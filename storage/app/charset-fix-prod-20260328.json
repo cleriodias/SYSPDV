@@ -1,0 +1,782 @@
+[
+    {
+        "tb1_id": 24,
+        "antes": "BOLO PEDAÃ§O",
+        "depois": "BOLO PEDAçO"
+    },
+    {
+        "tb1_id": 25,
+        "antes": "HAMBURGÃ£O",
+        "depois": "HAMBURGãO"
+    },
+    {
+        "tb1_id": 53,
+        "antes": "TORTA PROMOÃ§Ã£O 50",
+        "depois": "TORTA PROMOçãO 50"
+    },
+    {
+        "tb1_id": 65,
+        "antes": "BOLO CAÃ§AROLA",
+        "depois": "BOLO CAçAROLA"
+    },
+    {
+        "tb1_id": 103,
+        "antes": "BOLO PAÃ‡OCÃƒO",
+        "depois": "BOLO PAÇOCÃO"
+    },
+    {
+        "tb1_id": 104,
+        "antes": "BOLO PAÃ‡OCÃƒO",
+        "depois": "BOLO PAÇOCÃO"
+    },
+    {
+        "tb1_id": 112,
+        "antes": "BOLO DE FUBÃ",
+        "depois": "BOLO DE FUBÁ"
+    },
+    {
+        "tb1_id": 128,
+        "antes": "MORTADELA CONFIANÃ‡A",
+        "depois": "MORTADELA CONFIANÇA"
+    },
+    {
+        "tb1_id": 183,
+        "antes": "BOLO DE CAFÃ‰ C\/ CHOCOLATE",
+        "depois": "BOLO DE CAFÉ C\/ CHOCOLATE"
+    },
+    {
+        "tb1_id": 272,
+        "antes": "PUDIM FAMÃ­LIA",
+        "depois": "PUDIM FAMíLIA"
+    },
+    {
+        "tb1_id": 285,
+        "antes": "BELISCÃ£O",
+        "depois": "BELISCãO"
+    },
+    {
+        "tb1_id": 1003,
+        "antes": "MILHO DE PIPOCA PACHÃ¡ 500G",
+        "depois": "MILHO DE PIPOCA PACHá 500G"
+    },
+    {
+        "tb1_id": 1008,
+        "antes": "LAVA LOUÃ§AS BRISA NEUTRO",
+        "depois": "LAVA LOUçAS BRISA NEUTRO"
+    },
+    {
+        "tb1_id": 1009,
+        "antes": "LAVA LOUÃ§AS BRISA COCO",
+        "depois": "LAVA LOUçAS BRISA COCO"
+    },
+    {
+        "tb1_id": 1017,
+        "antes": "TRENTO MASSIMO AVELÃ£ CASTANHA E AMENDOIM 25G",
+        "depois": "TRENTO MASSIMO AVELã CASTANHA E AMENDOIM 25G"
+    },
+    {
+        "tb1_id": 1024,
+        "antes": "BISÂ´S 40G",
+        "depois": "BIS´S 40G"
+    },
+    {
+        "tb1_id": 1037,
+        "antes": "CAFÃ© DO SITIO 250GK",
+        "depois": "CAFé DO SITIO 250GK"
+    },
+    {
+        "tb1_id": 1040,
+        "antes": "GUARANÃ¡ MINEIRO 2L",
+        "depois": "GUARANá MINEIRO 2L"
+    },
+    {
+        "tb1_id": 1059,
+        "antes": "NUTRI NECTAR MAÃ§A 1L",
+        "depois": "NUTRI NECTAR MAçA 1L"
+    },
+    {
+        "tb1_id": 1084,
+        "antes": "ASSIM TRIPLA AÃ§AO 800G",
+        "depois": "ASSIM TRIPLA AçAO 800G"
+    },
+    {
+        "tb1_id": 1110,
+        "antes": "LINGUIÃ§A PERNIL SUINO 600G",
+        "depois": "LINGUIçA PERNIL SUINO 600G"
+    },
+    {
+        "tb1_id": 1111,
+        "antes": "LINGUIÃ§A APIMENTADA 600G",
+        "depois": "LINGUIçA APIMENTADA 600G"
+    },
+    {
+        "tb1_id": 1124,
+        "antes": "YPE CAPIM LIMÃ£O 500ML",
+        "depois": "YPE CAPIM LIMãO 500ML"
+    },
+    {
+        "tb1_id": 1125,
+        "antes": "YPE MAÃ§Ã£ 500ML",
+        "depois": "YPE MAçã 500ML"
+    },
+    {
+        "tb1_id": 1135,
+        "antes": "PAÃ§OKÃ£O",
+        "depois": "PAçOKãO"
+    },
+    {
+        "tb1_id": 1148,
+        "antes": "HERSHEYÂ´S 40 CACAU MEIO AMARGO 82G",
+        "depois": "HERSHEY´S 40 CACAU MEIO AMARGO 82G"
+    },
+    {
+        "tb1_id": 1149,
+        "antes": "TALENTO AVELÃ£ 85G",
+        "depois": "TALENTO AVELã 85G"
+    },
+    {
+        "tb1_id": 1150,
+        "antes": "TALENTO CASTANHA-DO-PARÃ¡ 85G",
+        "depois": "TALENTO CASTANHA-DO-PARá 85G"
+    },
+    {
+        "tb1_id": 1162,
+        "antes": "NUTRI NECTAR SABOR MAÃ§A",
+        "depois": "NUTRI NECTAR SABOR MAçA"
+    },
+    {
+        "tb1_id": 1178,
+        "antes": "MINUANO MAÃ§A 500ML",
+        "depois": "MINUANO MAçA 500ML"
+    },
+    {
+        "tb1_id": 1202,
+        "antes": "Ã¡LCOOL 70 DE 1L",
+        "depois": "áLCOOL 70 DE 1L"
+    },
+    {
+        "tb1_id": 1210,
+        "antes": "REQUEIJÃ£O CREMOSO ITAMBÃ© 200G",
+        "depois": "REQUEIJãO CREMOSO ITAMBé 200G"
+    },
+    {
+        "tb1_id": 1211,
+        "antes": "POWER ADE SOUR MAÃ§A VERDE 500ML",
+        "depois": "POWER ADE SOUR MAçA VERDE 500ML"
+    },
+    {
+        "tb1_id": 1220,
+        "antes": "ICE TEA LEÃ£O LIMÃ£O",
+        "depois": "ICE TEA LEãO LIMãO"
+    },
+    {
+        "tb1_id": 1222,
+        "antes": "DEL VALLE SABOR PÃªSSEGO",
+        "depois": "DEL VALLE SABOR PêSSEGO"
+    },
+    {
+        "tb1_id": 1223,
+        "antes": "DEL VALLE  PÃªSSEGO SEM AÃ§ÃºCAR",
+        "depois": "DEL VALLE  PêSSEGO SEM AçúCAR"
+    },
+    {
+        "tb1_id": 1224,
+        "antes": "DEL VALLE  MARACUJÃ¡",
+        "depois": "DEL VALLE  MARACUJá"
+    },
+    {
+        "tb1_id": 1230,
+        "antes": "VELA CORAÃ§Ã£O DOURADA",
+        "depois": "VELA CORAçãO DOURADA"
+    },
+    {
+        "tb1_id": 1265,
+        "antes": "SELETOS TENTAÃ§AO 1,5L",
+        "depois": "SELETOS TENTAçAO 1,5L"
+    },
+    {
+        "tb1_id": 1272,
+        "antes": "AÃ§AI COM CHOCOLATE 1,5L",
+        "depois": "AçAI COM CHOCOLATE 1,5L"
+    },
+    {
+        "tb1_id": 1273,
+        "antes": "AÃ§AI RURA ENERGIA 1,5L",
+        "depois": "AçAI RURA ENERGIA 1,5L"
+    },
+    {
+        "tb1_id": 1274,
+        "antes": "AÃ§AI COM MORANGO 1,5L",
+        "depois": "AçAI COM MORANGO 1,5L"
+    },
+    {
+        "tb1_id": 1275,
+        "antes": "AÃ§AI COM BANANA CARAMELIZADA 1,5L",
+        "depois": "AçAI COM BANANA CARAMELIZADA 1,5L"
+    },
+    {
+        "tb1_id": 1276,
+        "antes": "AÃ§AI +LEITINHO 1,5L",
+        "depois": "AçAI +LEITINHO 1,5L"
+    },
+    {
+        "tb1_id": 1282,
+        "antes": "DELICIE SORVERTE DE ALGODÃ£O DOCE E CHICLETE",
+        "depois": "DELICIE SORVERTE DE ALGODãO DOCE E CHICLETE"
+    },
+    {
+        "tb1_id": 1283,
+        "antes": "DELICIE MOUSSE DE MARACUJÃ¡ 1,8L",
+        "depois": "DELICIE MOUSSE DE MARACUJá 1,8L"
+    },
+    {
+        "tb1_id": 1291,
+        "antes": "CAFÃ© EXPORT PRIMIU",
+        "depois": "CAFé EXPORT PRIMIU"
+    },
+    {
+        "tb1_id": 1296,
+        "antes": "AÃ§ÃºCAR CRIATAL SAFIRA 2K",
+        "depois": "AçúCAR CRIATAL SAFIRA 2K"
+    },
+    {
+        "tb1_id": 1299,
+        "antes": "DOCE DE BANANA 25G 0% AÃ§UCAR",
+        "depois": "DOCE DE BANANA 25G 0% AçUCAR"
+    },
+    {
+        "tb1_id": 1334,
+        "antes": "PICOLE COM PEDAÃ§OS DE BISCOITO OREO 65G",
+        "depois": "PICOLE COM PEDAçOS DE BISCOITO OREO 65G"
+    },
+    {
+        "tb1_id": 1351,
+        "antes": "COOKIES CHARGE COM PEDAÃ§OS DE AMENDOIM 60G",
+        "depois": "COOKIES CHARGE COM PEDAçOS DE AMENDOIM 60G"
+    },
+    {
+        "tb1_id": 1354,
+        "antes": "FUEL ENERGY DRINK MAÃ§A VERDE 2L",
+        "depois": "FUEL ENERGY DRINK MAçA VERDE 2L"
+    },
+    {
+        "tb1_id": 1379,
+        "antes": "AZEITONA VERDE SEM CAROÃ§O  GUNE 200G",
+        "depois": "AZEITONA VERDE SEM CAROçO  GUNE 200G"
+    },
+    {
+        "tb1_id": 1452,
+        "antes": "SPRITE ZERO AÃ‡UCAR 310ML",
+        "depois": "SPRITE ZERO AÇUCAR 310ML"
+    },
+    {
+        "tb1_id": 1468,
+        "antes": "SENSAÃ§OES PEITO DE PERU 35G",
+        "depois": "SENSAçOES PEITO DE PERU 35G"
+    },
+    {
+        "tb1_id": 1469,
+        "antes": "SENSAÃ§OES FRANGO GRELHADO 35G",
+        "depois": "SENSAçOES FRANGO GRELHADO 35G"
+    },
+    {
+        "tb1_id": 2213,
+        "antes": "PAÃ§OCA MORENINHA DO RIO",
+        "depois": "PAçOCA MORENINHA DO RIO"
+    },
+    {
+        "tb1_id": 2272,
+        "antes": "PELISKÃ£O QUEIJO 140G",
+        "depois": "PELISKãO QUEIJO 140G"
+    },
+    {
+        "tb1_id": 2273,
+        "antes": "MIKÃ£O GALINHA CAIPIRA 120G",
+        "depois": "MIKãO GALINHA CAIPIRA 120G"
+    },
+    {
+        "tb1_id": 2299,
+        "antes": "COCA COLA 600ML SEM AÃ§UCAR",
+        "depois": "COCA COLA 600ML SEM AçUCAR"
+    },
+    {
+        "tb1_id": 2322,
+        "antes": "ZUPP MAÃ§A 500ML",
+        "depois": "ZUPP MAçA 500ML"
+    },
+    {
+        "tb1_id": 2325,
+        "antes": "ECOÃ§UCAR",
+        "depois": "ECOçUCAR"
+    },
+    {
+        "tb1_id": 2355,
+        "antes": "PAÃ§OQUINHA",
+        "depois": "PAçOQUINHA"
+    },
+    {
+        "tb1_id": 2367,
+        "antes": "COCA COLA ZERO AÃ§UCAR 310ML",
+        "depois": "COCA COLA ZERO AçUCAR 310ML"
+    },
+    {
+        "tb1_id": 2392,
+        "antes": "AMAZONAS LIMÃ£O",
+        "depois": "AMAZONAS LIMãO"
+    },
+    {
+        "tb1_id": 2395,
+        "antes": "FANTA GUARANÃ",
+        "depois": "FANTA GUARANÁ"
+    },
+    {
+        "tb1_id": 2417,
+        "antes": "REQUEIJÃ£O CANTO DE MINAS 200G",
+        "depois": "REQUEIJãO CANTO DE MINAS 200G"
+    },
+    {
+        "tb1_id": 2424,
+        "antes": "NUTRI NÃ©CTAR 1L ABACAXI",
+        "depois": "NUTRI NéCTAR 1L ABACAXI"
+    },
+    {
+        "tb1_id": 2435,
+        "antes": "SABÃ£O EM PO MINUANO AZUL 400G",
+        "depois": "SABãO EM PO MINUANO AZUL 400G"
+    },
+    {
+        "tb1_id": 2437,
+        "antes": "PAÃ§OCA CASEIRA 90G",
+        "depois": "PAçOCA CASEIRA 90G"
+    },
+    {
+        "tb1_id": 2439,
+        "antes": "GUARANÃ¡ KUAT",
+        "depois": "GUARANá KUAT"
+    },
+    {
+        "tb1_id": 2448,
+        "antes": "GOIANINHO GUARANÃ¡",
+        "depois": "GOIANINHO GUARANá"
+    },
+    {
+        "tb1_id": 2464,
+        "antes": "COADOR PARA CAFÃ©",
+        "depois": "COADOR PARA CAFé"
+    },
+    {
+        "tb1_id": 2466,
+        "antes": "GUARANÃ¡ JESUS 310ML",
+        "depois": "GUARANá JESUS 310ML"
+    },
+    {
+        "tb1_id": 2467,
+        "antes": "Ã¡GUA MINERAL MARIZA 1,5L",
+        "depois": "áGUA MINERAL MARIZA 1,5L"
+    },
+    {
+        "tb1_id": 2468,
+        "antes": "COCA COLA SEM AÃ‡UCAR 2L",
+        "depois": "COCA COLA SEM AÇUCAR 2L"
+    },
+    {
+        "tb1_id": 2469,
+        "antes": "CRYSTAL GUARANÃ 2L",
+        "depois": "CRYSTAL GUARANÁ 2L"
+    },
+    {
+        "tb1_id": 2473,
+        "antes": "PAPEL HIGIENICO OLÃ© 12 ROLOS",
+        "depois": "PAPEL HIGIENICO OLé 12 ROLOS"
+    },
+    {
+        "tb1_id": 2479,
+        "antes": "AÃ§UCAR ECOÃ§UCAR 2K",
+        "depois": "AçUCAR ECOçUCAR 2K"
+    },
+    {
+        "tb1_id": 2481,
+        "antes": "SABÃ£O EM PO TIXAN YPE 400G",
+        "depois": "SABãO EM PO TIXAN YPE 400G"
+    },
+    {
+        "tb1_id": 2482,
+        "antes": "SABÃ£O EM PO TIXAN YPE 800G",
+        "depois": "SABãO EM PO TIXAN YPE 800G"
+    },
+    {
+        "tb1_id": 2514,
+        "antes": "DOCIGOMA CORAÃ§Ã£O",
+        "depois": "DOCIGOMA CORAçãO"
+    },
+    {
+        "tb1_id": 2527,
+        "antes": "PAÃ§OCA TUBITOS 15G",
+        "depois": "PAçOCA TUBITOS 15G"
+    },
+    {
+        "tb1_id": 2528,
+        "antes": "GUARANÃ¡ JESUS 2L",
+        "depois": "GUARANá JESUS 2L"
+    },
+    {
+        "tb1_id": 2533,
+        "antes": "GOIANINHO AÃ§AÃ­ E BANANA 140G",
+        "depois": "GOIANINHO AçAí E BANANA 140G"
+    },
+    {
+        "tb1_id": 2540,
+        "antes": "SARDINHA GOMES COSTA COM Ã³LEO",
+        "depois": "SARDINHA GOMES COSTA COM óLEO"
+    },
+    {
+        "tb1_id": 2554,
+        "antes": "CAFE FORT 3 CORAÃ§ÃµES",
+        "depois": "CAFE FORT 3 CORAçõES"
+    },
+    {
+        "tb1_id": 2556,
+        "antes": "EXTRATO DE TOMATE OLÃ©",
+        "depois": "EXTRATO DE TOMATE OLé"
+    },
+    {
+        "tb1_id": 2565,
+        "antes": "FRESH LIMÃ£O",
+        "depois": "FRESH LIMãO"
+    },
+    {
+        "tb1_id": 2569,
+        "antes": "AÃ§UCAR CRISTAL 2KG",
+        "depois": "AçUCAR CRISTAL 2KG"
+    },
+    {
+        "tb1_id": 2577,
+        "antes": "POWER ADE LIMÃ£O 500ML",
+        "depois": "POWER ADE LIMãO 500ML"
+    },
+    {
+        "tb1_id": 2593,
+        "antes": "CHEETOS PARMESÃ£O 95G",
+        "depois": "CHEETOS PARMESãO 95G"
+    },
+    {
+        "tb1_id": 2594,
+        "antes": "CHEETOS REQUEIJÃ£O 105G",
+        "depois": "CHEETOS REQUEIJãO 105G"
+    },
+    {
+        "tb1_id": 2606,
+        "antes": "DEL VALLE KAPO MAÃ‡Ãƒ 200ML",
+        "depois": "DEL VALLE KAPO MAÇÃ 200ML"
+    },
+    {
+        "tb1_id": 2616,
+        "antes": "AÃ§UCAR PEROLA 1K",
+        "depois": "AçUCAR PEROLA 1K"
+    },
+    {
+        "tb1_id": 2622,
+        "antes": "PAÃ§OCA PEQUENA",
+        "depois": "PAçOCA PEQUENA"
+    },
+    {
+        "tb1_id": 2627,
+        "antes": "NUTRI NECTAR PÃŠSSEGO 220ML",
+        "depois": "NUTRI NECTAR PÊSSEGO 220ML"
+    },
+    {
+        "tb1_id": 2629,
+        "antes": "COCACOLA K-WAVE SEM AÃ§UCAR",
+        "depois": "COCACOLA K-WAVE SEM AçUCAR"
+    },
+    {
+        "tb1_id": 2632,
+        "antes": "TRENTO TORTA DE LIMÃ£O 32G",
+        "depois": "TRENTO TORTA DE LIMãO 32G"
+    },
+    {
+        "tb1_id": 2634,
+        "antes": "PE DE MOÃ§A 55G",
+        "depois": "PE DE MOçA 55G"
+    },
+    {
+        "tb1_id": 2635,
+        "antes": "PAÃ§OCA CASEIRA",
+        "depois": "PAçOCA CASEIRA"
+    },
+    {
+        "tb1_id": 2638,
+        "antes": "IOGURTE MAMÃ£O, MAÃ§Ã£ E BANANA 450G",
+        "depois": "IOGURTE MAMãO, MAçã E BANANA 450G"
+    },
+    {
+        "tb1_id": 2640,
+        "antes": "MOLHO DE PIMENTA FRICÃ³ 145ML",
+        "depois": "MOLHO DE PIMENTA FRICó 145ML"
+    },
+    {
+        "tb1_id": 2643,
+        "antes": "SUCO NUTRI DE MARACUJÃ¡ 1L",
+        "depois": "SUCO NUTRI DE MARACUJá 1L"
+    },
+    {
+        "tb1_id": 2658,
+        "antes": "GUARANÃ¡ JESUS 250ML",
+        "depois": "GUARANá JESUS 250ML"
+    },
+    {
+        "tb1_id": 2659,
+        "antes": "COCA COLA SEM AÃ§UCAR 220ML",
+        "depois": "COCA COLA SEM AçUCAR 220ML"
+    },
+    {
+        "tb1_id": 2665,
+        "antes": "CHEETOS QUEIJO SUIÃ§O  37 G",
+        "depois": "CHEETOS QUEIJO SUIçO  37 G"
+    },
+    {
+        "tb1_id": 2670,
+        "antes": "AGUA NATURAL ORGÃ£NICA 500ML",
+        "depois": "AGUA NATURAL ORGãNICA 500ML"
+    },
+    {
+        "tb1_id": 2680,
+        "antes": "TRENTO DE AVELÃ£ 32G",
+        "depois": "TRENTO DE AVELã 32G"
+    },
+    {
+        "tb1_id": 2707,
+        "antes": "AÃ§AI C\/ LEITINHO 160G BONABOCA",
+        "depois": "AçAI C\/ LEITINHO 160G BONABOCA"
+    },
+    {
+        "tb1_id": 2708,
+        "antes": "AÃ§AI C\/ BANANA 160G BONABOCA",
+        "depois": "AçAI C\/ BANANA 160G BONABOCA"
+    },
+    {
+        "tb1_id": 2709,
+        "antes": "AÃ§AI LEITINHO 1L  BONABOCA",
+        "depois": "AçAI LEITINHO 1L  BONABOCA"
+    },
+    {
+        "tb1_id": 2710,
+        "antes": "AÃ§AI C\/ BANANA 1L BONABOCA",
+        "depois": "AçAI C\/ BANANA 1L BONABOCA"
+    },
+    {
+        "tb1_id": 2713,
+        "antes": "APRESUNTADO PERDIGÃ£O 200G",
+        "depois": "APRESUNTADO PERDIGãO 200G"
+    },
+    {
+        "tb1_id": 2714,
+        "antes": "SCHWEPPES SEM AÃ§UCAR 310ML",
+        "depois": "SCHWEPPES SEM AçUCAR 310ML"
+    },
+    {
+        "tb1_id": 2717,
+        "antes": "TRENTO TORTA DE MAÃ§A",
+        "depois": "TRENTO TORTA DE MAçA"
+    },
+    {
+        "tb1_id": 2722,
+        "antes": "REQUEIJÃ£O CREMOSO GOIANINHO 180G",
+        "depois": "REQUEIJãO CREMOSO GOIANINHO 180G"
+    },
+    {
+        "tb1_id": 2735,
+        "antes": "ALBANY SABONETE OLEO DE MACADÃ£MIA",
+        "depois": "ALBANY SABONETE OLEO DE MACADãMIA"
+    },
+    {
+        "tb1_id": 2747,
+        "antes": "FLOCÃ£O GUARA 500G",
+        "depois": "FLOCãO GUARA 500G"
+    },
+    {
+        "tb1_id": 2749,
+        "antes": "CAFE 3 CORAÃ§OES TRADICIONAL 500G",
+        "depois": "CAFE 3 CORAçOES TRADICIONAL 500G"
+    },
+    {
+        "tb1_id": 2750,
+        "antes": "CAFE 3 CORAÃ§OES EXTRAFORTE 500G",
+        "depois": "CAFE 3 CORAçOES EXTRAFORTE 500G"
+    },
+    {
+        "tb1_id": 2758,
+        "antes": "PICOLE AÃ§AI COM LEITE CONDENSADO",
+        "depois": "PICOLE AçAI COM LEITE CONDENSADO"
+    },
+    {
+        "tb1_id": 2759,
+        "antes": "PICOLE LIMAO SUIÃ§O 60G",
+        "depois": "PICOLE LIMAO SUIçO 60G"
+    },
+    {
+        "tb1_id": 2760,
+        "antes": "PICOLE DE AÃ§AI GELADO NO PALITO 65G",
+        "depois": "PICOLE DE AçAI GELADO NO PALITO 65G"
+    },
+    {
+        "tb1_id": 2764,
+        "antes": "COCA COLA RETORNÃ¡VEL",
+        "depois": "COCA COLA RETORNáVEL"
+    },
+    {
+        "tb1_id": 2780,
+        "antes": "COCA COLA OREO SEM AÃ§UCAR 310ML",
+        "depois": "COCA COLA OREO SEM AçUCAR 310ML"
+    },
+    {
+        "tb1_id": 2786,
+        "antes": "ALBANY CAPIM LIMÃ£O 85G",
+        "depois": "ALBANY CAPIM LIMãO 85G"
+    },
+    {
+        "tb1_id": 2790,
+        "antes": "PISTOLA DÂ´AGUA",
+        "depois": "PISTOLA D´AGUA"
+    },
+    {
+        "tb1_id": 2801,
+        "antes": "BRINCLETÂ´S TIRA",
+        "depois": "BRINCLET´S TIRA"
+    },
+    {
+        "tb1_id": 2827,
+        "antes": "MÃ£MA UNICORNIO",
+        "depois": "MãMA UNICORNIO"
+    },
+    {
+        "tb1_id": 2834,
+        "antes": "MIKÃ£O PRESUNTO 90G",
+        "depois": "MIKãO PRESUNTO 90G"
+    },
+    {
+        "tb1_id": 2835,
+        "antes": "MIKÃ£O GALINHA 90G",
+        "depois": "MIKãO GALINHA 90G"
+    },
+    {
+        "tb1_id": 2836,
+        "antes": "MIKÃ£O REQUEIJÃ£O 90G",
+        "depois": "MIKãO REQUEIJãO 90G"
+    },
+    {
+        "tb1_id": 2837,
+        "antes": "MICOS REQUEIJÃ£O 41G",
+        "depois": "MICOS REQUEIJãO 41G"
+    },
+    {
+        "tb1_id": 2838,
+        "antes": "MICOS REQUEIJÃ£O 28G",
+        "depois": "MICOS REQUEIJãO 28G"
+    },
+    {
+        "tb1_id": 2866,
+        "antes": "TRENTO TORTA DE MAÃ‡A 29G",
+        "depois": "TRENTO TORTA DE MAÇA 29G"
+    },
+    {
+        "tb1_id": 2872,
+        "antes": "AÃ§UCAR REFINADO CARAVELAS 1KG",
+        "depois": "AçUCAR REFINADO CARAVELAS 1KG"
+    },
+    {
+        "tb1_id": 2879,
+        "antes": "MIKÃ£O QUEIJO 90G",
+        "depois": "MIKãO QUEIJO 90G"
+    },
+    {
+        "tb1_id": 2880,
+        "antes": "MIKÃ£O CEBOLA 90G",
+        "depois": "MIKãO CEBOLA 90G"
+    },
+    {
+        "tb1_id": 2912,
+        "antes": "CAFÃ© PILÃ£O 500G",
+        "depois": "CAFé PILãO 500G"
+    },
+    {
+        "tb1_id": 2919,
+        "antes": "QUATÃ¡  LEITE 1L",
+        "depois": "QUATá  LEITE 1L"
+    },
+    {
+        "tb1_id": 2924,
+        "antes": "COCA COLA PET  SEM AÃ§UCAR 200ML",
+        "depois": "COCA COLA PET  SEM AçUCAR 200ML"
+    },
+    {
+        "tb1_id": 2927,
+        "antes": "BARRA DE CHOCOLATE HERSHEYÂ´S 77G",
+        "depois": "BARRA DE CHOCOLATE HERSHEY´S 77G"
+    },
+    {
+        "tb1_id": 2930,
+        "antes": "PAÃ§OCA CASEIRA 60G",
+        "depois": "PAçOCA CASEIRA 60G"
+    },
+    {
+        "tb1_id": 2950,
+        "antes": "FANTA LARAN. SEM AÃ§UCAR 310ML",
+        "depois": "FANTA LARAN. SEM AçUCAR 310ML"
+    },
+    {
+        "tb1_id": 2952,
+        "antes": "VELA DE INTERROGAÃ§Ã£O AZUL",
+        "depois": "VELA DE INTERROGAçãO AZUL"
+    },
+    {
+        "tb1_id": 2954,
+        "antes": "BELAGURT AÃ‡AI E BANANA 140G",
+        "depois": "BELAGURT AÇAI E BANANA 140G"
+    },
+    {
+        "tb1_id": 2955,
+        "antes": "BELAGURT MAMAO,MAÃ‡A E BANANA 140G",
+        "depois": "BELAGURT MAMAO,MAÇA E BANANA 140G"
+    },
+    {
+        "tb1_id": 2958,
+        "antes": "RED BULL SEM AÃ§UCAR 250ML",
+        "depois": "RED BULL SEM AçUCAR 250ML"
+    },
+    {
+        "tb1_id": 2982,
+        "antes": "FREEGELLS VIT. MEL E LIMÃ£O",
+        "depois": "FREEGELLS VIT. MEL E LIMãO"
+    },
+    {
+        "tb1_id": 2983,
+        "antes": "ZOLLÃ© STICK FRAMBOESA",
+        "depois": "ZOLLé STICK FRAMBOESA"
+    },
+    {
+        "tb1_id": 2984,
+        "antes": "GELÃ©IA MOCOTÃ³",
+        "depois": "GELéIA MOCOTó"
+    },
+    {
+        "tb1_id": 2985,
+        "antes": "ZOLLÃ© STICK MAÃ§Ã£ VERDE",
+        "depois": "ZOLLé STICK MAçã VERDE"
+    },
+    {
+        "tb1_id": 2986,
+        "antes": "MINIT STICK HORTELÃ£",
+        "depois": "MINIT STICK HORTELã"
+    },
+    {
+        "tb1_id": 2992,
+        "antes": "NUTRY CEREAL AVELÃ£ 22G",
+        "depois": "NUTRY CEREAL AVELã 22G"
+    },
+    {
+        "tb1_id": 2995,
+        "antes": "DIPLOKO LIMÃ£O",
+        "depois": "DIPLOKO LIMãO"
+    }
+]

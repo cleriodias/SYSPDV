@@ -1,0 +1,848 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Produto;
+use App\Models\Unidade;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class ProductController extends Controller
+{
+    private const RESERVED_PRODUCT_ID_START = 3000;
+
+    private const RESERVED_PRODUCT_ID_END = 3100;
+
+    private const MAX_SAFE_PRODUCT_ID = 9999;
+
+    private const TYPE_LABELS = [
+        0 => 'Industria',
+        1 => 'Balanca',
+        2 => 'Servico',
+        3 => 'Producao',
+    ];
+
+    private const STATUS_LABELS = [
+        0 => 'Inativo',
+        1 => 'Ativo',
+    ];
+
+    private const ORIGIN_LABELS = [
+        0 => '0 - Nacional',
+        1 => '1 - Estrangeira importacao direta',
+        2 => '2 - Estrangeira adquirida no mercado interno',
+        3 => '3 - Nacional com conteudo de importacao superior a 40%',
+        4 => '4 - Nacional com processo produtivo basico',
+        5 => '5 - Nacional com conteudo de importacao ate 40%',
+        6 => '6 - Estrangeira importacao direta sem similar nacional',
+        7 => '7 - Estrangeira mercado interno sem similar nacional',
+        8 => '8 - Nacional com conteudo de importacao superior a 70%',
+    ];
+
+    private const PRODUCT_NAME_ENCODING = 'UTF-8';
+
+    public function index(Request $request): Response
+    {
+        $search = trim((string) $request->input('search', ''));
+        $vrCreditOnly = in_array(strtolower((string) $request->input('vr_credit', '0')), ['1', 'true'], true);
+        $fiscalStatus = strtolower(trim((string) $request->input('fiscal_status', '')));
+        $sort = (string) $request->input('sort', '');
+        $direction = strtolower((string) $request->input('direction', 'asc'));
+        $matrixId = $this->resolveMatrixId($request);
+        $query = Produto::query()->forMatrix($matrixId);
+
+        if ($search !== '') {
+            $isNumeric = ctype_digit($search);
+            $safeTerm = str_replace(['%', '_'], ['\%', '\_'], $search);
+            $likeTerm = '%' . $safeTerm . '%';
+            $numericTerm = $isNumeric ? (int) $search : null;
+            $isLongNumeric = $isNumeric && mb_strlen($search) > 4;
+
+            $query->where(function ($builder) use ($isNumeric, $isLongNumeric, $likeTerm, $numericTerm) {
+                if ($isNumeric) {
+                    if ($isLongNumeric) {
+                        $builder->where('tb1_codbar', 'like', $likeTerm);
+                    } else {
+                        $builder->where('produto_id', $numericTerm)
+                            ->orWhere('tb1_id', $numericTerm);
+                    }
+
+                    return;
+                }
+
+                $builder->where('tb1_nome', 'like', $likeTerm);
+            });
+        }
+
+        if ($vrCreditOnly) {
+            $query->where('tb1_vr_credit', true);
+        }
+
+        if (in_array($fiscalStatus, ['complete', 'incomplete'], true)) {
+            $query->where(function ($builder) use ($fiscalStatus) {
+                $requiredFiscalFields = ['tb1_ncm', 'tb1_cfop', 'tb1_csosn', 'tb1_cst'];
+
+                foreach ($requiredFiscalFields as $field) {
+                    if ($fiscalStatus === 'complete') {
+                        $builder->whereNotNull($field)
+                            ->where($field, '!=', '');
+                    } else {
+                        $builder->orWhereNull($field)
+                            ->orWhere($field, '=', '');
+                    }
+                }
+            });
+        }
+
+        $allowedSorts = [
+            'tb1_favorito',
+            'produto_id',
+            'tb1_nome',
+            'tb1_vlr_custo',
+            'tb1_vlr_venda',
+            'tb1_codbar',
+            'tb1_tipo',
+            'tb1_qtd',
+            'tb1_status',
+        ];
+        $allowedDirections = ['asc', 'desc'];
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = '';
+        }
+
+        if (! in_array($direction, $allowedDirections, true)) {
+            $direction = 'asc';
+        }
+
+        if ($sort !== '') {
+            $query->orderBy($sort, $direction)
+                ->orderBy('produto_id', $direction);
+        } else {
+            $query->orderByDesc('tb1_favorito')
+                ->orderByDesc('produto_id');
+            $direction = '';
+        }
+
+        $products = $query->paginate(10)->withQueryString();
+
+        return Inertia::render('Products/ProductIndex', [
+            'products' => $products,
+            'typeLabels' => self::TYPE_LABELS,
+            'statusLabels' => self::STATUS_LABELS,
+            'search' => $search,
+            'vrCreditOnly' => $vrCreditOnly,
+            'fiscalStatus' => $fiscalStatus,
+            'sort' => $sort,
+            'direction' => $direction,
+        ]);
+    }
+
+    public function show(Produto $product): Response
+    {
+        $this->ensureProductAccess($product, request());
+
+        return Inertia::render('Products/ProductShow', [
+            'product' => $product,
+            'typeLabels' => self::TYPE_LABELS,
+            'statusLabels' => self::STATUS_LABELS,
+        ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('Products/ProductCreate', $this->formOptions());
+    }
+
+    public function fiscalQueue(): Response
+    {
+        $typeFilter = $this->resolveFiscalQueueTypeFilter(request());
+        $search = $this->resolveFiscalQueueSearch(request());
+        $pendingQuery = $this->pendingFiscalProductsQuery($typeFilter, $search);
+
+        return Inertia::render('Products/ProductFiscalQueue', [
+            'items' => $pendingQuery->limit(20)->get(),
+            'pendingCount' => $this->pendingFiscalProductsQuery($typeFilter, $search)->count(),
+            'selectedType' => $typeFilter,
+            'search' => $search,
+            'typeOptions' => $this->formOptions()['typeOptions'],
+        ]);
+    }
+
+    public function fiscalQueueItems(Request $request): JsonResponse
+    {
+        $typeFilter = $this->resolveFiscalQueueTypeFilter($request);
+        $search = $this->resolveFiscalQueueSearch($request);
+
+        return response()->json([
+            'items' => $this->pendingFiscalProductsQuery($typeFilter, $search)->limit(20)->get(),
+            'pendingCount' => $this->pendingFiscalProductsQuery($typeFilter, $search)->count(),
+            'selectedType' => $typeFilter,
+            'search' => $search,
+        ]);
+    }
+
+    public function updateFiscalQueueItem(Request $request, Produto $product): JsonResponse
+    {
+        $this->ensureProductAccess($product, $request);
+
+        $data = $request->validate(
+            [
+                'tb1_ncm' => ['required', 'string', 'size:8'],
+                'tb1_cfop' => ['required', 'string', 'size:4'],
+                'tb1_csosn' => ['required', 'string', 'max:4'],
+                'tb1_cst' => ['required', 'string', 'max:3'],
+            ],
+            [
+                'tb1_ncm.required' => 'Informe o NCM.',
+                'tb1_ncm.size' => 'O NCM deve ter exatamente 8 digitos.',
+                'tb1_cfop.required' => 'Informe o CFOP.',
+                'tb1_cfop.size' => 'O CFOP deve ter exatamente 4 digitos.',
+                'tb1_csosn.required' => 'Informe o CSOSN.',
+                'tb1_csosn.max' => 'O CSOSN deve ter no maximo :max caracteres.',
+                'tb1_cst.required' => 'Informe o CST.',
+                'tb1_cst.max' => 'O CST deve ter no maximo :max caracteres.',
+            ]
+        );
+
+        $product->update([
+            'tb1_ncm' => $this->normalizeDigitsField($data['tb1_ncm'], 8),
+            'tb1_cfop' => $this->normalizeDigitsField($data['tb1_cfop'], 4),
+            'tb1_csosn' => $this->normalizeDigitsField($data['tb1_csosn'], 4),
+            'tb1_cst' => $this->normalizeDigitsField($data['tb1_cst'], 3),
+        ]);
+
+        return response()->json([
+            'message' => 'Dados fiscais gravados com sucesso.',
+            'product_id' => (int) ($product->produto_id ?? $product->tb1_id),
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $matrixId = $this->resolveMatrixId($request);
+        $data = $this->validateProduct($request);
+
+        if ((int) ($data['tb1_tipo'] ?? 0) !== 1) {
+            $data['produto_id'] = $this->nextSafeProductId($matrixId, $this->shouldUseOwnIdAsBarcode($data));
+        }
+
+        $data['tb1_vr_credit'] = (bool) ($data['tb1_vr_credit'] ?? false);
+        $data['matriz_id'] = $matrixId;
+        $data = $this->prepareProductData($data);
+
+        $product = Produto::create($data);
+
+        return Redirect::route('products.show', ['product' => $product->tb1_id])
+            ->with('success', 'Produto cadastrado com sucesso!');
+    }
+
+    public function edit(Produto $product): Response
+    {
+        $this->ensureProductAccess($product, request());
+
+        return Inertia::render('Products/ProductEdit', array_merge(
+            ['product' => $product],
+            $this->formOptions()
+        ));
+    }
+
+    public function update(Request $request, Produto $product)
+    {
+        $this->ensureProductAccess($product, $request);
+
+        $data = $this->validateProduct($request, $product);
+        $data['tb1_vr_credit'] = (bool) ($data['tb1_vr_credit'] ?? false);
+        $data = $this->prepareProductData($data, $product);
+
+        $product->update($data);
+
+        return Redirect::route('products.show', ['product' => $product->tb1_id])
+            ->with('success', 'Produto atualizado com sucesso!');
+    }
+
+    public function destroy(Produto $product)
+    {
+        $this->ensureProductAccess($product, request());
+
+        $product->delete();
+
+        return Redirect::route('products.index')
+            ->with('success', 'Produto removido com sucesso!');
+    }
+
+    public function toggleFavorite(Request $request, Produto $product)
+    {
+        $this->ensureProductAccess($product, $request);
+
+        $data = $request->validate([
+            'favorite' => 'required|boolean',
+        ]);
+
+        $product->update([
+            'tb1_favorito' => $data['favorite'],
+        ]);
+
+        return Redirect::back()->with('success', $data['favorite'] ? 'Produto marcado como favorito.' : 'Produto removido dos favoritos.');
+    }
+
+    public function favorites(): JsonResponse
+    {
+        $matrixId = $this->resolveMatrixId(request());
+
+        $favorites = Produto::query()
+            ->forMatrix($matrixId)
+            ->where('tb1_favorito', true)
+            ->where('tb1_status', 1)
+            ->orderBy('tb1_nome')
+            ->get([
+                'tb1_id',
+                'produto_id',
+                'tb1_nome',
+                'tb1_codbar',
+                'tb1_vlr_custo',
+                'tb1_vlr_venda',
+                'tb1_tipo',
+                'tb1_qtd',
+                'tb1_status',
+                'tb1_vr_credit',
+            ]);
+
+        return response()->json($favorites);
+    }
+
+    public function search(Request $request): JsonResponse
+    {
+        $matrixId = $this->resolveMatrixId($request);
+        $term = trim((string) $request->input('q', ''));
+        $typeFilter = $request->input('type');
+
+        $isNumeric = ctype_digit($term);
+
+        if (mb_strlen($term) < 3 && ! $isNumeric) {
+            return response()->json([]);
+        }
+
+        $safeTerm = str_replace(['%', '_'], ['\\%', '\\_'], $term);
+        $likeTerm = '%' . $safeTerm . '%';
+        $numericTerm = $isNumeric ? (int) $term : null;
+        $isLongNumeric = $isNumeric && mb_strlen($term) > 4;
+
+        $productsQuery = Produto::query()
+            ->forMatrix($matrixId)
+            ->where(function ($query) use ($isNumeric, $isLongNumeric, $likeTerm, $numericTerm) {
+                if ($isNumeric) {
+                    if ($isLongNumeric) {
+                        $query->where('tb1_codbar', 'like', $likeTerm);
+                    } else {
+                        $query->where('produto_id', $numericTerm)
+                            ->orWhere('tb1_id', $numericTerm);
+                    }
+
+                    return;
+                }
+
+                $query->where('tb1_nome', 'like', $likeTerm);
+            });
+
+        if ($typeFilter !== null && $typeFilter !== '') {
+            $typeValue = (int) $typeFilter;
+            $productsQuery->where('tb1_tipo', $typeValue);
+        }
+
+        $products = $productsQuery
+            ->orderByDesc('tb1_status')
+            ->orderBy('tb1_nome')
+            ->limit(10)
+            ->get([
+                'tb1_id',
+                'produto_id',
+                'tb1_nome',
+                'tb1_codbar',
+                'tb1_vlr_custo',
+                'tb1_vlr_venda',
+                'tb1_tipo',
+                'tb1_qtd',
+                'tb1_status',
+                'tb1_vr_credit',
+            ]);
+
+        return response()->json($products);
+    }
+
+    private function validateProduct(Request $request, ?Produto $product = null): array
+    {
+        $data = $request->validate(
+            [
+                'produto_id' => [
+                    Rule::requiredIf(fn () => (int) $request->input('tb1_tipo') === 1 && $product === null),
+                    'nullable',
+                    'integer',
+                    'min:1',
+                    'max:' . self::MAX_SAFE_PRODUCT_ID,
+                ],
+                'tb1_nome' => 'required|string|max:45',
+                'tb1_vlr_custo' => 'required|numeric|min:0',
+                'tb1_vlr_venda' => 'required|numeric|min:0|gte:tb1_vlr_custo',
+                'tb1_codbar' => [
+                    Rule::requiredIf(fn () => (int) $request->input('tb1_tipo') !== 1 && ! $request->boolean('sem_codigo_barras')),
+                    'nullable',
+                    'string',
+                    'max:64',
+                    Rule::unique('tb1_produto', 'tb1_codbar')
+                        ->where(fn ($query) => $query->where('matriz_id', $this->resolveMatrixId($request)))
+                        ->ignore($product?->tb1_id, 'tb1_id'),
+                ],
+                'tb1_tipo' => [
+                    'required',
+                    'integer',
+                    Rule::in(array_keys(self::TYPE_LABELS)),
+                ],
+                'tb1_ncm' => ['nullable', 'string', 'size:8'],
+                'tb1_cest' => ['nullable', 'string', 'size:7'],
+                'tb1_cfop' => ['nullable', 'string', 'size:4'],
+                'tb1_unidade_comercial' => ['nullable', 'string', 'max:6'],
+                'tb1_unidade_tributavel' => ['nullable', 'string', 'max:6'],
+                'tb1_origem' => ['nullable', 'integer', Rule::in(array_keys(self::ORIGIN_LABELS))],
+                'tb1_csosn' => ['nullable', 'string', 'max:4'],
+                'tb1_cst' => ['nullable', 'string', 'max:3'],
+                'tb1_aliquota_icms' => ['nullable', 'numeric', 'min:0', 'max:100'],
+                'tb1_qtd' => [
+                    Rule::requiredIf(fn () => (int) $request->input('tb1_tipo') === 3),
+                    'nullable',
+                    'integer',
+                    'min:0',
+                ],
+                'tb1_status' => [
+                    'required',
+                    'integer',
+                    Rule::in(array_keys(self::STATUS_LABELS)),
+                ],
+                'tb1_vr_credit' => [
+                    'nullable',
+                    'boolean',
+                ],
+                'sem_codigo_barras' => [
+                    'nullable',
+                    'boolean',
+                ],
+            ],
+            [
+                'produto_id.required' => 'Informe o codigo do produto de balanca.',
+                'produto_id.integer' => 'O codigo do produto deve ser numerico.',
+                'produto_id.min' => 'O codigo do produto deve ser maior que zero.',
+                'produto_id.max' => 'O codigo do produto deve ser no maximo :max.',
+                'tb1_nome.required' => 'Informe o nome do produto.',
+                'tb1_nome.max' => 'O nome nao pode exceder :max caracteres.',
+                'tb1_vlr_custo.required' => 'Informe o valor de custo.',
+                'tb1_vlr_custo.numeric' => 'O valor de custo deve ser numerico.',
+                'tb1_vlr_custo.min' => 'O valor de custo deve ser maior ou igual a zero.',
+                'tb1_vlr_venda.required' => 'Informe o valor de venda.',
+                'tb1_vlr_venda.numeric' => 'O valor de venda deve ser numerico.',
+                'tb1_vlr_venda.min' => 'O valor de venda deve ser maior ou igual a zero.',
+                'tb1_vlr_venda.gte' => 'O valor de venda deve ser maior que o valor de custo.',
+                'tb1_codbar.required' => 'Informe o codigo de barras.',
+                'tb1_codbar.max' => 'O codigo de barras deve ter no maximo :max caracteres.',
+                'tb1_codbar.unique' => 'Este codigo de barras ja esta cadastrado.',
+                'tb1_tipo.required' => 'Selecione o tipo do produto.',
+                'tb1_tipo.integer' => 'Tipo de produto invalido.',
+                'tb1_tipo.in' => 'Tipo de produto nao reconhecido.',
+                'tb1_ncm.size' => 'O NCM deve ter exatamente 8 digitos.',
+                'tb1_cest.size' => 'O CEST deve ter exatamente 7 digitos.',
+                'tb1_cfop.size' => 'O CFOP deve ter exatamente 4 digitos.',
+                'tb1_unidade_comercial.max' => 'A unidade comercial deve ter no maximo :max caracteres.',
+                'tb1_unidade_tributavel.max' => 'A unidade tributavel deve ter no maximo :max caracteres.',
+                'tb1_origem.in' => 'Origem fiscal invalida.',
+                'tb1_csosn.max' => 'O CSOSN deve ter no maximo :max caracteres.',
+                'tb1_cst.max' => 'O CST deve ter no maximo :max caracteres.',
+                'tb1_aliquota_icms.numeric' => 'A aliquota de ICMS deve ser numerica.',
+                'tb1_aliquota_icms.min' => 'A aliquota de ICMS nao pode ser negativa.',
+                'tb1_aliquota_icms.max' => 'A aliquota de ICMS nao pode ultrapassar 100%.',
+                'tb1_qtd.required' => 'Informe a quantidade em estoque para o produto de Producao.',
+                'tb1_qtd.integer' => 'A quantidade em estoque deve ser numerica e inteira.',
+                'tb1_qtd.min' => 'A quantidade em estoque nao pode ser negativa.',
+                'tb1_status.required' => 'Selecione o status do produto.',
+                'tb1_status.integer' => 'Status invalido.',
+                'tb1_status.in' => 'Status nao reconhecido.',
+                'tb1_vr_credit.boolean' => 'Valor invalido para VR Credito.',
+                'sem_codigo_barras.boolean' => 'Valor invalido para a opcao sem codigo de barras.',
+            ]
+        );
+
+        $matrixId = $this->resolveMatrixId($request);
+        $requestedId = isset($data['produto_id']) ? (int) $data['produto_id'] : null;
+
+        if ($product && $requestedId !== null && $requestedId !== (int) ($product->produto_id ?? 0)) {
+            throw ValidationException::withMessages([
+                'produto_id' => 'Nao e permitido alterar o codigo de um produto ja cadastrado.',
+            ]);
+        }
+
+        if ($product === null && (int) ($data['tb1_tipo'] ?? 0) === 1 && $requestedId !== null) {
+            if ($this->isReservedProductId($requestedId)) {
+                throw ValidationException::withMessages([
+                    'produto_id' => sprintf(
+                        'Os codigos de %d a %d sao reservados para comandas. Informe outro codigo de balanca.',
+                        self::RESERVED_PRODUCT_ID_START,
+                        self::RESERVED_PRODUCT_ID_END
+                    ),
+                ]);
+            }
+
+            $existingProduct = Produto::query()
+                ->forMatrix($matrixId)
+                ->where('produto_id', $requestedId)
+                ->first();
+
+            if ($existingProduct) {
+                throw ValidationException::withMessages([
+                    'produto_id' => $this->existingProductMessage($existingProduct),
+                ]);
+            }
+        }
+
+        $this->ensurePriceEditingIsAuthorized($data, $product, $request->user());
+
+        $resolvedBarcode = $this->resolveProductBarcode($data, $product);
+
+        if ($resolvedBarcode !== '') {
+            $barcodeInUse = Produto::query()
+                ->forMatrix($matrixId)
+                ->where('tb1_codbar', $resolvedBarcode)
+                ->when(
+                    $product,
+                    fn ($query) => $query->where('tb1_id', '!=', $product->tb1_id)
+                )
+                ->first();
+
+            if ($barcodeInUse) {
+                $field = $this->shouldUseOwnIdAsBarcode($data, $product) ? 'produto_id' : 'tb1_codbar';
+
+                throw ValidationException::withMessages([
+                    $field => sprintf(
+                        'O codigo de barras %s ja esta em uso no produto %d.',
+                        $resolvedBarcode,
+                        $barcodeInUse->produto_id ?? $barcodeInUse->tb1_id
+                    ),
+                ]);
+            }
+        }
+
+        return $data;
+    }
+
+    private function formOptions(): array
+    {
+        $format = fn (array $labels) => collect($labels)
+            ->map(fn (string $label, int $value) => ['value' => $value, 'label' => $label])
+            ->values()
+            ->all();
+
+        return [
+            'typeOptions' => $format(self::TYPE_LABELS),
+            'statusOptions' => $format(self::STATUS_LABELS),
+            'originOptions' => $format(self::ORIGIN_LABELS),
+        ];
+    }
+
+    private function pendingFiscalProductsQuery(?int $typeFilter = null, string $search = '')
+    {
+        return Produto::query()
+            ->forMatrix($this->resolveMatrixId(request()))
+            ->select([
+                'tb1_id',
+                'produto_id',
+                'tb1_nome',
+                'tb1_codbar',
+                'tb1_tipo',
+                'tb1_ncm',
+                'tb1_cfop',
+                'tb1_csosn',
+                'tb1_cst',
+            ])
+            ->when($typeFilter !== null, function ($query) use ($typeFilter) {
+                $query->where('tb1_tipo', $typeFilter);
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $isNumeric = ctype_digit($search);
+                $safeTerm = str_replace(['%', '_'], ['\%', '\_'], $search);
+                $likeTerm = '%' . $safeTerm . '%';
+                $numericTerm = $isNumeric ? (int) $search : null;
+                $isLongNumeric = $isNumeric && mb_strlen($search) > 4;
+
+                $query->where(function ($builder) use ($isNumeric, $isLongNumeric, $likeTerm, $numericTerm) {
+                    if ($isNumeric) {
+                        if ($isLongNumeric) {
+                            $builder->where('tb1_codbar', 'like', $likeTerm);
+                        } else {
+                            $builder->where('produto_id', $numericTerm)
+                                ->orWhere('tb1_id', $numericTerm);
+                        }
+
+                        return;
+                    }
+
+                    $builder->where('tb1_nome', 'like', $likeTerm);
+                });
+            })
+            ->where(function ($query) {
+                $query
+                    ->whereNull('tb1_ncm')
+                    ->orWhere('tb1_ncm', '=', '')
+                    ->orWhereNull('tb1_cfop')
+                    ->orWhere('tb1_cfop', '=', '')
+                    ->orWhereNull('tb1_csosn')
+                    ->orWhere('tb1_csosn', '=', '')
+                    ->orWhereNull('tb1_cst')
+                    ->orWhere('tb1_cst', '=', '');
+            })
+            ->orderBy('produto_id');
+    }
+
+    private function resolveFiscalQueueTypeFilter(Request $request): ?int
+    {
+        $type = $request->input('type');
+
+        if ($type === null || $type === '') {
+            return null;
+        }
+
+        $type = (int) $type;
+
+        return array_key_exists($type, self::TYPE_LABELS) ? $type : null;
+    }
+
+    private function resolveFiscalQueueSearch(Request $request): string
+    {
+        return trim((string) $request->input('search', ''));
+    }
+
+    private function prepareProductData(array $data, ?Produto $product = null): array
+    {
+        $type = (int) ($data['tb1_tipo'] ?? $product?->tb1_tipo ?? 0);
+
+        $data['tb1_nome'] = $this->normalizeProductName($data['tb1_nome'] ?? $product?->tb1_nome ?? '');
+        $data['tb1_codbar'] = $this->resolveProductBarcode($data, $product);
+        $data['tb1_ncm'] = $this->normalizeDigitsField($data['tb1_ncm'] ?? $product?->tb1_ncm ?? null, 8);
+        $data['tb1_cest'] = $this->normalizeDigitsField($data['tb1_cest'] ?? $product?->tb1_cest ?? null, 7);
+        $data['tb1_cfop'] = $this->normalizeDigitsField($data['tb1_cfop'] ?? $product?->tb1_cfop ?? null, 4);
+        $data['tb1_unidade_comercial'] = $this->normalizeShortCode($data['tb1_unidade_comercial'] ?? $product?->tb1_unidade_comercial ?? 'UN', 'UN');
+        $data['tb1_unidade_tributavel'] = $this->normalizeShortCode($data['tb1_unidade_tributavel'] ?? $product?->tb1_unidade_tributavel ?? 'UN', 'UN');
+        $data['tb1_origem'] = isset($data['tb1_origem']) && $data['tb1_origem'] !== ''
+            ? (int) $data['tb1_origem']
+            : (int) ($product?->tb1_origem ?? 0);
+        $data['tb1_csosn'] = $this->normalizeDigitsField($data['tb1_csosn'] ?? $product?->tb1_csosn ?? null, 4);
+        $data['tb1_cst'] = $this->normalizeDigitsField($data['tb1_cst'] ?? $product?->tb1_cst ?? null, 3);
+        $data['tb1_aliquota_icms'] = round((float) ($data['tb1_aliquota_icms'] ?? $product?->tb1_aliquota_icms ?? 0), 2);
+
+        $data['tb1_qtd'] = $type === 3
+            ? (int) ($data['tb1_qtd'] ?? $product?->tb1_qtd ?? 0)
+            : 0;
+
+        unset($data['sem_codigo_barras']);
+
+        if ($product) {
+            unset($data['produto_id']);
+        }
+
+        return $data;
+    }
+
+    private function resolveProductBarcode(array $data, ?Produto $product = null): string
+    {
+        if ($this->shouldUseOwnIdAsBarcode($data, $product)) {
+            $productId = isset($data['produto_id'])
+                ? (int) $data['produto_id']
+                : (int) ($product?->produto_id ?? $product?->tb1_id ?? 0);
+
+            return $this->formatGeneratedBarcode($productId);
+        }
+
+        return trim((string) ($data['tb1_codbar'] ?? $product?->tb1_codbar ?? ''));
+    }
+
+    private function nextSafeProductId(?int $matrixId, bool $reserveOwnIdBarcode = false): int
+    {
+        $maxExistingId = (int) Produto::query()
+            ->forMatrix($matrixId)
+            ->where('produto_id', '<=', self::MAX_SAFE_PRODUCT_ID)
+            ->where(function ($query) {
+                $query->where('produto_id', '<', self::RESERVED_PRODUCT_ID_START)
+                    ->orWhere('produto_id', '>', self::RESERVED_PRODUCT_ID_END);
+            })
+            ->max('produto_id');
+
+        $candidateId = $maxExistingId + 1;
+
+        while ($candidateId <= self::MAX_SAFE_PRODUCT_ID) {
+            if ($candidateId >= self::RESERVED_PRODUCT_ID_START && $candidateId <= self::RESERVED_PRODUCT_ID_END) {
+                $candidateId = self::RESERVED_PRODUCT_ID_END + 1;
+                continue;
+            }
+
+            if (! $reserveOwnIdBarcode) {
+                return $candidateId;
+            }
+
+            $generatedBarcode = $this->formatGeneratedBarcode($candidateId);
+
+            $barcodeInUse = Produto::query()
+                ->forMatrix($matrixId)
+                ->where('tb1_codbar', $generatedBarcode)
+                ->exists();
+
+            if (! $barcodeInUse) {
+                return $candidateId;
+            }
+
+            $candidateId++;
+        }
+
+        throw ValidationException::withMessages([
+            'tb1_nome' => 'Nao ha mais IDs seguros disponiveis para novos produtos.',
+        ]);
+    }
+
+    private function isReservedProductId(int $productId): bool
+    {
+        return $productId >= self::RESERVED_PRODUCT_ID_START
+            && $productId <= self::RESERVED_PRODUCT_ID_END;
+    }
+
+    private function ensurePriceEditingIsAuthorized(array $data, ?Produto $product, ?User $user): void
+    {
+        if (! $product || $this->canEditProductPrices($user)) {
+            return;
+        }
+
+        $errors = [];
+
+        if ($this->priceValueChanged($data['tb1_vlr_custo'] ?? null, $product->tb1_vlr_custo)) {
+            $errors['tb1_vlr_custo'] = 'Apenas Master, Gerente e Sub-Gerente podem alterar o valor de custo.';
+        }
+
+        if ($this->priceValueChanged($data['tb1_vlr_venda'] ?? null, $product->tb1_vlr_venda)) {
+            $errors['tb1_vlr_venda'] = 'Apenas Master, Gerente e Sub-Gerente podem alterar o valor de venda.';
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    private function canEditProductPrices(?User $user): bool
+    {
+        return $user instanceof User
+            && in_array((int) $user->funcao, [0, 1, 2], true);
+    }
+
+    private function priceValueChanged(mixed $requestedValue, mixed $currentValue): bool
+    {
+        if ($requestedValue === null) {
+            return false;
+        }
+
+        return abs((float) $requestedValue - (float) $currentValue) > 0.00001;
+    }
+
+    private function existingProductMessage(Produto $product): string
+    {
+        $type = self::TYPE_LABELS[(int) $product->tb1_tipo] ?? '---';
+        $status = self::STATUS_LABELS[(int) $product->tb1_status] ?? '---';
+
+        return sprintf(
+            'O codigo %d ja esta cadastrado nesta matriz. Nome: %s | Tipo: %s | Status: %s.',
+            $product->produto_id ?? $product->tb1_id,
+            $product->tb1_nome,
+            $type,
+            $status
+        );
+    }
+
+    private function shouldUseOwnIdAsBarcode(array $data, ?Produto $product = null): bool
+    {
+        $type = (int) ($data['tb1_tipo'] ?? $product?->tb1_tipo ?? 0);
+
+        if ($type === 1) {
+            return true;
+        }
+
+        return (bool) ($data['sem_codigo_barras'] ?? false);
+    }
+
+    private function resolveMatrixId(Request $request): ?int
+    {
+        $activeUnit = $request->session()->get('active_unit');
+        $unitId = is_array($activeUnit)
+            ? ($activeUnit['id'] ?? $activeUnit['tb2_id'] ?? null)
+            : (is_object($activeUnit) ? ($activeUnit->id ?? $activeUnit->tb2_id ?? null) : null);
+
+        $unitId = $unitId ?? ($request->user()?->tb2_id);
+
+        if ($unitId) {
+            $matrixId = Unidade::query()->where('tb2_id', $unitId)->value('matriz_id');
+
+            if ($matrixId) {
+                return (int) $matrixId;
+            }
+        }
+
+        $userMatrixId = (int) ($request->user()?->matriz_id ?? 0);
+
+        return $userMatrixId > 0 ? $userMatrixId : null;
+    }
+
+    private function ensureProductAccess(Produto $product, Request $request): void
+    {
+        $matrixId = $this->resolveMatrixId($request);
+
+        if ($matrixId !== null && (int) ($product->matriz_id ?? 0) !== $matrixId) {
+            abort(404);
+        }
+    }
+
+    private function formatGeneratedBarcode(int $productId): string
+    {
+        if ($productId <= 0) {
+            return '';
+        }
+
+        return (string) $productId;
+    }
+
+    private function normalizeProductName(mixed $value): string
+    {
+        $normalized = trim((string) $value);
+
+        if ($normalized === '') {
+            return '';
+        }
+
+        return mb_strtoupper($normalized, self::PRODUCT_NAME_ENCODING);
+    }
+
+    private function normalizeDigitsField(mixed $value, int $size): ?string
+    {
+        $normalized = preg_replace('/\D+/', '', (string) $value);
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        return mb_substr($normalized, 0, $size);
+    }
+
+    private function normalizeShortCode(mixed $value, string $fallback): string
+    {
+        $normalized = trim((string) $value);
+        $normalized = $normalized === '' ? $fallback : $normalized;
+
+        return mb_strtoupper($normalized, self::PRODUCT_NAME_ENCODING);
+    }
+}
