@@ -87,6 +87,14 @@ jobs:
           rm -rf artifacts/staging/public/storage
           mkdir -p artifacts/staging/public/storage
           touch artifacts/staging/public/storage/.gitkeep
+          mkdir -p artifacts/staging/storage/logs
+          mkdir -p artifacts/staging/storage/framework/cache/data
+          mkdir -p artifacts/staging/storage/framework/sessions
+          mkdir -p artifacts/staging/storage/framework/views
+          touch artifacts/staging/storage/logs/.gitkeep
+          touch artifacts/staging/storage/framework/cache/data/.gitkeep
+          touch artifacts/staging/storage/framework/sessions/.gitkeep
+          touch artifacts/staging/storage/framework/views/.gitkeep
           (cd artifacts/staging && zip -r ../app.zip .)
 
       - name: Deploy to Azure Web App
