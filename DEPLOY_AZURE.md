@@ -33,7 +33,7 @@ Em `GitHub -> Settings -> Secrets and variables -> Actions -> Secrets`, criar:
 
 Esse secret deve receber o conteudo inteiro do arquivo de Publish Profile baixado do novo Web App.
 
-O workflow atual deste projeto ja usa o nome fixo do Web App `syspdv`, entao nao precisa criar `AZURE_WEBAPP_NAME` como variable para este repositorio.
+O workflow atual deste projeto ja usa o nome fixo do Web App `SYSPDV`, entao nao precisa criar `AZURE_WEBAPP_NAME` como variable para este repositorio. O dominio publico continua sendo `https://syspdv.azurewebsites.net`.
 
 ## 4. Passos na Azure
 

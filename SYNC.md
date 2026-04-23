@@ -1,3 +1,24 @@
+## 23/04/26 - Ajuste do nome do App Service no workflow Azure
+
+Causa:
+- o Publish Profile novo identifica o Web App como `SYSPDV`;
+- o workflow estava usando `syspdv` em minusculo;
+- apesar do dominio publico ser `https://syspdv.azurewebsites.net`, a action `azure/webapps-deploy@v3` valida o `app-name` informado contra o App Service/Publish Profile e pode rejeitar quando nao bate exatamente com o nome do recurso.
+
+O que foi alterado:
+- em `.github/workflows/deploy.yml`, `AZURE_WEBAPP_NAME` foi ajustado de `syspdv` para `SYSPDV`;
+- em `DEPLOY_AZURE.md`, foi documentado que o nome fixo do Web App no workflow e `SYSPDV`, mantendo o dominio publico em minusculo.
+
+Como sincronizar no projeto espelho:
+- se o projeto espelho publicar no mesmo App Service, usar `AZURE_WEBAPP_NAME: SYSPDV`;
+- manter `APP_URL=https://syspdv.azurewebsites.net` nas variaveis de ambiente da Azure;
+- garantir que o secret `AZURE_WEBAPP_PUBLISH_PROFILE` contenha o XML completo do `SYSPDV.PublishSettings`.
+
+Arquivos alterados:
+- `.github/workflows/deploy.yml`
+- `DEPLOY_AZURE.md`
+- `SYNC.md`
+
 ## 23/04/26 - Atualizacao do App Service Azure para syspdv
 
 Causa:
