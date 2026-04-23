@@ -1,6 +1,6 @@
 # Deploy Azure do PDV
 
-Este projeto deve ser publicado como um ambiente novo, separado do `PEC83`.
+Este projeto deve ser publicado como um ambiente novo, separado do `SYSPDV`.
 
 ## 1. O que muda com Publish Profile
 
@@ -42,7 +42,7 @@ No novo `App Service` Linux:
 1. Em `Configuration -> Application settings`, adicionar:
 
 - `APP_ENV=production`
-- `APP_NAME=PDV`
+- `APP_NAME=SYSPDV`
 - `APP_DEBUG=false`
 - `APP_URL=https://syspdv.azurewebsites.net`
 - `APP_KEY=base64:...`
@@ -54,11 +54,11 @@ No novo `App Service` Linux:
 - `APP_MAINTENANCE_DRIVER=file`
 - `APP_STORAGE=/home/site/storage`
 - `DB_CONNECTION=mysql`
-- `DB_HOST=...`
+- `DB_HOST=pdv.mysql.database.azure.com`
 - `DB_PORT=3306`
-- `DB_DATABASE=...`
-- `DB_USERNAME=...`
-- `DB_PASSWORD=...`
+- `DB_DATABASE=paoecafe8302`
+- `DB_USERNAME=paoecafe83`
+- `DB_PASSWORD=6yh&UJ8ik`
 - `LOG_CHANNEL=stack`
 - `LOG_STACK=single`
 - `LOG_LEVEL=debug`
