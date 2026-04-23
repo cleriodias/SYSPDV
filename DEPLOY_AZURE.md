@@ -33,7 +33,7 @@ Em `GitHub -> Settings -> Secrets and variables -> Actions -> Secrets`, criar:
 
 Esse secret deve receber o conteudo inteiro do arquivo de Publish Profile baixado do novo Web App.
 
-O workflow atual deste projeto ja usa o nome fixo do Web App `pdv`, entao nao precisa criar `AZURE_WEBAPP_NAME` como variable para este repositorio.
+O workflow atual deste projeto ja usa o nome fixo do Web App `syspdv`, entao nao precisa criar `AZURE_WEBAPP_NAME` como variable para este repositorio.
 
 ## 4. Passos na Azure
 
@@ -44,7 +44,7 @@ No novo `App Service` Linux:
 - `APP_ENV=production`
 - `APP_NAME=PDV`
 - `APP_DEBUG=false`
-- `APP_URL=https://SEU-APP.azurewebsites.net`
+- `APP_URL=https://syspdv.azurewebsites.net`
 - `APP_KEY=base64:...`
 - `APP_TIMEZONE=America/Sao_Paulo`
 - `DB_TIMEZONE=-03:00`

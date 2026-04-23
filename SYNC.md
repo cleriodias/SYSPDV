@@ -1,3 +1,25 @@
+## 23/04/26 - Atualizacao do App Service Azure para syspdv
+
+Causa:
+- o servico de aplicacao na Azure foi alterado para `syspdv.azurewebsites.net`;
+- o workflow de deploy ainda apontava para o Web App antigo `pdv`, entao os proximos deploys do GitHub Actions poderiam ser enviados para o App Service errado.
+
+O que foi alterado:
+- em `.github/workflows/deploy.yml`, `AZURE_WEBAPP_NAME` foi atualizado de `pdv` para `syspdv`;
+- em `DEPLOY_AZURE.md`, a documentacao passou a indicar `APP_URL=https://syspdv.azurewebsites.net`;
+- a orientacao do workflow tambem foi ajustada para informar que o nome fixo atual do Web App e `syspdv`.
+
+Como sincronizar no projeto espelho:
+- aplicar a mesma troca em `.github/workflows/deploy.yml` caso o projeto espelho tambem publique no App Service `syspdv`;
+- conferir no GitHub do projeto espelho se o secret `AZURE_WEBAPP_PUBLISH_PROFILE` foi atualizado com o Publish Profile baixado do novo App Service;
+- nao copiar `.env` local entre os projetos;
+- nao copiar `pdv.PublishSettings` se ele tiver credenciais antigas ou de outro App Service; baixar um Publish Profile novo quando necessario.
+
+Arquivos alterados:
+- `.github/workflows/deploy.yml`
+- `DEPLOY_AZURE.md`
+- `SYNC.md`
+
 ## 22/04/26 - Alinhamento corrigido no campo "Arquivo do certificado"
 
 Causa:
