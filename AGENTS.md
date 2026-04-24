@@ -8,9 +8,7 @@ IMPORTANT:
 - SEMPRE EXPLIQUE A CAUSA DO PROBLEMA (QUANDO FOR A CORRECAO DE UM PROBLEMA) E MOSTRE O PLANO QUE PRETENDE FAZER E AGUARDE MINHA AUTORIZACAO. SOMENTE E NECESSARIO PEDIR AUTORIZACAO QUANDO ENVOLVER MODIFICACOES NO CODIGO (EXPLICACOES OU QUESTIONAMENTOS NAO E NECESSARIO AUTORIZAR).
 - Pense o maximo possivel e sem preca para responder, nao me importo com a quantidade de tokens ou tempo.
 - QUANDO FOR QUESTIONADO SE A ALTERACAO ESTA CORRETA, VERIFIQUE CAUTELOSAMENTE; NAO APENAS RESPONDA QUE ESTA CERTO.
-- Todas as datas devem usar o formato DD/MM/AA, tanto para preenchimento quanto para visualizacao.
-- Existe um outro sistema que é uma copia deste aqui, com excao do dominio, banco de dados, tela de login(resources/js/Pages/Welcome.jsx) 
-- EM (C:\xampp\htdocs\pec1) EXISTE UMA COPIA DESTTA APLICAÇAO, COM EXEÇAO DA CONEXAO COM O BANCO DE DADOS, DOMINIO, PAGINA PRINCIPAL(resources/js/Pages/Welcome.jsx) E TELA DE LOGIN(resources/js/Pages/Auth/Login.jsx), SEMPRE AO FINAL DO DIA EU FAÇO UM ATUALIZAÇAO DAS ALTERAÇOES REALIZADAS AQUI, EU CHAMO DE SINCRONIZAR. TODAS AS ALTERAÇOES REALIZADAS DEVEM SER DESCRITAS NO ARQUIVO SYNC.md PARA QUE A IA NO OUTRO PROJETO REPLIQUE A SINCRONIA COM MAIS FACILIDADE, ADICIONE INFORMAÇOES RELEVANTE PARA AXILIAR NA SINCRONIA, POIS ESTAO OCORRENDO PROBLEMAS DURANRE O PROCESSO, O INTUITO DESTE ARQUIVO A AUXILIAR A IA E DEIXAR A SINCRONIA O MAIS SIMPLES E FIEL POSSIVEL.
+- Todas as datas devem usar o formato DD/MM/AA, tanto para preenchimento quanto para visualizacao os inputs deve sempre abrir o calendario a selecao de data..
 
 PADRAO VISUAL OBRIGATORIO:
 - Botoes e badges de loja devem sempre usar as cores primarias predefinidas centralmente no codigo.

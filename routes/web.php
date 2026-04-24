@@ -41,6 +41,21 @@ use Inertia\Inertia;
 
 Route::get('/', function (Request $request) {
     $requestedUnitId = (int) $request->query('l', 0);
+    $units = collect();
+
+    try {
+        $units = Unidade::active()->orderBy('tb2_nome')->get([
+            'tb2_id',
+            'tb2_nome',
+            'tb2_endereco',
+            'tb2_cep',
+            'tb2_fone',
+            'tb2_localizacao',
+        ]);
+    } catch (\Throwable $exception) {
+        report($exception);
+    }
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
@@ -48,14 +63,7 @@ Route::get('/', function (Request $request) {
         'phpVersion' => PHP_VERSION,
         'selectedUnitId' => $requestedUnitId > 0 ? $requestedUnitId : null,
         'planSettings' => BillingPlanSettings::current(),
-        'units' => Unidade::active()->orderBy('tb2_nome')->get([
-            'tb2_id',
-            'tb2_nome',
-            'tb2_endereco',
-            'tb2_cep',
-            'tb2_fone',
-            'tb2_localizacao',
-        ]),
+        'units' => $units,
     ]);
 });
 
