@@ -57,7 +57,7 @@ No novo `App Service` Linux:
 - `DB_HOST=pdv.mysql.database.azure.com`
 - `DB_PORT=3306`
 - `DB_DATABASE=paoecafe8302`
-- `DB_USERNAME=paoecafe83`
+- `DB_USERNAME=pdv`
 - `DB_PASSWORD=6yh&UJ8ik`
 - `LOG_CHANNEL=stack`
 - `LOG_STACK=single`
@@ -110,7 +110,7 @@ cp /home/site/wwwroot/default /etc/nginx/sites-available/default && service ngin
 
 ```powershell
 git init -b main
-git remote add origin https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
+git remote add origin https://github.com/cleriodias/SYSPDV.git
 git add .
 git commit -m "Estrutura inicial do PDV para deploy Azure"
 git push -u origin main
