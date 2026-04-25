@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Unidade;
 use App\Support\ActiveUnitSessionData;
-use App\Support\ManagementScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,8 +11,6 @@ use Inertia\Response;
 
 class UnitSwitchController extends Controller
 {
-    private const BOSS_SWITCHABLE_ROLES = [7, 0, 1, 2, 3, 4];
-
     private const ROLE_OPTIONS = [
         7 => 'BOSS',
         0 => 'MASTER',
@@ -50,13 +47,7 @@ class UnitSwitchController extends Controller
             ->values();
 
         $roles = collect(self::ROLE_OPTIONS)
-            ->filter(function (string $label, int $value) use ($originalRole) {
-                if ($originalRole === 7) {
-                    return in_array($value, self::BOSS_SWITCHABLE_ROLES, true);
-                }
-
-                return $value >= $originalRole;
-            })
+            ->filter(fn (string $label, int $value) => $this->canUseRole($originalRole, $value))
             ->map(fn (string $label, int $value) => [
                 'value' => $value,
                 'label' => $label,
@@ -100,6 +91,10 @@ class UnitSwitchController extends Controller
             abort(403);
         }
 
+        if ((int) $user->funcao !== $role) {
+            $user->forceFill(['funcao' => $role])->save();
+        }
+
         $request->session()->put('active_unit', ActiveUnitSessionData::fromUnit($unit));
         $request->session()->put('active_role', $role);
 
@@ -108,17 +103,26 @@ class UnitSwitchController extends Controller
 
     private function allowedUnits($user)
     {
-        return ManagementScope::managedUnits(
-            $user,
-            ['tb2_id', 'tb2_nome', 'tb2_endereco', 'tb2_cnpj', 'tb2_tipo', 'matriz_id']
-        )->load('matriz:id,nome');
+        $matrixId = $this->resolveUserMatrixId($user);
+
+        if ($matrixId <= 0) {
+            return collect();
+        }
+
+        return Unidade::query()
+            ->where('matriz_id', $matrixId)
+            ->where('tb2_status', 1)
+            ->orderBy('tb2_tipo')
+            ->orderBy('tb2_nome')
+            ->get(['tb2_id', 'tb2_nome', 'tb2_endereco', 'tb2_cnpj', 'tb2_tipo', 'matriz_id'])
+            ->load('matriz:id,nome');
     }
 
     private function ensureCanSwitchUnit($user): void
     {
         $roleOriginal = $this->originalRole($user);
 
-        if (! $user || ! in_array($roleOriginal, [7, 0, 1, 2, 3], true)) {
+        if (! $user || ! array_key_exists($roleOriginal, self::ROLE_OPTIONS)) {
             abort(403);
         }
     }
@@ -130,10 +134,25 @@ class UnitSwitchController extends Controller
 
     private function canUseRole(int $originalRole, int $role): bool
     {
-        if ($originalRole === 7) {
-            return in_array($role, self::BOSS_SWITCHABLE_ROLES, true);
+        return array_key_exists($role, self::ROLE_OPTIONS) && $role <= $originalRole;
+    }
+
+    private function resolveUserMatrixId($user): int
+    {
+        $matrixId = (int) ($user?->matriz_id ?? 0);
+
+        if ($matrixId > 0) {
+            return $matrixId;
         }
 
-        return $role >= $originalRole;
+        $primaryUnitId = (int) ($user?->tb2_id ?? 0);
+
+        if ($primaryUnitId <= 0) {
+            return 0;
+        }
+
+        return (int) (Unidade::query()
+            ->where('tb2_id', $primaryUnitId)
+            ->value('matriz_id') ?? 0);
     }
 }

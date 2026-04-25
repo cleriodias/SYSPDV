@@ -9,6 +9,13 @@ IMPORTANT:
 - Pense o maximo possivel e sem preca para responder, nao me importo com a quantidade de tokens ou tempo.
 - QUANDO FOR QUESTIONADO SE A ALTERACAO ESTA CORRETA, VERIFIQUE CAUTELOSAMENTE; NAO APENAS RESPONDA QUE ESTA CERTO.
 - Todas as datas devem usar o formato DD/MM/AA, tanto para preenchimento quanto para visualizacao os inputs deve sempre abrir o calendario a selecao de data..
+- Este projeto e multiempresa. Toda regra de perfil, permissao, destinatario de chat, aviso, notificacao, visibilidade de dados e qualquer comportamento por funcao deve sempre considerar tambem o vinculo correto com matriz/unidade.
+- Nunca assumir que um perfil MASTER pode ver ou receber tudo globalmente. MASTER, gerente e qualquer outro perfil so podem participar de fluxos, avisos e acessos dentro da empresa/matriz/unidade a que estiverem vinculados.
+- Sempre que houver logica por perfil, validar cuidadosamente o escopo por matriz/unidade para impedir que usuarios de outras empresas recebam avisos, enxerguem dados ou executem acoes fora do seu contexto.
+- Perfis compartilhados com o sistema `pec-rodrigo`: `0 = MASTER`, `1 = GERENTE`, `2 = SUPERVISOR`, `3 = FUNCIONARIO`, `4 = LANCAMENTO`, `5 = RH`, `6 = LOJA`.
+- Neste projeto `pdv` existe um perfil adicional e exclusivo: `7 = BOSS`.
+- Ao implementar, validar ou consultar regras por perfil, considerar esse mapeamento completo e lembrar que o `BOSS` existe apenas neste projeto, mas continua sujeito ao escopo correto de matriz/unidade.
+- No banco atual, apos a renumeracao dos IDs da tabela users, o usuario de sistema usado para avisos e mensagens do chat ficou com id = 2. Tratar isso como particularidade do ambiente atual e nao assumir esse mesmo ID em outros bancos sem conferir.
 
 PADRAO VISUAL OBRIGATORIO:
 - Botoes e badges de loja devem sempre usar as cores primarias predefinidas centralmente no codigo.

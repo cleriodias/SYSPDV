@@ -25,12 +25,13 @@ const formatDate = (value) => {
     return formatBrazilDate(value);
 };
 
-export default function CashierClose({ activeUnit, todayClosure, lastClosure, pendingClosureDate }) {
+export default function CashierClose({ activeUnit, todayClosure, lastClosure, pendingClosureDate, hasOpenComandas }) {
     const { data, setData, post, processing, errors } = useForm({
         cash_amount: '',
         card_amount: '',
         closure_date: pendingClosureDate ?? '',
         confirm_pending: false,
+        open_comandas_observation: '',
     });
 
     const hasClosedToday = Boolean(todayClosure);
@@ -106,6 +107,34 @@ export default function CashierClose({ activeUnit, todayClosure, lastClosure, pe
                                             Confirmo fechar o caixa pendente.
                                         </label>
                                         <InputError message={errors.confirm_pending} className="mt-2" />
+                                    </div>
+                                )}
+
+                                {hasOpenComandas && (
+                                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-400/50 dark:bg-amber-900/10 dark:text-amber-100">
+                                        <p className="font-semibold">
+                                            Existem comandas da lanchonete em aberto.
+                                        </p>
+                                        <p className="mt-1">
+                                            O caixa pode ser fechado com esta pendencia, mas a observacao com o motivo passa a ser obrigatoria.
+                                        </p>
+                                        <div className="mt-3">
+                                            <label
+                                                htmlFor="open_comandas_observation"
+                                                className="text-sm font-medium text-amber-900 dark:text-amber-100"
+                                            >
+                                                Observacao da pendencia
+                                            </label>
+                                            <textarea
+                                                id="open_comandas_observation"
+                                                value={data.open_comandas_observation}
+                                                onChange={(event) => setData('open_comandas_observation', event.target.value)}
+                                                rows={4}
+                                                className="mt-1 w-full rounded-xl border border-amber-300 bg-white px-4 py-2 text-gray-800 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 dark:border-amber-500/60 dark:bg-gray-800 dark:text-gray-100"
+                                                placeholder="Descreva por que o caixa esta sendo fechado com comanda em aberto"
+                                            />
+                                            <InputError message={errors.open_comandas_observation} className="mt-2" />
+                                        </div>
                                     </div>
                                 )}
                                 <div>

@@ -43,17 +43,7 @@ class MatrixController extends Controller
     public function edit(Matriz $matriz): Response
     {
         $this->ensureBoss();
-        $matrixUnit = $matriz->units()
-            ->where('tb2_tipo', 'matriz')
-            ->first([
-                'tb2_id',
-                'tb2_nome',
-                'tb2_endereco',
-                'tb2_cep',
-                'tb2_fone',
-                'tb2_cnpj',
-                'tb2_localizacao',
-            ]);
+        $matrixUnit = $this->resolveMatrixUnit($matriz, true);
         $branchUnits = $matriz->units()
             ->where('tb2_tipo', 'filial')
             ->orderBy('tb2_nome')
@@ -163,13 +153,7 @@ class MatrixController extends Controller
             'plano_contratado_em' => ['nullable', 'date_format:Y-m-d'],
         ]);
 
-        $matrixUnit = $matriz->units()
-            ->where('tb2_tipo', 'matriz')
-            ->first();
-
-        if (! $matrixUnit) {
-            abort(404, 'Unidade matriz nao encontrada.');
-        }
+        $matrixUnit = $this->resolveMatrixUnit($matriz);
 
         DB::transaction(function () use ($data, $matriz, $matrixUnit) {
             $contractedAt = $data['plano_contratado_em']
@@ -231,6 +215,69 @@ class MatrixController extends Controller
         if (! ManagementScope::isBoss(request()->user())) {
             abort(403, 'Acesso negado.');
         }
+    }
+
+    private function resolveMatrixUnit(Matriz $matriz, bool $limitColumns = false): Unidade
+    {
+        $columns = $limitColumns
+            ? [
+                'tb2_id',
+                'tb2_nome',
+                'tb2_endereco',
+                'tb2_cep',
+                'tb2_fone',
+                'tb2_cnpj',
+                'tb2_localizacao',
+            ]
+            : ['*'];
+
+        $matrixUnit = $matriz->units()
+            ->where('tb2_tipo', 'matriz')
+            ->first($columns);
+
+        if ($matrixUnit) {
+            return $matrixUnit;
+        }
+
+        $fallbackUnit = $matriz->units()
+            ->orderBy('tb2_id')
+            ->first();
+
+        if ($fallbackUnit) {
+            $fallbackUnit->fill([
+                'tb2_tipo' => 'matriz',
+                'tb2_status' => (int) ($fallbackUnit->tb2_status ?? $matriz->status ?? 1),
+                'pagamento_ativo' => (bool) ($fallbackUnit->pagamento_ativo ?? $matriz->pagamento_ativo ?? true),
+                'login_liberado' => (bool) ($fallbackUnit->login_liberado ?? true),
+            ])->save();
+
+            return $this->reloadMatrixUnit($fallbackUnit, $columns);
+        }
+
+        $createdUnit = Unidade::create([
+            'matriz_id' => $matriz->id,
+            'tb2_tipo' => 'matriz',
+            'tb2_nome' => $matriz->nome,
+            'tb2_endereco' => 'Endereco nao informado',
+            'tb2_cep' => '00000-000',
+            'tb2_fone' => '(00) 00000-0000',
+            'tb2_cnpj' => preg_replace('/\D+/', '', (string) ($matriz->cnpj ?? '')) ?: '00000000000000',
+            'tb2_localizacao' => 'https://maps.google.com/?q=' . rawurlencode($matriz->nome),
+            'tb2_status' => (int) ($matriz->status ?? 1),
+            'plano_mensal_valor' => $matriz->plano_mensal_valor,
+            'plano_contratado_em' => $matriz->plano_contratado_em,
+            'pagamento_ativo' => (bool) ($matriz->pagamento_ativo ?? true),
+            'login_liberado' => true,
+        ]);
+
+        return $this->reloadMatrixUnit($createdUnit, $columns);
+    }
+
+    private function reloadMatrixUnit(Unidade $unit, array $columns): Unidade
+    {
+        return Unidade::query()
+            ->whereKey($unit->getKey())
+            ->firstOrFail($columns);
     }
 
     private function generateUniqueSlug(string $name, ?Matriz $ignore = null): string

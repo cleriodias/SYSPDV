@@ -13,14 +13,18 @@ class ApplyActiveRole
 
         if ($user) {
             $originalRole = (int) ($user->funcao_original ?? $user->funcao ?? 0);
-            $activeRole = $request->session()->get('active_role');
-            $activeRole = is_numeric($activeRole) ? (int) $activeRole : $originalRole;
+            $activeRole = (int) ($user->funcao ?? $originalRole);
 
             $maximumRole = $originalRole === 7 ? 7 : 6;
             $minimumRole = $originalRole === 7 ? 0 : $originalRole;
 
             if ($activeRole < $minimumRole || $activeRole > $maximumRole) {
                 $activeRole = $originalRole;
+                if ((int) $user->funcao !== $activeRole) {
+                    $user->forceFill(['funcao' => $activeRole])->save();
+                }
+                $request->session()->put('active_role', $activeRole);
+            } else {
                 $request->session()->put('active_role', $activeRole);
             }
 

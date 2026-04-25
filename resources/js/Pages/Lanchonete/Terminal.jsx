@@ -82,6 +82,11 @@ export default function Terminal() {
     const [suggestions, setSuggestions] = useState([]);
     const [searchLoading, setSearchLoading] = useState(false);
     const [searchError, setSearchError] = useState('');
+    const [removeModalOpen, setRemoveModalOpen] = useState(false);
+    const [removeReason, setRemoveReason] = useState('');
+    const [removeError, setRemoveError] = useState('');
+    const [pendingRemovalItemId, setPendingRemovalItemId] = useState(null);
+    const [removeProcessing, setRemoveProcessing] = useState(false);
     const searchDebounce = useRef(null);
 
     const accessRef = useRef(null);
@@ -140,14 +145,20 @@ export default function Terminal() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    Accept: 'application/json',
                     'X-CSRF-Token': csrfToken,
                 },
                 body: JSON.stringify({ cod_acesso: accessCode.trim() }),
             });
 
             if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                setAccessError(data?.message ?? 'Codigo invalido.');
+                const data = await response.json().catch(() => null);
+
+                if (response.status === 419) {
+                    setAccessError('Sua sessao expirou. Recarregue a pagina e tente novamente.');
+                } else {
+                    setAccessError(data?.message ?? `Falha ao validar codigo (${response.status}).`);
+                }
                 setAccessUser(null);
                 return;
             }
@@ -156,7 +167,7 @@ export default function Terminal() {
             setAccessUser(data);
             goToStep(2);
         } catch (err) {
-            setAccessError('Falha ao validar codigo. Tente novamente.');
+            setAccessError('Falha ao validar codigo de acesso. Tente novamente.');
             setAccessUser(null);
         }
     };
@@ -359,6 +370,7 @@ export default function Terminal() {
             setSearchError('Informe a comanda antes de ajustar itens.');
             return;
         }
+
         try {
             const resp = await fetch(
                 route('sales.comandas.update-item', { codigo: comanda, productId: id }),
@@ -368,18 +380,34 @@ export default function Terminal() {
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': csrfToken,
                     },
-                    body: JSON.stringify({ quantity, access_user_id: accessUser?.id ?? auth?.user?.id }),
+                    body: JSON.stringify({
+                        quantity,
+                        access_user_id: accessUser?.id ?? auth?.user?.id,
+                        removal_reason: quantity === 0 ? removeReason.trim() : undefined,
+                    }),
                 },
             );
             if (!resp.ok) {
                 const data = await resp.json().catch(() => ({}));
-                setSearchError(data?.message ?? 'Falha ao atualizar item.');
+                const nextError = data?.errors?.removal_reason?.[0] ?? data?.message ?? 'Falha ao atualizar item.';
+                if (quantity === 0) {
+                    setRemoveError(nextError);
+                } else {
+                    setSearchError(nextError);
+                }
                 return;
             }
             const data = await resp.json();
             setComandaItems(Array.isArray(data?.items) ? data.items.map(normalizeComandaItem) : []);
+            if (quantity === 0) {
+                closeRemoveModal();
+            }
         } catch (err) {
-            setSearchError('Falha ao atualizar item.');
+            if (quantity === 0) {
+                setRemoveError('Falha ao remover item.');
+            } else {
+                setSearchError('Falha ao atualizar item.');
+            }
         }
     };
 
@@ -392,11 +420,45 @@ export default function Terminal() {
     const decrementItem = (id) => {
         const current = comandaItems.find((item) => item.line_id === id);
         const next = Math.max(0, (current?.quantity ?? 0) - 1);
+        if (next === 0) {
+            openRemoveModal(id);
+            return;
+        }
         updateQuantity(id, next);
     };
 
     const removeItem = (id) => {
-        updateQuantity(id, 0);
+        openRemoveModal(id);
+    };
+
+    const openRemoveModal = (id) => {
+        setPendingRemovalItemId(id);
+        setRemoveReason('');
+        setRemoveError('');
+        setRemoveModalOpen(true);
+    };
+
+    const closeRemoveModal = () => {
+        setPendingRemovalItemId(null);
+        setRemoveReason('');
+        setRemoveError('');
+        setRemoveModalOpen(false);
+        setRemoveProcessing(false);
+    };
+
+    const confirmRemoveItem = async () => {
+        if (!pendingRemovalItemId) {
+            return;
+        }
+
+        if (!removeReason.trim()) {
+            setRemoveError('Informe o motivo da remocao do item.');
+            return;
+        }
+
+        setRemoveProcessing(true);
+        await updateQuantity(pendingRemovalItemId, 0);
+        setRemoveProcessing(false);
     };
 
     return (
@@ -651,6 +713,53 @@ export default function Terminal() {
                     </div>
                 )}
             </main>
+
+            {removeModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                    <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                            Confirmar remocao do item
+                        </h3>
+                        <p className="mt-2 text-sm text-gray-600">
+                            Informe o motivo da remocao. Esta informacao sera enviada pelo bate-papo do sistema para os usuarios MASTER, gerentes da unidade e para o proprio executor.
+                        </p>
+                        <div className="mt-4">
+                            <label htmlFor="remove_reason" className="text-sm font-medium text-gray-700">
+                                Motivo da remocao
+                            </label>
+                            <textarea
+                                id="remove_reason"
+                                rows={4}
+                                value={removeReason}
+                                onChange={(event) => setRemoveReason(event.target.value)}
+                                className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-2 text-gray-800 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                                placeholder="Descreva o motivo da remocao deste item"
+                            />
+                            {removeError && (
+                                <p className="mt-2 text-sm font-semibold text-red-600">{removeError}</p>
+                            )}
+                        </div>
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={closeRemoveModal}
+                                disabled={removeProcessing}
+                                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmRemoveItem}
+                                disabled={removeProcessing}
+                                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-700 disabled:opacity-50"
+                            >
+                                {removeProcessing ? 'Removendo...' : 'Confirmar remocao'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

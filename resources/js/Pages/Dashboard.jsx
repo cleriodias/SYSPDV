@@ -415,7 +415,9 @@ export default function Dashboard() {
         () => items.reduce((sum, item) => sum + (item.quantity ?? 0), 0),
         [items],
     );
+    const isMaster = effectiveRole === 0;
     const isCashier = effectiveRole === 3;
+    const canLaunchSales = isCashier;
     const pendingComandas = useMemo(() => {
         const list = cashierRestrictions?.pending_comandas;
         if (!Array.isArray(list)) {
@@ -1732,6 +1734,25 @@ export default function Dashboard() {
         addItemFromProduct(product, { preserveInput: true });
     };
 
+    const restrictedHeaderContent = (
+        <div className="space-y-1">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
+                Dashboard
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-300">
+                Apenas o perfil CAIXA pode realizar lancamentos.
+            </p>
+        </div>
+    );
+
+    const masterShortcutLinks = [
+        { label: 'Usuarios', icon: 'bi-people-fill', href: route('users.index') },
+        { label: 'Unidades', icon: 'bi-building', href: route('units.index') },
+        { label: 'Relatorios', icon: 'bi-clipboard-data', href: route('reports.index') },
+        { label: 'Contra-cheque', icon: 'bi-receipt-cutoff', href: route('settings.contra-cheque') },
+        { label: 'AnyDesck', icon: 'bi-pc-display', href: route('settings.anydesck') },
+    ];
+
     const headerContent = (
         <div className="space-y-2">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
@@ -1807,6 +1828,65 @@ export default function Dashboard() {
             </div>
         </div>
     );
+
+    if (!canLaunchSales) {
+        return (
+            <AuthenticatedLayout header={restrictedHeaderContent} headerClassName="py-1">
+                <Head title="Dashboard" />
+
+                <div className="pt-3 pb-8">
+                    <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                        <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
+                            <div className="p-6 text-gray-900 dark:text-gray-100">
+                                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900 dark:border-amber-400/40 dark:bg-amber-900/20 dark:text-amber-100">
+                                    <p className="font-semibold">
+                                        Apenas o perfil CAIXA pode fazer lancamentos no Dashboard.
+                                    </p>
+                                    <p className="mt-1">
+                                        Para registrar vendas, troque o perfil atual para CAIXA na tela de troca de funcao.
+                                    </p>
+                                </div>
+                                {isMaster && (
+                                    <div className="mt-6">
+                                        <div className="mb-3">
+                                            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                                                Acessos do perfil MASTER
+                                            </h3>
+                                            <p className="text-sm text-gray-500 dark:text-gray-300">
+                                                Utilize estes atalhos para as areas administrativas disponiveis no Dashboard.
+                                            </p>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                                            {masterShortcutLinks.map((link) => (
+                                                <Link
+                                                    key={link.href}
+                                                    href={link.href}
+                                                    className="flex items-center gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-4 text-left shadow-sm transition hover:border-indigo-400 hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/30"
+                                                >
+                                                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-lg text-white shadow">
+                                                        <i className={link.icon} aria-hidden="true"></i>
+                                                    </span>
+                                                    <span className="min-w-0">
+                                                        <span className="block text-sm font-semibold text-indigo-900 dark:text-indigo-100">
+                                                            {link.label}
+                                                        </span>
+                                                        <span className="block text-xs text-indigo-700 dark:text-indigo-200">
+                                                            Abrir
+                                                        </span>
+                                                    </span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </AuthenticatedLayout>
+        );
+    }
+
     return (
         <AuthenticatedLayout header={headerContent} headerClassName="py-1">
             <Head title="Dashboard" />

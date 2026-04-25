@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashierClosure;
+use App\Models\ChatMessage;
 use App\Models\NotaFiscal;
 use App\Models\Produto;
 use App\Models\Unidade;
@@ -14,11 +15,14 @@ use App\Support\FiscalNfceTransmissionService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class SaleController extends Controller
 {
+    private const SYSTEM_EMAIL = 'sistema.chat@pec.local';
+
     public function openComandas(Request $request): JsonResponse
     {
         return response()->json($this->buildOpenComandasPayload($request));
@@ -799,6 +803,7 @@ class SaleController extends Controller
         $validated = $request->validate([
             'quantity' => ['required', 'integer', 'min:0', 'max:1000'],
             'access_user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'removal_reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $lineData = $this->parseSaleItemKey($lineKey);
@@ -832,6 +837,25 @@ class SaleController extends Controller
         }
 
         if ($validated['quantity'] === 0) {
+            $removalReason = trim((string) ($validated['removal_reason'] ?? ''));
+
+            if ($removalReason === '') {
+                throw ValidationException::withMessages([
+                    'removal_reason' => 'Informe o motivo da remocao do item.',
+                ]);
+            }
+
+            $executor = $this->resolveRemovalExecutor($validated['access_user_id'] ?? null, $request->user());
+            $removedAt = now();
+
+            $this->notifyComandaItemRemoval(
+                unitId: $unitId,
+                executor: $executor,
+                record: $record,
+                removalReason: $removalReason,
+                removedAt: $removedAt,
+            );
+
             $record->delete();
         } else {
             $record->update([
@@ -1189,6 +1213,127 @@ class SaleController extends Controller
     private function formatCurrencyForMessage(float $value): string
     {
         return 'R$ ' . number_format($value, 2, ',', '.');
+    }
+
+    private function resolveRemovalExecutor(?int $accessUserId, ?User $fallbackUser): User
+    {
+        if ($accessUserId) {
+            $executor = User::find($accessUserId);
+
+            if ($executor) {
+                return $executor;
+            }
+        }
+
+        if ($fallbackUser) {
+            return $fallbackUser;
+        }
+
+        throw ValidationException::withMessages([
+            'access_user_id' => 'Usuario executor da remocao nao foi encontrado.',
+        ]);
+    }
+
+    private function notifyComandaItemRemoval(?int $unitId, User $executor, Venda $record, string $removalReason, Carbon $removedAt): void
+    {
+        $resolvedUnitId = (int) ($unitId ?? $record->id_unidade ?? 0);
+        $systemUser = $this->ensureSystemUser($resolvedUnitId > 0 ? $resolvedUnitId : null);
+        $recipientIds = User::query()
+            ->where(function ($query) use ($resolvedUnitId) {
+                $query->where('funcao_original', 0)
+                    ->orWhere(function ($managerQuery) use ($resolvedUnitId) {
+                        $managerQuery->where('funcao_original', 1)
+                            ->where(function ($unitQuery) use ($resolvedUnitId) {
+                                $unitQuery->where('tb2_id', $resolvedUnitId)
+                                    ->orWhereHas('units', function ($relationQuery) use ($resolvedUnitId) {
+                                        $relationQuery->where('tb2_unidades.tb2_id', $resolvedUnitId);
+                                    });
+                            });
+                    });
+            })
+            ->pluck('id')
+            ->push($executor->id)
+            ->unique()
+            ->values();
+
+        $message = $this->buildComandaItemRemovalMessage($executor, $record, $removalReason, $removedAt);
+
+        foreach ($recipientIds as $recipientId) {
+            ChatMessage::create([
+                'sender_id' => $systemUser->id,
+                'recipient_id' => (int) $recipientId,
+                'sender_role' => (int) $systemUser->funcao,
+                'sender_unit_id' => $resolvedUnitId > 0 ? $resolvedUnitId : null,
+                'message' => $message,
+            ]);
+        }
+    }
+
+    private function buildComandaItemRemovalMessage(User $executor, Venda $record, string $removalReason, Carbon $removedAt): string
+    {
+        $includedAt = $record->created_at instanceof Carbon
+            ? $record->created_at
+            : Carbon::parse($record->created_at ?? $record->data_hora);
+        $minutesDifference = max(0, $includedAt->diffInMinutes($removedAt));
+
+        $lines = [
+            '[b]Aviso automatico do sistema - exclusao de item da comanda[/b]',
+            'Registro gerado automaticamente pelo terminal da lanchonete.',
+            sprintf('Responsavel pela exclusao: %s', $executor->name),
+            sprintf('Comanda: %s', $record->id_comanda ? (string) $record->id_comanda : '---'),
+            sprintf('Item removido: %s', (string) $record->produto_nome),
+            sprintf('Quantidade removida: %d', (int) $record->quantidade),
+            sprintf('Valor unitario: %s', $this->formatCurrencyForMessage((float) $record->valor_unitario)),
+            sprintf('Data e hora da inclusao: %s', $includedAt->format('d/m/y H:i:s')),
+            sprintf('Data e hora da exclusao: %s', $removedAt->format('d/m/y H:i:s')),
+            sprintf('Diferenca em minutos: %d', $minutesDifference),
+            sprintf('Motivo informado: %s', $removalReason),
+        ];
+
+        return implode("\n", $lines);
+    }
+
+    private function ensureSystemUser(?int $activeUnitId = null): User
+    {
+        $activeUnitIds = Unidade::active()
+            ->orderBy('tb2_id')
+            ->pluck('tb2_id')
+            ->map(fn ($value) => (int) $value)
+            ->values();
+
+        $primaryUnitId = $activeUnitId && $activeUnitId > 0
+            ? $activeUnitId
+            : (int) ($activeUnitIds->first() ?? 0);
+
+        $systemUser = User::query()->firstOrCreate(
+            ['email' => self::SYSTEM_EMAIL],
+            [
+                'name' => 'Sistema',
+                'password' => Str::random(32),
+                'funcao' => 1,
+                'funcao_original' => 1,
+                'hr_ini' => '00:00',
+                'hr_fim' => '23:59',
+                'salario' => 0,
+                'vr_cred' => 0,
+                'tb2_id' => $primaryUnitId > 0 ? $primaryUnitId : null,
+                'cod_acesso' => Str::upper(Str::random(6)),
+            ]
+        );
+
+        $nextPrimaryUnitId = $primaryUnitId > 0
+            ? $primaryUnitId
+            : (int) ($systemUser->tb2_id ?? 0);
+
+        if ($nextPrimaryUnitId > 0 && (int) $systemUser->tb2_id !== $nextPrimaryUnitId) {
+            $systemUser->forceFill(['tb2_id' => $nextPrimaryUnitId])->save();
+        }
+
+        if ($activeUnitIds->isNotEmpty()) {
+            $systemUser->units()->sync($activeUnitIds->all());
+        }
+
+        return $systemUser->fresh(['units']) ?? $systemUser;
     }
 
     private function normalizeFiscalConsumerInput(array $consumer): array

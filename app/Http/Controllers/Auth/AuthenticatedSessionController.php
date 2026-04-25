@@ -42,12 +42,17 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         $user = $request->user();
+        if ($user->funcao_original === null) {
+            $user->forceFill(['funcao_original' => $user->funcao])->save();
+        }
+
         $funcaoOriginal = $user->funcao_original ?? $user->funcao;
+        $funcaoAtual = (int) ($user->funcao ?? $funcaoOriginal);
         $unitId = (int) ($user->tb2_id ?? 0);
 
         if (ManagementScope::isBoss($user)) {
             $request->session()->forget('active_unit');
-            $request->session()->put('active_role', 7);
+            $request->session()->put('active_role', $funcaoAtual);
 
             return redirect()->intended(route('dashboard', absolute: false));
         }
@@ -107,12 +112,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         $request->session()->put('active_unit', ActiveUnitSessionData::fromUnit($selectedUnit));
-
-        if ($user->funcao_original === null) {
-            $user->forceFill(['funcao_original' => $user->funcao])->save();
-        }
-
-        $request->session()->put('active_role', (int) ($user->funcao_original ?? $user->funcao));
+        $request->session()->put('active_role', $funcaoAtual);
         app(PaymentControlNotificationService::class)->notifyUserOnLogin($user, (int) $selectedUnit->tb2_id);
 
         return redirect()->intended(route('dashboard', absolute: false));

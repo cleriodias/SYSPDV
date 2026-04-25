@@ -306,7 +306,12 @@ require __DIR__.'/auth.php';
     Route::get('/matrizes', [MatrixController::class, 'index'])->name('matrizes.index');
     Route::get('/matrizes/create', [MatrixController::class, 'create'])->name('matrizes.create');
     Route::post('/matrizes', [MatrixController::class, 'store'])->name('matrizes.store');
-    Route::get('/matrizes/{matriz}/edit', [MatrixController::class, 'edit'])->name('matrizes.edit');
-    Route::put('/matrizes/{matriz}', [MatrixController::class, 'update'])->name('matrizes.update');
+    Route::get('/matrizes/{matriz}/edit', [MatrixController::class, 'edit'])
+        ->missing(fn () => redirect()->route('matrizes.index')->with('error', 'Matriz nao encontrada.'))
+        ->name('matrizes.edit');
+    Route::put('/matrizes/{matriz}', [MatrixController::class, 'update'])
+        ->missing(fn () => redirect()->route('matrizes.index')->with('error', 'Matriz nao encontrada.'))
+        ->name('matrizes.update');
     Route::put('/matrizes/{matriz}/filiais/{unit}/mensalidade', [MatrixController::class, 'updateBranchMonthlyValue'])
+        ->missing(fn () => redirect()->route('matrizes.index')->with('error', 'Matriz nao encontrada.'))
         ->name('matrizes.branches.monthly-value.update');

@@ -16,6 +16,7 @@ class CashierClosure extends Model
         'unit_name',
         'cash_amount',
         'card_amount',
+        'open_comandas_observation',
         'master_cash_amount',
         'master_card_amount',
         'closed_date',
