@@ -651,7 +651,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                             {canSwitchUnit && (
                                 <Link
                                     href={route('reports.switch-unit')}
-                                    className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-100 dark:border-gray-600 dark:text-gray-100"
+                                    className="inline-flex items-center gap-2 rounded-full border border-sky-500 bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600 hover:border-sky-600 dark:border-sky-300 dark:bg-sky-300 dark:text-sky-950 dark:hover:border-sky-200 dark:hover:bg-sky-200"
                                 >
                                     <i className="bi bi-arrow-left-right" aria-hidden="true"></i>
                                     Trocar
@@ -660,7 +660,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                             {canSeeOnline ? (
                                 <Link
                                     href={route('online.index')}
-                                    className="relative inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-indigo-400 hover:text-indigo-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-indigo-300"
+                                    className="relative inline-flex items-center rounded-full border border-indigo-500 bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:border-indigo-600 hover:bg-indigo-600 dark:border-indigo-300 dark:bg-indigo-300 dark:text-indigo-950 dark:hover:border-indigo-200 dark:hover:bg-indigo-200"
                                 >
                                     <span>{user.name}</span>
                                     {unreadOnlineTotal > 0 && (
@@ -670,7 +670,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                                     )}
                                 </Link>
                             ) : (
-                                <div className="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+                                <div className="inline-flex items-center rounded-full border border-indigo-500 bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm dark:border-indigo-300 dark:bg-indigo-300 dark:text-indigo-950">
                                     {user.name}
                                 </div>
                             )}
@@ -680,9 +680,9 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                                         <span className="inline-flex rounded-md">
                                             <button
                                                 type="button"
-                                                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 shadow-sm transition duration-150 ease-in-out hover:border-indigo-400 hover:text-gray-700 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
+                                                className="inline-flex items-center gap-2 rounded-full border border-indigo-500 bg-indigo-500 px-3 py-2 text-sm font-medium leading-4 text-white shadow-sm transition duration-150 ease-in-out hover:border-indigo-600 hover:bg-indigo-600 focus:outline-none dark:border-indigo-300 dark:bg-indigo-300 dark:text-indigo-950 dark:hover:border-indigo-200 dark:hover:bg-indigo-200"
                                             >
-                                                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                                                <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white dark:bg-white/70 dark:text-indigo-950">
                                                     {roleLabels[effectiveRole] ?? '---'}
                                                 </span>
 
