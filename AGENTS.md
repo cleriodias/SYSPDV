@@ -15,6 +15,7 @@ IMPORTANT:
 - Perfis compartilhados com o sistema `pec-rodrigo`: `0 = MASTER`, `1 = GERENTE`, `2 = SUPERVISOR`, `3 = FUNCIONARIO`, `4 = LANCAMENTO`, `5 = RH`, `6 = LOJA`.
 - Neste projeto `pdv` existe um perfil adicional e exclusivo: `7 = BOSS`.
 - Ao implementar, validar ou consultar regras por perfil, considerar esse mapeamento completo e lembrar que o `BOSS` existe apenas neste projeto, mas continua sujeito ao escopo correto de matriz/unidade.
+- O sistema `pec-rodrigo` so deve ser usado como referencia quando o usuario citar explicitamente esse projeto. Se o usuario nao citar o `pec-rodrigo`, ignorar o que existe la e considerar apenas o comportamento e os arquivos deste projeto `pdv`.
 - No banco atual, apos a renumeracao dos IDs da tabela users, o usuario de sistema usado para avisos e mensagens do chat ficou com id = 2. Tratar isso como particularidade do ambiente atual e nao assumir esse mesmo ID em outros bancos sem conferir.
 
 PADRAO VISUAL OBRIGATORIO:

@@ -8,7 +8,6 @@ use App\Models\CashierClosure;
 use App\Models\OnlineUser;
 use App\Models\Unidade;
 use App\Support\ActiveUnitSessionData;
-use App\Support\ManagementScope;
 use App\Support\PaymentControlNotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -46,13 +45,18 @@ class AuthenticatedSessionController extends Controller
             $user->forceFill(['funcao_original' => $user->funcao])->save();
         }
 
-        $funcaoOriginal = $user->funcao_original ?? $user->funcao;
-        $funcaoAtual = (int) ($user->funcao ?? $funcaoOriginal);
+        $funcaoOriginal = (int) ($user->funcao_original ?? $user->funcao);
+
+        if ((int) $user->funcao !== $funcaoOriginal) {
+            $user->forceFill(['funcao' => $funcaoOriginal])->save();
+            $user->setAttribute('funcao', $funcaoOriginal);
+        }
+
         $unitId = (int) ($user->tb2_id ?? 0);
 
-        if (ManagementScope::isBoss($user)) {
+        if ($funcaoOriginal === 7) {
             $request->session()->forget('active_unit');
-            $request->session()->put('active_role', $funcaoAtual);
+            $request->session()->put('active_role', $funcaoOriginal);
 
             return redirect()->intended(route('dashboard', absolute: false));
         }
@@ -112,7 +116,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         $request->session()->put('active_unit', ActiveUnitSessionData::fromUnit($selectedUnit));
-        $request->session()->put('active_role', $funcaoAtual);
+        $request->session()->put('active_role', $funcaoOriginal);
         app(PaymentControlNotificationService::class)->notifyUserOnLogin($user, (int) $selectedUnit->tb2_id);
 
         return redirect()->intended(route('dashboard', absolute: false));
