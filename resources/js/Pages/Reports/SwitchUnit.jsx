@@ -17,7 +17,19 @@ const withAlpha = (hexColor, alpha) => {
 };
 
 const getRoleOptionStyle = (item, selected) => {
-    const roleStyle = getRoleBadgeStyle(item.label ?? item.name ?? '');
+    const roleLabel = String(item.label ?? item.name ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[-_/]+/g, ' ')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toUpperCase();
+
+    if (!['MASTER', 'CAIXA', 'LANCHONETE'].includes(roleLabel)) {
+        return undefined;
+    }
+
+    const roleStyle = getRoleBadgeStyle(roleLabel);
 
     if (selected) {
         return {
