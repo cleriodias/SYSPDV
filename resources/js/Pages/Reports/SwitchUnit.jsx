@@ -1,5 +1,38 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { getRoleBadgeStyle } from '@/Utils/brandBadges';
 import { Head, useForm } from '@inertiajs/react';
+
+const withAlpha = (hexColor, alpha) => {
+    const normalized = String(hexColor ?? '').replace('#', '');
+
+    if (normalized.length !== 6) {
+        return hexColor;
+    }
+
+    const red = parseInt(normalized.slice(0, 2), 16);
+    const green = parseInt(normalized.slice(2, 4), 16);
+    const blue = parseInt(normalized.slice(4, 6), 16);
+
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};
+
+const getRoleOptionStyle = (item, selected) => {
+    const roleStyle = getRoleBadgeStyle(item.label ?? item.name ?? '');
+
+    if (selected) {
+        return {
+            backgroundColor: roleStyle.backgroundColor,
+            borderColor: roleStyle.borderColor,
+            color: roleStyle.color,
+        };
+    }
+
+    return {
+        backgroundColor: withAlpha(roleStyle.backgroundColor, 0.12),
+        borderColor: withAlpha(roleStyle.borderColor, 0.35),
+        color: roleStyle.borderColor,
+    };
+};
 
 export default function SwitchUnit({
     units = [],
@@ -63,29 +96,48 @@ export default function SwitchUnit({
         );
     };
 
-    const renderOption = (item, index, selected, onSelect, valueKey = 'id') => {
+    const renderOption = (item, index, selected, onSelect, valueKey = 'id', variant = 'unit') => {
         const isCurrent = item.active;
+        const isRole = variant === 'role';
+        const optionStyle = isRole ? getRoleOptionStyle(item, selected) : undefined;
 
         return (
             <button
                 key={item[valueKey]}
                 type="button"
                 onClick={() => onSelect(item[valueKey])}
+                style={optionStyle}
                 className={`relative flex min-h-[34px] items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-left text-xs font-semibold shadow-sm transition ${
-                    selected
+                    isRole
+                        ? selected
+                            ? 'ring-2 ring-offset-1 ring-slate-200 dark:ring-slate-700'
+                            : 'hover:brightness-95 dark:hover:brightness-110'
+                        : selected
                         ? 'border-slate-900 bg-slate-50 text-slate-900 ring-2 ring-slate-200 dark:border-slate-200 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-700'
                         : 'border-gray-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:border-slate-400 dark:hover:bg-gray-800'
                 }`}
             >
                 <i
                     className={`bi bi-arrow-left-right text-xs ${
-                        selected ? 'text-slate-700 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'
+                        isRole
+                            ? selected
+                                ? 'text-white'
+                                : 'opacity-80'
+                            : selected
+                                ? 'text-slate-700 dark:text-slate-200'
+                                : 'text-slate-500 dark:text-slate-400'
                     }`}
                     aria-hidden="true"
                 ></i>
                 <span className="block flex-1 truncate pr-10 leading-4">{item.name ?? item.label}</span>
                 {isCurrent && (
-                    <span className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-600 dark:bg-slate-700 dark:text-slate-100">
+                    <span
+                        className={`absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+                            isRole && selected
+                                ? 'bg-white/20 text-white'
+                                : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-100'
+                        }`}
+                    >
                         Atual
                     </span>
                 )}
@@ -138,6 +190,7 @@ export default function SwitchUnit({
                                         Number(data.role) === role.value,
                                         (value) => setData('role', value),
                                         'value',
+                                        'role',
                                     ),
                                 )}
                             </div>
