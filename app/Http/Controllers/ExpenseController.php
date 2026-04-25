@@ -6,6 +6,7 @@ use App\Models\Expense;
 use App\Models\Supplier;
 use App\Models\Unidade;
 use App\Support\ManagementScope;
+use App\Support\ReportUnitScope;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,7 +43,7 @@ class ExpenseController extends Controller
             ->orderByDesc('id');
 
         if ($canFilterList) {
-            $filterUnits = ManagementScope::managedUnits($user, ['tb2_id', 'tb2_nome'])
+            $filterUnits = ReportUnitScope::availableUnits($user, ['tb2_id', 'tb2_nome'])
                 ->map(fn (Unidade $unit) => [
                     'id' => (int) $unit->tb2_id,
                     'name' => $unit->tb2_nome,

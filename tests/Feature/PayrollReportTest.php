@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Produto;
+use App\Models\Matriz;
 use App\Models\SalaryAdvance;
 use App\Models\Unidade;
 use App\Models\User;
@@ -242,7 +243,75 @@ class PayrollReportTest extends TestCase
         );
     }
 
-    private function makeUnit(string $name): Unidade
+    public function test_master_sees_only_units_from_its_matrix_in_payroll_filters(): void
+    {
+        $matrixA = Matriz::create([
+            'nome' => 'Matriz Folha A',
+            'slug' => 'matriz-folha-a',
+            'cnpj' => '33.333.333/0001-33',
+            'status' => 1,
+        ]);
+        $matrixB = Matriz::create([
+            'nome' => 'Matriz Folha B',
+            'slug' => 'matriz-folha-b',
+            'cnpj' => '44.444.444/0001-44',
+            'status' => 1,
+        ]);
+
+        $unitA1 = $this->makeUnit('Loja Matriz A1', $matrixA->id);
+        $unitA2 = $this->makeUnit('Loja Matriz A2', $matrixA->id);
+        $unitB1 = $this->makeUnit('Loja Matriz B1', $matrixB->id);
+
+        $master = User::factory()->create([
+            'name' => 'Master Folha',
+            'email' => 'master.folha@example.com',
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $unitA1->tb2_id,
+            'matriz_id' => $matrixA->id,
+        ]);
+
+        $employeeA = User::factory()->create([
+            'name' => 'Funcionario Matriz A',
+            'email' => 'funcionario.a@example.com',
+            'funcao' => 5,
+            'funcao_original' => 5,
+            'salario' => 1500,
+            'tb2_id' => $unitA2->tb2_id,
+            'matriz_id' => $matrixA->id,
+        ]);
+        $employeeA->units()->sync([$unitA2->tb2_id]);
+
+        $employeeB = User::factory()->create([
+            'name' => 'Funcionario Matriz B',
+            'email' => 'funcionario.b@example.com',
+            'funcao' => 5,
+            'funcao_original' => 5,
+            'salario' => 1800,
+            'tb2_id' => $unitB1->tb2_id,
+            'matriz_id' => $matrixB->id,
+        ]);
+        $employeeB->units()->sync([$unitB1->tb2_id]);
+
+        $response = $this
+            ->actingAs($master)
+            ->get(route('settings.payroll', [
+                'start_date' => '2026-04-01',
+                'end_date' => '2026-04-30',
+            ]));
+
+        $response->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Settings/FolhaPagamento')
+            ->where('filterUnits', [
+                ['id' => $unitA1->tb2_id, 'name' => 'Loja Matriz A1'],
+                ['id' => $unitA2->tb2_id, 'name' => 'Loja Matriz A2'],
+            ])
+            ->where('summary.employees_count', 2)
+            ->has('rows', 2)
+        );
+    }
+
+    private function makeUnit(string $name, ?int $matrixId = null): Unidade
     {
         return Unidade::create([
             'tb2_nome' => $name,
@@ -251,6 +320,7 @@ class PayrollReportTest extends TestCase
             'tb2_fone' => '(61) 99999-9999',
             'tb2_cnpj' => fake()->unique()->numerify('##.###.###/####-##'),
             'tb2_localizacao' => 'https://maps.example.com/' . fake()->slug(),
+            'matriz_id' => $matrixId,
             'tb2_status' => 1,
         ]);
     }

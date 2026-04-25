@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Unidade;
 use App\Support\DiscardAlertService;
 use App\Support\ManagementScope;
+use App\Support\ReportUnitScope;
 use Carbon\Carbon;
 use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Http\JsonResponse;
@@ -1631,6 +1632,34 @@ class SalesReportController extends Controller
 
         $dateKey = $date->toDateString();
         $expenseData = $this->groupExpenseDataByCashierUnit($dateKey, $filterUnitId, $allowedUnitIds);
+        $openComandasTotalsByUnit = Venda::query()
+            ->selectRaw('id_unidade, COALESCE(SUM(valor_total), 0) as total_open_comandas, COUNT(DISTINCT id_comanda) as open_comandas_count')
+            ->whereNotNull('id_comanda')
+            ->whereBetween('id_comanda', [3000, 3100])
+            ->where('status', 0)
+            ->when($filterUnitId, function ($query) use ($filterUnitId) {
+                $query->where('id_unidade', $filterUnitId);
+            }, function ($query) use ($allowedUnitIds) {
+                if ($allowedUnitIds->isEmpty()) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->whereIn('id_unidade', $allowedUnitIds);
+            })
+            ->groupBy('id_unidade')
+            ->get()
+            ->mapWithKeys(function ($row) {
+                $key = (int) $row->id_unidade;
+
+                return [
+                    $key => [
+                        'total' => round((float) ($row->total_open_comandas ?? 0), 2),
+                        'count' => (int) ($row->open_comandas_count ?? 0),
+                    ],
+                ];
+            });
         $discardEntries = ProductDiscard::query()
             ->with(['product:tb1_id,tb1_nome,tb1_vlr_venda', 'user:id,tb2_id'])
             ->whereDate('created_at', $dateKey)
@@ -1712,7 +1741,7 @@ class SalesReportController extends Controller
             });
 
         $records = collect($grouped)
-            ->map(function (array $record) use ($closures, $discardTotals, $discardAlertService, $discardThreshold, $reviewers, $expenseData) {
+            ->map(function (array $record) use ($closures, $discardTotals, $discardAlertService, $discardThreshold, $reviewers, $expenseData, $openComandasTotalsByUnit) {
                 $record['totals'] = array_map(fn ($value) => round($value, 2), $record['totals']);
                 $record['grand_total'] = round($record['grand_total'], 2);
                 $record['row_key'] = $record['row_key'] ?? ($record['cashier_id'] . '-' . ($record['unit_id'] ?? 'none'));
@@ -1810,6 +1839,12 @@ class SalesReportController extends Controller
                     ->all();
                 $record['conference_base_cash'] = round($conferenceCashBase, 2);
                 $record['conference_base_total'] = round($systemTotal, 2);
+                $openComandasMeta = $openComandasTotalsByUnit[(int) ($record['unit_id'] ?? 0)] ?? [
+                    'total' => 0.0,
+                    'count' => 0,
+                ];
+                $record['open_comandas_total'] = round((float) ($openComandasMeta['total'] ?? 0), 2);
+                $record['open_comandas_count'] = (int) ($openComandasMeta['count'] ?? 0);
 
                 $discardMeta = $discardTotals[$record['row_key']] ?? ['value' => 0.0, 'quantity' => 0.0];
                 $record['discard_total'] = round((float) ($discardMeta['value'] ?? 0), 2);
@@ -3274,17 +3309,7 @@ class SalesReportController extends Controller
 
     private function availableUnits(User $user): Collection
     {
-        $units = $user->units()
-            ->select('tb2_unidades.tb2_id', 'tb2_unidades.tb2_nome')
-            ->where('tb2_unidades.tb2_status', 1)
-            ->get();
-
-        if ($user->tb2_id && !$units->contains('tb2_id', $user->tb2_id)) {
-            $primary = Unidade::active()->find($user->tb2_id, ['tb2_id', 'tb2_nome']);
-            if ($primary) {
-                $units->push($primary);
-            }
-        }
+        $units = ReportUnitScope::availableUnits($user, ['tb2_id', 'tb2_nome']);
 
         return $units
             ->map(fn ($unit) => [

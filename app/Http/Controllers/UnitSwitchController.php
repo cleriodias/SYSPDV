@@ -34,17 +34,13 @@ class UnitSwitchController extends Controller
                 'id' => $unit->tb2_id,
                 'name' => ActiveUnitSessionData::displayName($unit),
                 'type' => (string) ($unit->tb2_tipo ?? 'filial'),
+                'matrixId' => (int) ($unit->matriz_id ?? 0),
+                'matrixName' => trim((string) ($unit->matriz?->nome ?? '')) ?: ActiveUnitSessionData::displayName($unit),
                 'active' => (int) ($request->session()->get('active_unit.id')) === $unit->tb2_id,
             ])
             ->values();
 
-        $matrixUnits = $units
-            ->filter(fn (array $unit) => strcasecmp($unit['type'], 'matriz') === 0)
-            ->values();
-
-        $branchUnits = $units
-            ->reject(fn (array $unit) => strcasecmp($unit['type'], 'matriz') === 0)
-            ->values();
+        $unitGroups = $this->groupUnitsByMatrix($units);
 
         $roles = collect(self::ROLE_OPTIONS)
             ->filter(fn (string $label, int $value) => $this->canUseRole($originalRole, $value))
@@ -57,8 +53,7 @@ class UnitSwitchController extends Controller
 
         return Inertia::render('Reports/SwitchUnit', [
             'units' => $units,
-            'matrixUnits' => $matrixUnits,
-            'branchUnits' => $branchUnits,
+            'unitGroups' => $unitGroups,
             'roles' => $roles,
             'currentUnitId' => (int) ($request->session()->get('active_unit.id') ?? $user->tb2_id ?? 0),
             'currentRole' => $currentRole,
@@ -103,6 +98,15 @@ class UnitSwitchController extends Controller
 
     private function allowedUnits($user)
     {
+        if ($this->originalRole($user) === 7) {
+            return Unidade::query()
+                ->where('tb2_status', 1)
+                ->orderBy('tb2_tipo')
+                ->orderBy('tb2_nome')
+                ->get(['tb2_id', 'tb2_nome', 'tb2_endereco', 'tb2_cnpj', 'tb2_tipo', 'matriz_id'])
+                ->load('matriz:id,nome');
+        }
+
         $matrixId = $this->resolveUserMatrixId($user);
 
         if ($matrixId <= 0) {
@@ -154,5 +158,31 @@ class UnitSwitchController extends Controller
         return (int) (Unidade::query()
             ->where('tb2_id', $primaryUnitId)
             ->value('matriz_id') ?? 0);
+    }
+
+    private function groupUnitsByMatrix($units)
+    {
+        return $units
+            ->groupBy(fn (array $unit) => $unit['matrixId'] > 0 ? 'matrix-' . $unit['matrixId'] : 'unit-' . $unit['id'])
+            ->map(function ($group) {
+                $first = $group->first();
+                $matrixUnit = $group->first(fn (array $unit) => strcasecmp($unit['type'], 'matriz') === 0);
+                $branches = $group
+                    ->reject(fn (array $unit) => strcasecmp($unit['type'], 'matriz') === 0)
+                    ->values()
+                    ->all();
+
+                return [
+                    'key' => $first['matrixId'] > 0 ? 'matrix-' . $first['matrixId'] : 'unit-' . $first['id'],
+                    'matrix' => [
+                        'id' => $first['matrixId'] > 0 ? $first['matrixId'] : null,
+                        'name' => $matrixUnit['matrixName'] ?? $first['matrixName'] ?? $first['name'],
+                    ],
+                    'matrixUnit' => $matrixUnit,
+                    'branches' => $branches,
+                ];
+            })
+            ->sortBy(fn (array $group) => mb_strtolower((string) ($group['matrix']['name'] ?? '')))
+            ->values();
     }
 }

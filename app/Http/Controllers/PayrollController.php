@@ -7,6 +7,7 @@ use App\Models\Unidade;
 use App\Models\User;
 use App\Models\Venda;
 use App\Support\ManagementScope;
+use App\Support\ReportUnitScope;
 use Carbon\Carbon;
 use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Http\Request;
@@ -43,7 +44,7 @@ class PayrollController extends Controller
     private function buildPayrollPayload(Request $request, bool $onlyWithSalary = false): array
     {
         [$start, $end, $startDate, $endDate] = $this->resolveDateRange($request);
-        $filterUnits = ManagementScope::managedUnits($request->user(), ['tb2_id', 'tb2_nome'])
+        $filterUnits = ReportUnitScope::availableUnits($request->user(), ['tb2_id', 'tb2_nome'])
             ->map(fn (Unidade $unit) => [
                 'id' => (int) $unit->tb2_id,
                 'name' => $unit->tb2_nome,

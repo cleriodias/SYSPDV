@@ -1,5 +1,6 @@
 import AlertMessage from "@/Components/Alert/AlertMessage";
 import InfoButton from "@/Components/Button/InfoButton";
+import SuccessButton from "@/Components/Button/SuccessButton";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, usePage } from "@inertiajs/react";
 
@@ -39,6 +40,11 @@ export default function ProductShow({ auth, product, typeLabels, statusLabels })
                     <div className="flex justify-between items-center m-4">
                         <h3 className="text-lg">Visualizar</h3>
                         <div className="flex space-x-4">
+                            <Link href={route("products.create")}>
+                                <SuccessButton aria-label="Incluir outro" title="Incluir outro">
+                                    <i className="bi bi-plus-lg text-lg" aria-hidden="true"></i>
+                                </SuccessButton>
+                            </Link>
                             {Number(product.tb1_tipo) === 3 && (
                                 <Link href={route("products.production-stock", { product_id: product.produto_id ?? product.tb1_id })}>
                                     <InfoButton aria-label="Estoque" title="Estoque de Producao">

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Boleto;
 use App\Models\Unidade;
 use App\Support\ManagementScope;
+use App\Support\ReportUnitScope;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -205,7 +206,7 @@ class BoletoController extends Controller
 
     private function resolveManagedUnits($user): Collection
     {
-        return ManagementScope::managedUnits($user, ['tb2_id', 'tb2_nome'])
+        return ReportUnitScope::availableUnits($user, ['tb2_id', 'tb2_nome'])
             ->map(fn (Unidade $unit) => [
                 'id' => (int) $unit->tb2_id,
                 'name' => $unit->tb2_nome,

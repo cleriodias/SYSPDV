@@ -143,9 +143,14 @@ class UserManagementTest extends TestCase
                 ['value' => 5, 'label' => 'FUNCIONARIO', 'active' => false],
                 ['value' => 6, 'label' => 'CLIENTE', 'active' => true],
             ])
-            ->where('units', [
-                ['id' => $unitA2->tb2_id, 'name' => 'Loja A2', 'type' => 'filial', 'active' => false],
-                ['id' => $unitA1->tb2_id, 'name' => 'Matriz A', 'type' => 'matriz', 'active' => true],
+            ->has('unitGroups', 1)
+            ->where('unitGroups.0.matrix.name', 'Matriz A')
+            ->where('unitGroups.0.matrixUnit.id', $unitA1->tb2_id)
+            ->where('unitGroups.0.matrixUnit.name', 'Matriz A')
+            ->where('unitGroups.0.matrixUnit.type', 'matriz')
+            ->where('unitGroups.0.matrixUnit.active', true)
+            ->where('unitGroups.0.branches', [
+                ['id' => $unitA2->tb2_id, 'name' => 'Loja A2', 'type' => 'filial', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz A', 'active' => false],
             ])
             ->missing('roles.7')
         );
@@ -183,6 +188,66 @@ class UserManagementTest extends TestCase
             'funcao_original' => 1,
             'matriz_id' => $matrixA->id,
         ]);
+    }
+
+    public function test_boss_sees_units_from_all_matrices_on_switch_screen(): void
+    {
+        $matrixA = $this->makeMatrix('Matriz Boss A');
+        $matrixB = $this->makeMatrix('Matriz Boss B');
+        $unitA1 = $this->makeUnit('Loja Boss A1', $matrixA, 'matriz');
+        $unitA2 = $this->makeUnit('Loja Boss A2', $matrixA, 'filial');
+        $unitB1 = $this->makeUnit('Loja Boss B1', $matrixB, 'matriz');
+        $unitB2 = $this->makeUnit('Loja Boss B2', $matrixB, 'filial');
+
+        $boss = User::factory()->create([
+            'name' => 'Boss Global',
+            'email' => 'boss.global@example.com',
+            'funcao' => 7,
+            'funcao_original' => 7,
+            'tb2_id' => $unitA1->tb2_id,
+            'matriz_id' => $matrixA->id,
+        ]);
+        $boss->units()->sync([$unitA1->tb2_id]);
+
+        $response = $this
+            ->actingAs($boss)
+            ->withSession([
+                'active_unit' => [
+                    'id' => $unitA1->tb2_id,
+                    'name' => $unitA1->tb2_nome,
+                    'address' => $unitA1->tb2_endereco,
+                    'cnpj' => $unitA1->tb2_cnpj,
+                ],
+                'active_role' => 7,
+            ])
+            ->get(route('reports.switch-unit'));
+
+        $response->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Reports/SwitchUnit')
+            ->has('unitGroups', 2)
+            ->where('unitGroups.0.matrix.name', 'Matriz Boss A')
+            ->where('unitGroups.0.matrixUnit.id', $unitA1->tb2_id)
+            ->where('unitGroups.0.matrixUnit.active', true)
+            ->where('unitGroups.0.branches', [
+                ['id' => $unitA2->tb2_id, 'name' => 'Loja Boss A2', 'type' => 'filial', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz Boss A', 'active' => false],
+            ])
+            ->where('unitGroups.1.matrix.name', 'Matriz Boss B')
+            ->where('unitGroups.1.matrixUnit.id', $unitB1->tb2_id)
+            ->where('unitGroups.1.matrixUnit.active', false)
+            ->where('unitGroups.1.branches', [
+                ['id' => $unitB2->tb2_id, 'name' => 'Loja Boss B2', 'type' => 'filial', 'matrixId' => $matrixB->id, 'matrixName' => 'Matriz Boss B', 'active' => false],
+            ])
+            ->where('roles', [
+                ['value' => 7, 'label' => 'BOSS', 'active' => true],
+                ['value' => 0, 'label' => 'MASTER', 'active' => false],
+                ['value' => 1, 'label' => 'GERENTE', 'active' => false],
+                ['value' => 2, 'label' => 'SUB-GERENTE', 'active' => false],
+                ['value' => 3, 'label' => 'CAIXA', 'active' => false],
+                ['value' => 4, 'label' => 'LANCHONETE', 'active' => false],
+                ['value' => 5, 'label' => 'FUNCIONARIO', 'active' => false],
+                ['value' => 6, 'label' => 'CLIENTE', 'active' => false],
+            ])
+        );
     }
 
     private function makeMatrix(string $name): Matriz

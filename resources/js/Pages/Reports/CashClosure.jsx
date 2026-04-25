@@ -629,6 +629,8 @@ export default function CashClosure({
         const closureTotal = closure?.total_amount ?? 0;
         const diffTotal = closure?.differences?.total ?? systemTotal;
         const diffClass = differenceTone(diffTotal);
+        const openComandasTotal = Number(record?.open_comandas_total ?? 0);
+        const openComandasCount = Number(record?.open_comandas_count ?? 0);
 
         return (
             <div className="space-y-1 text-right">
@@ -650,6 +652,16 @@ export default function CashClosure({
                         {formatCurrency(diffTotal)}
                     </p>
                 </div>
+                {isMaster && openComandasTotal > 0 && (
+                    <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Comandas abertas{openComandasCount > 0 ? ` (${openComandasCount})` : ''}
+                        </p>
+                        <p className="text-sm font-semibold text-amber-600 dark:text-amber-300">
+                            {formatCurrency(openComandasTotal)}
+                        </p>
+                    </div>
+                )}
             </div>
         );
     };
