@@ -288,6 +288,7 @@ class FiscalNfceTransmissionService
                         'error' => $error,
                         'url' => $url,
                         'http_code' => $statusCode,
+                        'configured_ca_bundle' => Config::get('services.fiscal.ca_bundle'),
                         'ca_bundle' => $caBundlePath,
                         'ca_path' => is_dir($caBundleDirectory) ? $caBundleDirectory : null,
                         'openssl_conf' => $openSslLegacyConfigPath,
@@ -321,18 +322,7 @@ class FiscalNfceTransmissionService
         $iniCurlPath = trim((string) ini_get('curl.cainfo'));
         $iniOpenSslPath = trim((string) ini_get('openssl.cafile'));
 
-        $candidates = array_filter([
-            $configuredPath,
-            storage_path('app/private/fiscal-ca-bundle.pem'),
-            storage_path('app/private/cacert.pem'),
-            base_path('storage/app/private/fiscal-ca-bundle.pem'),
-            base_path('storage/app/private/cacert.pem'),
-            $iniCurlPath,
-            $iniOpenSslPath,
-            base_path('cacert.pem'),
-            'C:\\xampp\\php\\extras\\ssl\\cacert.pem',
-            'C:\\php\\extras\\ssl\\cacert.pem',
-        ]);
+        $candidates = $this->buildCaBundleCandidates($configuredPath, $iniCurlPath, $iniOpenSslPath);
 
         $checkedPaths = [];
 
@@ -349,6 +339,63 @@ class FiscalNfceTransmissionService
             . 'Configure um CA bundle valido em services.fiscal.ca_bundle, php.ini (curl.cainfo/openssl.cafile) ou em C:\\xampp\\php\\extras\\ssl\\cacert.pem. '
             . 'Caminhos verificados: ' . implode(' | ', $checkedPaths)
         );
+    }
+
+    private function buildCaBundleCandidates(
+        string $configuredPath,
+        string $iniCurlPath,
+        string $iniOpenSslPath,
+    ): array {
+        $orderedCandidates = [
+            $this->resolveSiblingFiscalBundlePath($configuredPath),
+            storage_path('app/private/fiscal-ca-bundle.pem'),
+            base_path('storage/app/private/fiscal-ca-bundle.pem'),
+            $configuredPath,
+            storage_path('app/private/cacert.pem'),
+            base_path('storage/app/private/cacert.pem'),
+            $iniCurlPath,
+            $iniOpenSslPath,
+            base_path('cacert.pem'),
+            'C:\\xampp\\php\\extras\\ssl\\cacert.pem',
+            'C:\\php\\extras\\ssl\\cacert.pem',
+        ];
+
+        $candidates = [];
+
+        foreach ($orderedCandidates as $candidate) {
+            $candidate = trim((string) $candidate);
+
+            if ($candidate === '' || in_array($candidate, $candidates, true)) {
+                continue;
+            }
+
+            $candidates[] = $candidate;
+        }
+
+        return $candidates;
+    }
+
+    private function resolveSiblingFiscalBundlePath(string $configuredPath): ?string
+    {
+        $configuredPath = trim($configuredPath);
+
+        if ($configuredPath === '') {
+            return null;
+        }
+
+        $normalizedPath = str_replace('\\', '/', $configuredPath);
+
+        if (strtolower(basename($normalizedPath)) !== 'cacert.pem') {
+            return null;
+        }
+
+        $directory = dirname($configuredPath);
+
+        if ($directory === '' || $directory === '.' || $directory === DIRECTORY_SEPARATOR) {
+            return null;
+        }
+
+        return rtrim($directory, '\\/') . DIRECTORY_SEPARATOR . 'fiscal-ca-bundle.pem';
     }
 
     private function buildSoapCommunicationErrorMessage(string $error, string $caBundlePath): string
