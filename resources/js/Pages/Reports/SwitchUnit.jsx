@@ -13,6 +13,8 @@ const COLOR_CYCLE = [
 
 export default function SwitchUnit({
     units = [],
+    matrixUnits = [],
+    branchUnits = [],
     roles = [],
     currentUnitId,
     currentRole,
@@ -31,6 +33,22 @@ export default function SwitchUnit({
 
     const selectedUnitName = units.find((unit) => unit.id === Number(data.unit_id))?.name ?? '---';
     const selectedRoleLabel = roles.find((role) => role.value === Number(data.role))?.label ?? currentRoleLabel ?? '---';
+
+    const renderUnitGrid = (items, emptyMessage, offset = 0) => (
+        items.length ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {items.map((unit, index) =>
+                    renderOption(unit, index + offset, Number(data.unit_id) === unit.id, (value) =>
+                        setData('unit_id', value),
+                    ),
+                )}
+            </div>
+        ) : (
+            <p className="mt-4 rounded-2xl border border-dashed border-gray-300 px-4 py-3 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-300">
+                {emptyMessage}
+            </p>
+        )
+    );
 
     const renderOption = (item, index, selected, onSelect, valueKey = 'id') => {
         const color = COLOR_CYCLE[index % COLOR_CYCLE.length];
@@ -77,15 +95,22 @@ export default function SwitchUnit({
                     <form onSubmit={submit} className="space-y-6">
                         <div className="rounded-2xl bg-white p-6 shadow dark:bg-gray-800">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                Trocar Unidade
+                                Unidades Matriz
                             </h3>
-                            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                                {units.map((unit, index) =>
-                                    renderOption(unit, index, Number(data.unit_id) === unit.id, (value) =>
-                                        setData('unit_id', value),
-                                    ),
-                                )}
-                            </div>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
+                                Selecione a unidade principal da matriz que deseja usar nesta sessao.
+                            </p>
+                            {renderUnitGrid(matrixUnits, 'Nenhuma unidade matriz disponivel para troca.')}
+                        </div>
+
+                        <div className="rounded-2xl bg-white p-6 shadow dark:bg-gray-800">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                Filiais / Unidades
+                            </h3>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
+                                Demais lojas vinculadas ao seu acesso.
+                            </p>
+                            {renderUnitGrid(branchUnits, 'Nenhuma filial disponivel para troca.', matrixUnits.length)}
                         </div>
 
                         <div className="rounded-2xl bg-white p-6 shadow dark:bg-gray-800">

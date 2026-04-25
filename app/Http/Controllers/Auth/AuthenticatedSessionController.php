@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Models\CashierClosure;
 use App\Models\OnlineUser;
 use App\Models\Unidade;
+use App\Support\ActiveUnitSessionData;
 use App\Support\ManagementScope;
 use App\Support\PaymentControlNotificationService;
 use Carbon\Carbon;
@@ -91,7 +92,8 @@ class AuthenticatedSessionController extends Controller
 
         $selectedUnit = Unidade::active()
             ->loginAllowed()
-            ->select('tb2_id', 'tb2_nome', 'tb2_endereco', 'tb2_cnpj')
+            ->select('tb2_id', 'tb2_nome', 'tb2_endereco', 'tb2_cnpj', 'tb2_tipo', 'matriz_id')
+            ->with('matriz:id,nome')
             ->find($unitId);
 
         if (! $selectedUnit) {
@@ -104,12 +106,7 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
-        $request->session()->put('active_unit', [
-            'id' => $selectedUnit->tb2_id,
-            'name' => $selectedUnit->tb2_nome,
-            'address' => $selectedUnit->tb2_endereco,
-            'cnpj' => $selectedUnit->tb2_cnpj,
-        ]);
+        $request->session()->put('active_unit', ActiveUnitSessionData::fromUnit($selectedUnit));
 
         if ($user->funcao_original === null) {
             $user->forceFill(['funcao_original' => $user->funcao])->save();

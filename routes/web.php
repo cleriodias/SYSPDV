@@ -125,8 +125,12 @@ Route::middleware('auth')->group(function () {
         ->name('settings.billing-plans.update');
     Route::put('/settings/billing-status/matrizes/{matriz}/payment', [BillingStatusController::class, 'toggleMatrixPayment'])
         ->name('settings.billing-status.matrices.payment');
+    Route::put('/settings/billing-status/matrizes/{matriz}/status', [BillingStatusController::class, 'toggleMatrixStatus'])
+        ->name('settings.billing-status.matrices.status');
     Route::put('/settings/billing-status/units/{unit}/payment', [BillingStatusController::class, 'toggleUnitPayment'])
         ->name('settings.billing-status.units.payment');
+    Route::put('/settings/billing-status/units/{unit}/status', [BillingStatusController::class, 'toggleUnitStatus'])
+        ->name('settings.billing-status.units.status');
     Route::put('/settings/billing-status/units/{unit}/login', [BillingStatusController::class, 'toggleUnitLogin'])
         ->name('settings.billing-status.units.login');
     Route::get('/settings/menu', function () {
@@ -302,3 +306,7 @@ require __DIR__.'/auth.php';
     Route::get('/matrizes', [MatrixController::class, 'index'])->name('matrizes.index');
     Route::get('/matrizes/create', [MatrixController::class, 'create'])->name('matrizes.create');
     Route::post('/matrizes', [MatrixController::class, 'store'])->name('matrizes.store');
+    Route::get('/matrizes/{matriz}/edit', [MatrixController::class, 'edit'])->name('matrizes.edit');
+    Route::put('/matrizes/{matriz}', [MatrixController::class, 'update'])->name('matrizes.update');
+    Route::put('/matrizes/{matriz}/filiais/{unit}/mensalidade', [MatrixController::class, 'updateBranchMonthlyValue'])
+        ->name('matrizes.branches.monthly-value.update');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Unidade;
+use App\Support\ActiveUnitSessionData;
 use App\Support\ManagementScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,9 +35,18 @@ class UnitSwitchController extends Controller
         $units = $this->allowedUnits($user)
             ->map(fn (Unidade $unit) => [
                 'id' => $unit->tb2_id,
-                'name' => $unit->tb2_nome,
+                'name' => ActiveUnitSessionData::displayName($unit),
+                'type' => (string) ($unit->tb2_tipo ?? 'filial'),
                 'active' => (int) ($request->session()->get('active_unit.id')) === $unit->tb2_id,
             ])
+            ->values();
+
+        $matrixUnits = $units
+            ->filter(fn (array $unit) => strcasecmp($unit['type'], 'matriz') === 0)
+            ->values();
+
+        $branchUnits = $units
+            ->reject(fn (array $unit) => strcasecmp($unit['type'], 'matriz') === 0)
             ->values();
 
         $roles = collect(self::ROLE_OPTIONS)
@@ -56,6 +66,8 @@ class UnitSwitchController extends Controller
 
         return Inertia::render('Reports/SwitchUnit', [
             'units' => $units,
+            'matrixUnits' => $matrixUnits,
+            'branchUnits' => $branchUnits,
             'roles' => $roles,
             'currentUnitId' => (int) ($request->session()->get('active_unit.id') ?? $user->tb2_id ?? 0),
             'currentRole' => $currentRole,
@@ -88,12 +100,7 @@ class UnitSwitchController extends Controller
             abort(403);
         }
 
-        $request->session()->put('active_unit', [
-            'id' => $unit->tb2_id,
-            'name' => $unit->tb2_nome,
-            'address' => $unit->tb2_endereco,
-            'cnpj' => $unit->tb2_cnpj,
-        ]);
+        $request->session()->put('active_unit', ActiveUnitSessionData::fromUnit($unit));
         $request->session()->put('active_role', $role);
 
         return redirect()->route('dashboard')->with('success', 'Sessao atualizada com sucesso!');
@@ -103,8 +110,8 @@ class UnitSwitchController extends Controller
     {
         return ManagementScope::managedUnits(
             $user,
-            ['tb2_id', 'tb2_nome', 'tb2_endereco', 'tb2_cnpj']
-        );
+            ['tb2_id', 'tb2_nome', 'tb2_endereco', 'tb2_cnpj', 'tb2_tipo', 'matriz_id']
+        )->load('matriz:id,nome');
     }
 
     private function ensureCanSwitchUnit($user): void

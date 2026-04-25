@@ -1,6 +1,8 @@
 import AlertMessage from "@/Components/Alert/AlertMessage";
+import InfoButton from "@/Components/Button/InfoButton";
 import SuccessButton from "@/Components/Button/SuccessButton";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import { formatBrazilShortDate } from "@/Utils/date";
 import { Head, Link, usePage } from "@inertiajs/react";
 
 const formatCurrency = (value) =>
@@ -41,7 +43,10 @@ export default function MatrixIndex({ auth, matrizes = [] }) {
                                 <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Unidades</td>
                                 <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Usuarios</td>
                                 <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Plano matriz</td>
+                                <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Contratada em</td>
+                                <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Pagamento</td>
                                 <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Status</td>
+                                <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Acoes</td>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
@@ -56,7 +61,20 @@ export default function MatrixIndex({ auth, matrizes = [] }) {
                                         {formatCurrency(matriz.plano_mensal_valor ?? 250)}
                                     </td>
                                     <td className="px-4 py-2 text-sm text-gray-500">
+                                        {formatBrazilShortDate(matriz.plano_contratado_em)}
+                                    </td>
+                                    <td className="px-4 py-2 text-sm text-gray-500">
+                                        {matriz.pagamento_ativo ? 'Ativo' : 'Bloqueado'}
+                                    </td>
+                                    <td className="px-4 py-2 text-sm text-gray-500">
                                         {Number(matriz.status) === 1 ? 'Ativa' : 'Inativa'}
+                                    </td>
+                                    <td className="px-4 py-2 text-sm text-gray-500">
+                                        <Link href={route('matrizes.edit', matriz.id)}>
+                                            <InfoButton aria-label={`Editar matriz ${matriz.nome}`} title="Editar matriz">
+                                                <i className="bi bi-pencil-square text-lg" aria-hidden="true"></i>
+                                            </InfoButton>
+                                        </Link>
                                     </td>
                                 </tr>
                             ))}

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Unidade;
+use App\Support\ActiveUnitSessionData;
 use Closure;
 use Illuminate\Http\Request;
 
@@ -17,16 +18,12 @@ class EnsureActiveUnit
 
             if ($unitId > 0) {
                 $unit = Unidade::active()
-                    ->select('tb2_id', 'tb2_nome', 'tb2_endereco', 'tb2_cnpj')
+                    ->select('tb2_id', 'tb2_nome', 'tb2_endereco', 'tb2_cnpj', 'tb2_tipo', 'matriz_id')
+                    ->with('matriz:id,nome')
                     ->find($unitId);
 
                 if ($unit) {
-                    $request->session()->put('active_unit', [
-                        'id' => $unit->tb2_id,
-                        'name' => $unit->tb2_nome,
-                        'address' => $unit->tb2_endereco,
-                        'cnpj' => $unit->tb2_cnpj,
-                    ]);
+                    $request->session()->put('active_unit', ActiveUnitSessionData::fromUnit($unit));
                 }
             }
         }

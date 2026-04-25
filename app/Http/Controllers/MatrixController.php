@@ -9,6 +9,7 @@ use App\Support\BillingPlanSettings;
 use App\Support\ManagementScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -39,6 +40,38 @@ class MatrixController extends Controller
         ]);
     }
 
+    public function edit(Matriz $matriz): Response
+    {
+        $this->ensureBoss();
+        $matrixUnit = $matriz->units()
+            ->where('tb2_tipo', 'matriz')
+            ->first([
+                'tb2_id',
+                'tb2_nome',
+                'tb2_endereco',
+                'tb2_cep',
+                'tb2_fone',
+                'tb2_cnpj',
+                'tb2_localizacao',
+            ]);
+        $branchUnits = $matriz->units()
+            ->where('tb2_tipo', 'filial')
+            ->orderBy('tb2_nome')
+            ->get([
+                'tb2_id',
+                'tb2_nome',
+                'tb2_status',
+                'plano_mensal_valor',
+                'plano_contratado_em',
+            ]);
+
+        return Inertia::render('Matrizes/Edit', [
+            'matriz' => $matriz,
+            'matrixUnit' => $matrixUnit,
+            'branchUnits' => $branchUnits,
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $this->ensureBoss();
@@ -61,18 +94,9 @@ class MatrixController extends Controller
         $planSettings = BillingPlanSettings::current();
 
         DB::transaction(function () use ($data, $planSettings, &$createdAccessCode) {
-            $baseSlug = Str::slug($data['matriz_nome']);
-            $slug = $baseSlug;
-            $suffix = 2;
-
-            while (Matriz::where('slug', $slug)->exists()) {
-                $slug = $baseSlug . '-' . $suffix;
-                $suffix++;
-            }
-
             $matriz = Matriz::create([
                 'nome' => $data['matriz_nome'],
-                'slug' => $slug,
+                'slug' => $this->generateUniqueSlug($data['matriz_nome']),
                 'cnpj' => $data['matriz_cnpj'] ?: null,
                 'status' => 1,
                 'plano_mensal_valor' => $planSettings['matrix_monthly_price'],
@@ -120,11 +144,112 @@ class MatrixController extends Controller
         );
     }
 
+    public function update(Request $request, Matriz $matriz): RedirectResponse
+    {
+        $this->ensureBoss();
+
+        $data = $request->validate([
+            'nome' => ['required', 'string', 'max:255'],
+            'cnpj' => ['nullable', 'string', 'max:20'],
+            'unit_name' => ['required', 'string', 'max:255'],
+            'unit_address' => ['required', 'string', 'max:255'],
+            'unit_cep' => ['required', 'string', 'max:20'],
+            'unit_phone' => ['required', 'string', 'max:20'],
+            'unit_cnpj' => ['required', 'string', 'max:20'],
+            'unit_location' => ['required', 'url', 'max:512'],
+            'status' => ['required', 'boolean'],
+            'pagamento_ativo' => ['required', 'boolean'],
+            'plano_mensal_valor' => ['required', 'numeric', 'min:0'],
+            'plano_contratado_em' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+
+        $matrixUnit = $matriz->units()
+            ->where('tb2_tipo', 'matriz')
+            ->first();
+
+        if (! $matrixUnit) {
+            abort(404, 'Unidade matriz nao encontrada.');
+        }
+
+        DB::transaction(function () use ($data, $matriz, $matrixUnit) {
+            $contractedAt = $data['plano_contratado_em']
+                ? Carbon::createFromFormat('Y-m-d', $data['plano_contratado_em'])->startOfDay()
+                : null;
+
+            $monthlyValue = round((float) $data['plano_mensal_valor'], 2);
+
+            $matriz->fill([
+                'nome' => $data['nome'],
+                'slug' => $this->generateUniqueSlug($data['nome'], $matriz),
+                'cnpj' => $data['cnpj'] ?: null,
+                'status' => (int) $data['status'],
+                'pagamento_ativo' => (bool) $data['pagamento_ativo'],
+                'plano_mensal_valor' => $monthlyValue,
+                'plano_contratado_em' => $contractedAt,
+            ])->save();
+
+            $matrixUnit->fill([
+                'tb2_nome' => $data['unit_name'],
+                'tb2_endereco' => $data['unit_address'],
+                'tb2_cep' => $data['unit_cep'],
+                'tb2_fone' => $data['unit_phone'],
+                'tb2_cnpj' => $data['unit_cnpj'],
+                'tb2_localizacao' => $data['unit_location'],
+                'tb2_status' => (int) $data['status'],
+                'pagamento_ativo' => (bool) $data['pagamento_ativo'],
+                'plano_mensal_valor' => $monthlyValue,
+                'plano_contratado_em' => $contractedAt,
+            ])->save();
+        });
+
+        return redirect()->route('matrizes.index')->with('success', 'Dados da matriz atualizados com sucesso.');
+    }
+
+    public function updateBranchMonthlyValue(Request $request, Matriz $matriz, Unidade $unit): RedirectResponse
+    {
+        $this->ensureBoss();
+
+        if ((int) $unit->matriz_id !== (int) $matriz->id || (string) $unit->tb2_tipo !== 'filial') {
+            abort(404, 'Filial nao encontrada para esta matriz.');
+        }
+
+        $data = $request->validate([
+            'plano_mensal_valor' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $unit->update([
+            'plano_mensal_valor' => round((float) $data['plano_mensal_valor'], 2),
+        ]);
+
+        return redirect()
+            ->route('matrizes.edit', $matriz)
+            ->with('success', 'Mensalidade da filial atualizada com sucesso.');
+    }
+
     private function ensureBoss(): void
     {
         if (! ManagementScope::isBoss(request()->user())) {
             abort(403, 'Acesso negado.');
         }
+    }
+
+    private function generateUniqueSlug(string $name, ?Matriz $ignore = null): string
+    {
+        $baseSlug = Str::slug($name) ?: 'matriz';
+        $slug = $baseSlug;
+        $suffix = 2;
+
+        while (
+            Matriz::query()
+                ->where('slug', $slug)
+                ->when($ignore, fn ($query) => $query->whereKeyNot($ignore->getKey()))
+                ->exists()
+        ) {
+            $slug = $baseSlug . '-' . $suffix;
+            $suffix++;
+        }
+
+        return $slug;
     }
 
     private function generateUniqueAccessCode(?string $preferred = null): string

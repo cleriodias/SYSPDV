@@ -6,22 +6,25 @@ use App\Models\Matriz;
 use App\Models\Unidade;
 use App\Support\BillingPlanSettings;
 use App\Support\ManagementScope;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $user = request()->user();
+        $user = $request->user();
 
         if (ManagementScope::isBoss($user)) {
             $planSettings = BillingPlanSettings::current();
+            $showInactive = $request->boolean('show_inactive');
             $matrizes = Matriz::query()
                 ->with(['units' => fn ($query) => $query->orderBy('tb2_nome')])
                 ->orderBy('nome')
                 ->get()
-                ->map(function (Matriz $matriz) use ($planSettings) {
+                ->filter(fn (Matriz $matriz) => $showInactive || (int) ($matriz->status ?? 0) === 1)
+                ->map(function (Matriz $matriz) use ($planSettings, $showInactive) {
                     $matrixFee = (float) ($matriz->plano_mensal_valor ?? $planSettings['matrix_monthly_price']);
                     $units = $matriz->units ?? collect();
                     $matrixUnit = $units->first(
@@ -32,7 +35,9 @@ class DashboardController extends Controller
                         fn (Unidade $unit) => (string) ($unit->tb2_tipo ?? 'filial') === 'filial'
                     );
 
-                    $branches = $branchUnits->map(function (Unidade $unit) use ($planSettings) {
+                    $branches = $branchUnits
+                        ->filter(fn (Unidade $unit) => $showInactive || (int) ($unit->tb2_status ?? 0) === 1)
+                        ->map(function (Unidade $unit) use ($planSettings) {
                         return [
                             'id' => (int) $unit->tb2_id,
                             'name' => (string) $unit->tb2_nome,
@@ -68,6 +73,9 @@ class DashboardController extends Controller
 
             return Inertia::render('Boss/Dashboard', [
                 'planSettings' => $planSettings,
+                'filters' => [
+                    'show_inactive' => $showInactive,
+                ],
                 'summary' => [
                     'matrices_count' => $matrizes->count(),
                     'branches_count' => $matrizes->sum('branches_count'),
