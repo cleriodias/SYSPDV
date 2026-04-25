@@ -1,23 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { getRoleBadgeStyle } from '@/Utils/brandBadges';
 import { Head, useForm } from '@inertiajs/react';
 
-const withAlpha = (hexColor, alpha) => {
-    const normalized = String(hexColor ?? '').replace('#', '');
-
-    if (normalized.length !== 6) {
-        return hexColor;
-    }
-
-    const red = parseInt(normalized.slice(0, 2), 16);
-    const green = parseInt(normalized.slice(2, 4), 16);
-    const blue = parseInt(normalized.slice(4, 6), 16);
-
-    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
-};
-
-const getRoleOptionStyle = (item, selected) => {
-    const roleLabel = String(item.label ?? item.name ?? '')
+const normalizeRoleLabel = (value) =>
+    String(value ?? '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[-_/]+/g, ' ')
@@ -25,25 +10,31 @@ const getRoleOptionStyle = (item, selected) => {
         .replace(/\s+/g, ' ')
         .toUpperCase();
 
-    if (!['MASTER', 'CAIXA', 'LANCHONETE'].includes(roleLabel)) {
-        return undefined;
-    }
-
-    const roleStyle = getRoleBadgeStyle(roleLabel);
-
-    if (selected) {
-        return {
-            backgroundColor: roleStyle.backgroundColor,
-            borderColor: roleStyle.borderColor,
-            color: roleStyle.color,
-        };
-    }
-
-    return {
-        backgroundColor: withAlpha(roleStyle.backgroundColor, 0.12),
-        borderColor: withAlpha(roleStyle.borderColor, 0.35),
-        color: roleStyle.borderColor,
-    };
+const ROLE_TONE_CLASS_MAP = {
+    MASTER: {
+        selected:
+            'border-transparent bg-blue-500 text-white ring-2 ring-blue-200 hover:bg-blue-600 dark:bg-blue-200 dark:text-blue-800 dark:ring-blue-900/40 dark:hover:bg-white',
+        unselected:
+            'border-transparent bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-200 dark:text-blue-800 dark:hover:bg-white',
+        current: 'bg-white/20 text-white dark:bg-white/70 dark:text-blue-900',
+        icon: 'text-white dark:text-blue-800',
+    },
+    CAIXA: {
+        selected:
+            'border-transparent bg-green-500 text-white ring-2 ring-green-200 hover:bg-green-600 dark:bg-green-200 dark:text-green-800 dark:ring-green-900/40 dark:hover:bg-white',
+        unselected:
+            'border-transparent bg-green-500 text-white hover:bg-green-600 dark:bg-green-200 dark:text-green-800 dark:hover:bg-white',
+        current: 'bg-white/20 text-white dark:bg-white/70 dark:text-green-900',
+        icon: 'text-white dark:text-green-800',
+    },
+    LANCHONETE: {
+        selected:
+            'border-transparent bg-orange-400 text-white ring-2 ring-orange-200 hover:bg-orange-500 dark:bg-orange-200 dark:text-orange-800 dark:ring-orange-900/40 dark:hover:bg-white',
+        unselected:
+            'border-transparent bg-orange-400 text-white hover:bg-orange-500 dark:bg-orange-200 dark:text-orange-800 dark:hover:bg-white',
+        current: 'bg-white/20 text-white dark:bg-white/70 dark:text-orange-900',
+        icon: 'text-white dark:text-orange-800',
+    },
 };
 
 export default function SwitchUnit({
@@ -111,33 +102,35 @@ export default function SwitchUnit({
     const renderOption = (item, index, selected, onSelect, valueKey = 'id', variant = 'unit') => {
         const isCurrent = item.active;
         const isRole = variant === 'role';
-        const optionStyle = isRole ? getRoleOptionStyle(item, selected) : undefined;
+        const roleLabel = isRole ? normalizeRoleLabel(item.label ?? item.name) : '';
+        const roleTone = isRole ? ROLE_TONE_CLASS_MAP[roleLabel] : null;
 
         return (
             <button
                 key={item[valueKey]}
                 type="button"
                 onClick={() => onSelect(item[valueKey])}
-                style={optionStyle}
                 className={`relative flex min-h-[34px] items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-left text-xs font-semibold shadow-sm transition ${
-                    isRole
+                    isRole && roleTone
                         ? selected
-                            ? 'ring-2 ring-offset-1 ring-slate-200 dark:ring-slate-700'
-                            : 'hover:brightness-95 dark:hover:brightness-110'
+                            ? roleTone.selected
+                            : roleTone.unselected
+                        : isRole
+                            ? selected
+                                ? 'border-slate-900 bg-slate-50 text-slate-900 ring-2 ring-slate-200 dark:border-slate-200 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-700'
+                                : 'border-gray-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:border-slate-400 dark:hover:bg-gray-800'
                         : selected
-                        ? 'border-slate-900 bg-slate-50 text-slate-900 ring-2 ring-slate-200 dark:border-slate-200 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-700'
-                        : 'border-gray-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:border-slate-400 dark:hover:bg-gray-800'
+                            ? 'border-slate-900 bg-slate-50 text-slate-900 ring-2 ring-slate-200 dark:border-slate-200 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-700'
+                            : 'border-gray-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:border-slate-400 dark:hover:bg-gray-800'
                 }`}
             >
                 <i
                     className={`bi bi-arrow-left-right text-xs ${
-                        isRole
-                            ? selected
-                                ? 'text-white'
-                                : 'opacity-80'
+                        isRole && roleTone
+                            ? roleTone.icon
                             : selected
-                                ? 'text-slate-700 dark:text-slate-200'
-                                : 'text-slate-500 dark:text-slate-400'
+                            ? 'text-slate-700 dark:text-slate-200'
+                            : 'text-slate-500 dark:text-slate-400'
                     }`}
                     aria-hidden="true"
                 ></i>
@@ -145,8 +138,8 @@ export default function SwitchUnit({
                 {isCurrent && (
                     <span
                         className={`absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
-                            isRole && selected
-                                ? 'bg-white/20 text-white'
+                            isRole && roleTone
+                                ? roleTone.current
                                 : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-100'
                         }`}
                     >
