@@ -330,8 +330,8 @@ class FiscalConfigurationController extends Controller
                 'tb26_serie' => trim((string) $data['tb26_serie']),
                 'tb26_proximo_numero' => (int) $data['tb26_proximo_numero'],
                 'tb26_crt' => filled($data['tb26_crt'] ?? null) ? (int) $data['tb26_crt'] : null,
-                'tb26_csc_id' => $this->nullableTrim($data['tb26_csc_id'] ?? null),
-                'tb26_csc' => $this->nullableTrim($data['tb26_csc'] ?? null),
+                'tb26_csc_id' => $this->normalizeFiscalCscId($data['tb26_csc_id'] ?? null),
+                'tb26_csc' => $this->normalizeFiscalCsc($data['tb26_csc'] ?? null),
                 'tb26_certificado_tipo' => $this->nullableTrim($data['tb26_certificado_tipo'] ?? null) ?? 'A1',
                 'tb26_certificado_nome' => $this->nullableTrim($data['tb26_certificado_nome'] ?? null) ?? $configuration->tb26_certificado_nome,
                 'tb26_certificado_cnpj' => $this->onlyDigits($data['tb26_certificado_cnpj'] ?? null) ?? $configuration->tb26_certificado_cnpj,
@@ -551,6 +551,25 @@ class FiscalConfigurationController extends Controller
 
     private function nullableTrim(?string $value): ?string
     {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function normalizeFiscalCscId(?string $value): ?string
+    {
+        $digits = $this->onlyDigits($value);
+
+        if ($digits === null) {
+            return null;
+        }
+
+        return ltrim($digits, '0') ?: '0';
+    }
+
+    private function normalizeFiscalCsc(?string $value): ?string
+    {
+        $value = preg_replace('/\s+/u', '', (string) $value);
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
@@ -827,13 +846,27 @@ class FiscalConfigurationController extends Controller
     {
         $message = $this->stringOrNull($message);
 
-        if ($message === null || ! str_contains($message, 'cStat 462')) {
+        if ($message === null) {
             return $message;
         }
 
         $cscId = $xmlData['csc_id'] ?? null;
+
+        if (str_contains($message, 'cStat 462')) {
+            $suffix = sprintf(
+                ' Confira o CSC ID%s cadastrado na SEFAZ para o ambiente atual da loja.',
+                $cscId ? ' ' . $cscId : ''
+            );
+
+            return str_contains($message, $suffix) ? $message : $message . $suffix;
+        }
+
+        if (! str_contains($message, 'cStat 464')) {
+            return $message;
+        }
+
         $suffix = sprintf(
-            ' Confira o CSC ID%s cadastrado na SEFAZ para o ambiente atual da loja.',
+            ' Confira o CSC e o CSC ID%s cadastrados na SEFAZ para o ambiente atual da loja.',
             $cscId ? ' ' . $cscId : ''
         );
 
