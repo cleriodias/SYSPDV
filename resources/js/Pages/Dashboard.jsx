@@ -13,11 +13,11 @@ const WEIGHTED_BARCODE_PREFIX = '2';
 const WEIGHTED_BARCODE_LENGTH = 13;
 const paymentLabels = {
     maquina: 'Maquina',
-    cartao_credito: 'Cartao credito',
-    cartao_debito: 'Cartao debito',
+    cartao_credito: 'Credito',
+    cartao_debito: 'Debito',
     dinheiro: 'Dinheiro',
-    dinheiro_cartao_credito: 'Dinheiro + Cartao credito',
-    dinheiro_cartao_debito: 'Dinheiro + Cartao debito',
+    dinheiro_cartao_credito: 'Dinheiro + Credito',
+    dinheiro_cartao_debito: 'Dinheiro + Debito',
     vale: 'Vale',
     faturar: 'Faturar',
     refeicao: 'Refeição',
