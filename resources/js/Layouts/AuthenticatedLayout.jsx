@@ -384,6 +384,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                     <NavLink
                         href={route('matrizes.index')}
                         active={route().current('matrizes.*')}
+                        variant="top-control"
                     >
                         <MenuLabel icon="bi bi-buildings" text="Matrizes" />
                     </NavLink>
@@ -396,6 +397,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                     <NavLink
                         href={route('dashboard')}
                         active={route().current('dashboard')}
+                        variant="top-control"
                     >
                         <MenuLabel icon="bi bi-speedometer2" text={activeUnitName} />
                     </NavLink>
@@ -408,6 +410,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                     <NavLink
                         href={route('products.index')}
                         active={route().current('products.*')}
+                        variant="top-control"
                     >
                         <MenuLabel icon="bi bi-box-seam" text="Produtos" />
                     </NavLink>
@@ -420,6 +423,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                     <NavLink
                         href={route('support.tickets.index')}
                         active={route().current('support.tickets.*')}
+                        variant="top-control"
                     >
                         <MenuLabel
                             icon="bi bi-camera-video"
@@ -436,6 +440,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                     <NavLink
                         href={route('reports.control')}
                         active={route().current('reports.control')}
+                        variant="top-control"
                     >
                         <MenuLabel icon="bi bi-graph-up-arrow" text="Controle" />
                     </NavLink>
@@ -448,6 +453,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                     <NavLink
                         href={route('reports.cash.closure')}
                         active={route().current('reports.cash.closure')}
+                        variant="top-control"
                     >
                         <MenuLabel
                             icon="bi bi-clipboard-data"
@@ -464,6 +470,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                     <NavLink
                         href={route('cashier.close')}
                         active={route().current('cashier.close')}
+                        variant="top-control"
                     >
                         <MenuLabel icon="bi bi-cash-stack" text="Fechar CX" />
                     </NavLink>
@@ -476,6 +483,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                     <NavLink
                         href={hasLanchoneteRoute ? route('lanchonete.terminal') : '#'}
                         active={hasLanchoneteRoute ? route().current('lanchonete.terminal') : false}
+                        variant="top-control"
                     >
                         <MenuLabel icon="bi bi-egg-fried" text="Lanchonete" />
                     </NavLink>
