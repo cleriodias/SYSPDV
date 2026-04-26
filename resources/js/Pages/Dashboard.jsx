@@ -2111,10 +2111,7 @@ export default function Dashboard() {
                                             </table>
                                         </div>
                                     )}
-                                    <div className="mt-6 border-t border-gray-100 pt-4 dark:border-gray-700">
-                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                                        </p>
-                                    </div>
+
                                     <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                                         {paymentOptions.map((option) => (
                                             <button
