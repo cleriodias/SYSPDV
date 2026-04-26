@@ -413,7 +413,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                         href={route('products.index')}
                         active={route().current('products.*')}
                         variant="top-control"
-                        tone="Success"
+                        tone="Secondary"
                     >
                         <MenuLabel icon="bi bi-box-seam" text="Produtos" />
                     </NavLink>
@@ -427,7 +427,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                         href={route('support.tickets.index')}
                         active={route().current('support.tickets.*')}
                         variant="top-control"
-                        tone="Info"
+                        tone="Warning"
                     >
                         <MenuLabel
                             icon="bi bi-camera-video"
@@ -445,7 +445,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                         href={route('reports.control')}
                         active={route().current('reports.control')}
                         variant="top-control"
-                        tone="Dark"
+                        tone="Success"
                     >
                         <MenuLabel icon="bi bi-graph-up-arrow" text="Controle" />
                     </NavLink>
@@ -459,7 +459,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                         href={route('reports.cash.closure')}
                         active={route().current('reports.cash.closure')}
                         variant="top-control"
-                        tone="Dark"
+                        tone="Error"
                     >
                         <MenuLabel
                             icon="bi bi-clipboard-data"
@@ -477,7 +477,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                         href={route('cashier.close')}
                         active={route().current('cashier.close')}
                         variant="top-control"
-                        tone="Dark"
+                        tone="Error"
                     >
                         <MenuLabel icon="bi bi-cash-stack" text="Fechar CX" />
                     </NavLink>

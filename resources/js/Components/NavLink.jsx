@@ -31,7 +31,7 @@ export default function NavLink({
 
     const baseClassName =
         variant === 'top-control'
-            ? `inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold leading-5 shadow-sm transition duration-150 ease-in-out focus:outline-none ${
+            ? `inline-flex items-center gap-2 rounded-full border px-2 py-1 text-sm font-semibold leading-5 shadow-sm transition duration-150 ease-in-out focus:outline-none ${
                   topControlToneClassMap[tone] ?? topControlToneClassMap.Info
               }`
             : 'inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium leading-5 transition duration-150 ease-in-out focus:outline-none';
