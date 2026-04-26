@@ -24,3 +24,4 @@ PADRAO VISUAL OBRIGATORIO:
 - Badge de nome de usuario deve sempre usar texto preto com fundo branco.
 - A paleta padrao oficial do sistema para fonte, botoes, badges e estados visuais e: `Default`, `Primary`, `Secondary`, `Info`, `Success`, `Warning`, `Error`, `Dark` e `Light`.
 - Sempre reutilizar esses estilos/tokens visuais centrais do sistema e nao criar variacoes paralelas quando ja existir uma opcao padrao adequada.
+
