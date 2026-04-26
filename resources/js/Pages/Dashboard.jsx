@@ -1988,6 +1988,11 @@ export default function Dashboard() {
                                             <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
                                                 Itens adicionados
                                             </h3>
+                                            {items.length > 0 && (
+                                                <span className="text-base font-bold text-gray-700 dark:text-gray-200">
+                                                    {totalItems}
+                                                </span>
+                                            )}
                                             {selectedComandaCode && (
                                                 <span className="rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700">
                                                     Comanda: {selectedComandaCode}
@@ -2103,29 +2108,9 @@ export default function Dashboard() {
                                                         </tr>
                                                     ))}
                                                 </tbody>
-                                                <tfoot className="border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/30">
-                                                    <tr>
-                                                        <td className="px-3 py-3"></td>
-                                                        <td className="px-3 py-3 text-center text-base font-bold text-gray-800 dark:text-gray-100">
-                                                            {totalItems}
-                                                        </td>
-                                                        <td className="px-3 py-3"></td>
-                                                        <td className="px-3 py-3"></td>
-                                                        <td className="px-3 py-3"></td>
-                                                    </tr>
-                                                </tfoot>
                                             </table>
                                         </div>
                                     )}
-                                    <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-700">
-                                        <p className="text-base font-semibold text-gray-700 dark:text-gray-200">
-                                            Total
-                                        </p>
-                                        <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-300">
-                                            {formatCurrency(totalAmount)}
-                                        </p>
-                                    </div>
-
                                     <div className="mt-6 border-t border-gray-100 pt-4 dark:border-gray-700">
                                         <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
                                         </p>

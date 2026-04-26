@@ -18,18 +18,10 @@ const MetricCard = ({ title, value, description, accent }) => (
     </div>
 );
 
-const normalizeDateInput = (value) => {
-    const digits = String(value ?? '').replace(/\D/g, '').slice(0, 6);
-
-    if (digits.length <= 2) {
-        return digits;
+const openNativeDatePicker = (event) => {
+    if (typeof event?.target?.showPicker === 'function') {
+        event.target.showPicker();
     }
-
-    if (digits.length <= 4) {
-        return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    }
-
-    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 };
 
 export default function ControlPanel({
@@ -41,8 +33,8 @@ export default function ControlPanel({
 }) {
     const { data, setData, get, processing } = useForm({
         payment_type: paymentType ?? 'all',
-        start_date: period?.start ?? '',
-        end_date: period?.end ?? '',
+        start_date: period?.input_start ?? '',
+        end_date: period?.input_end ?? '',
     });
 
     const totalSum = Number(summary?.grand_total ?? 0);
@@ -143,14 +135,12 @@ export default function ControlPanel({
                             <div>
                                 <label className="text-sm font-medium text-gray-700">Inicio</label>
                                 <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    maxLength={8}
-                                    placeholder="DD/MM/AA"
+                                    type="date"
+                                    lang="pt-BR"
                                     value={data.start_date}
-                                    onChange={(event) =>
-                                        setData('start_date', normalizeDateInput(event.target.value))
-                                    }
+                                    onChange={(event) => setData('start_date', event.target.value)}
+                                    onFocus={openNativeDatePicker}
+                                    onClick={openNativeDatePicker}
                                     className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-gray-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                                 />
                             </div>
@@ -158,12 +148,12 @@ export default function ControlPanel({
                             <div>
                                 <label className="text-sm font-medium text-gray-700">Fim</label>
                                 <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    maxLength={8}
-                                    placeholder="DD/MM/AA"
+                                    type="date"
+                                    lang="pt-BR"
                                     value={data.end_date}
-                                    onChange={(event) => setData('end_date', normalizeDateInput(event.target.value))}
+                                    onChange={(event) => setData('end_date', event.target.value)}
+                                    onFocus={openNativeDatePicker}
+                                    onClick={openNativeDatePicker}
                                     className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-gray-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                                 />
                             </div>

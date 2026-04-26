@@ -2376,11 +2376,13 @@ class SalesReportController extends Controller
         $this->ensureManager($request);
         $user = $request->user();
         $availableUnits = $this->availableUnits($user);
+        $startInput = trim((string) $request->query('start_date', ''));
+        $endInput = trim((string) $request->query('end_date', ''));
 
         $defaultStart = Carbon::today()->startOfMonth();
         $defaultEnd = Carbon::today()->endOfDay();
-        $start = $this->parseFlexibleReportDate($request->query('start_date'), $defaultStart)->startOfDay();
-        $end = $this->parseFlexibleReportDate($request->query('end_date'), $defaultEnd)->endOfDay();
+        $start = $this->parseFlexibleReportDate($startInput, $defaultStart)->startOfDay();
+        $end = $this->parseFlexibleReportDate($endInput, $defaultEnd)->endOfDay();
 
         if ($end->lt($start)) {
             $end = $start->copy()->endOfDay();
@@ -2397,6 +2399,8 @@ class SalesReportController extends Controller
             'period' => [
                 'start' => $start->format('d/m/y'),
                 'end' => $end->format('d/m/y'),
+                'input_start' => $startInput !== '' ? $start->toDateString() : '',
+                'input_end' => $endInput !== '' ? $end->toDateString() : '',
                 'label' => $start->translatedFormat('d/m/Y') . ' - ' . $end->translatedFormat('d/m/Y'),
             ],
             'paymentType' => $paymentType,
