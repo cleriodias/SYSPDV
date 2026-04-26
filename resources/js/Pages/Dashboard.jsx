@@ -1835,9 +1835,9 @@ export default function Dashboard() {
                 <Head title="Dashboard" />
 
                 <div className="pt-3 pb-8">
-                    <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-7xl sm:px-2 lg:px-8">
                         <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                            <div className="p-6 text-gray-900 dark:text-gray-100">
+                            <div className="p-3 text-gray-900 dark:text-gray-100">
                                 <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900 dark:border-amber-400/40 dark:bg-amber-900/20 dark:text-amber-100">
                                     <p className="font-semibold">
                                         Apenas o perfil CAIXA pode fazer lancamentos no Dashboard.
@@ -1891,13 +1891,13 @@ export default function Dashboard() {
         <AuthenticatedLayout header={headerContent} headerClassName="py-1">
             <Head title="Dashboard" />
 
-            <div className="pt-3 pb-8">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <div className="pt-1 pb-8">
+                <div className="mx-auto max-w-7xl ">
                     <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
                         <div className="p-6 text-gray-900 dark:text-gray-100">
                             <div className="space-y-6">
                                 {isCashier && (requiresClosure || hasPendingComandas) && (
-                                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-2py-1 text-sm text-amber-900 dark:border-amber-400/40 dark:bg-amber-900/20 dark:text-amber-100">
+                                    <div className="p-4 rounded-lg border border-amber-200 bg-amber-50 px-2py-1 text-sm text-amber-900 dark:border-amber-400/40 dark:bg-amber-900/20 dark:text-amber-100">
                                         <div className="flex flex-col gap-2">
                                             {requiresClosure && (
                                                 <p className="font-semibold">{closureBlockMessage}</p>
@@ -1982,42 +1982,13 @@ export default function Dashboard() {
                                     </div>
                                 )}
 
-                                <div className="rounded-2xl border border-gray-200 p-4 shadow-sm dark:border-gray-700">
-                                    <div className="flex flex-wrap items-center justify-between gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                                                Itens adicionados
-                                            </h3>
-                                            {items.length > 0 && (
-                                                <span className="text-base font-bold text-gray-700 dark:text-gray-200">
-                                                    {totalItems}
-                                                </span>
-                                            )}
-                                            {selectedComandaCode && (
-                                                <span className="rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700">
-                                                    Comanda: {selectedComandaCode}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            {selectedComandaCode && (
-                                                <span className="rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700">
-                                                    Comanda: {selectedComandaCode}
-                                                </span>
-                                            )}
-                                            <button
-                                                type="button"
-                                                onClick={handleSaveCart}
-                                                disabled={items.length === 0}
-                                                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-indigo-400 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200"
-                                            >
-                                                <i className="bi bi-download" aria-hidden="true"></i>
-                                                Guardar lista
-                                            </button>
-                                            <span className="text-sm text-gray-500 dark:text-gray-300">
-                                                {items.length} produto(s)
+                                <div className="rounded-2xl border border-gray-200 p-2 shadow-sm dark:border-gray-700">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        {selectedComandaCode && (
+                                            <span className="rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700">
+                                                Comanda: {selectedComandaCode}
                                             </span>
-                                        </div>
+                                        )}
                                     </div>
                                     {items.length === 0 ? (
                                         <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
@@ -2028,7 +1999,12 @@ export default function Dashboard() {
                                                 <thead className="bg-gray-50 dark:bg-gray-900/40">
                                                     <tr>
                                                         <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
-                                                            Produto
+                                                            <span className="inline-flex items-center gap-2">
+                                                                <span>Produto</span>
+                                                                <span className="text-base font-bold text-gray-700 dark:text-gray-200">
+                                                                    {items.length}
+                                                                </span>
+                                                            </span>
                                                         </th>
                                                         <th className="px-3 py-2 text-center font-medium text-gray-600 dark:text-gray-300">
                                                             Qtd
@@ -2112,14 +2088,34 @@ export default function Dashboard() {
                                         </div>
                                     )}
 
-                                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                                        {paymentOptions.map((option) => (
+                                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+                                        {paymentOptions.slice(0, 2).map((option) => (
                                             <button
                                                 type="button"
                                                 key={option.value}
                                                 onClick={() => handlePaymentClick(option.value)}
                                                 disabled={saleLoading || items.length === 0 || isSalesBlocked}
-                                                className={`rounded-lg px-4 py-3 text-center text-base font-semibold shadow focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${option.classes}`}
+                                                className={`min-w-0 rounded-lg px-3 py-3 text-center text-sm font-semibold shadow focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 lg:text-base ${option.classes}`}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveCart}
+                                            disabled={items.length === 0}
+                                            className="inline-flex min-w-0 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-3 text-center text-sm font-semibold text-white shadow focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60 lg:text-base"
+                                        >
+                                            <i className="bi bi-download" aria-hidden="true"></i>
+                                            Guardar {totalItems} Itens
+                                        </button>
+                                        {paymentOptions.slice(2).map((option) => (
+                                            <button
+                                                type="button"
+                                                key={option.value}
+                                                onClick={() => handlePaymentClick(option.value)}
+                                                disabled={saleLoading || items.length === 0 || isSalesBlocked}
+                                                className={`min-w-0 rounded-lg px-3 py-3 text-center text-sm font-semibold shadow focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 lg:text-base ${option.classes}`}
                                             >
                                                 {option.label}
                                             </button>
