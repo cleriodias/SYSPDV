@@ -22,6 +22,17 @@ class UnitSwitchController extends Controller
         6 => 'CLIENTE',
     ];
 
+    private const ROLE_HIERARCHY = [
+        7,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+    ];
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -138,7 +149,18 @@ class UnitSwitchController extends Controller
 
     private function canUseRole(int $originalRole, int $role): bool
     {
-        return array_key_exists($role, self::ROLE_OPTIONS) && $role <= $originalRole;
+        if (! array_key_exists($originalRole, self::ROLE_OPTIONS) || ! array_key_exists($role, self::ROLE_OPTIONS)) {
+            return false;
+        }
+
+        $originalIndex = array_search($originalRole, self::ROLE_HIERARCHY, true);
+        $roleIndex = array_search($role, self::ROLE_HIERARCHY, true);
+
+        if ($originalIndex === false || $roleIndex === false) {
+            return false;
+        }
+
+        return $roleIndex >= $originalIndex;
     }
 
     private function resolveUserMatrixId($user): int
