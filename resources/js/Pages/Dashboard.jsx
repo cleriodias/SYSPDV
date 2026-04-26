@@ -1897,7 +1897,7 @@ export default function Dashboard() {
                         <div className="p-6 text-gray-900 dark:text-gray-100">
                             <div className="space-y-6">
                                 {isCashier && (requiresClosure || hasPendingComandas) && (
-                                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/40 dark:bg-amber-900/20 dark:text-amber-100">
+                                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-2py-1 text-sm text-amber-900 dark:border-amber-400/40 dark:bg-amber-900/20 dark:text-amber-100">
                                         <div className="flex flex-col gap-2">
                                             {requiresClosure && (
                                                 <p className="font-semibold">{closureBlockMessage}</p>
