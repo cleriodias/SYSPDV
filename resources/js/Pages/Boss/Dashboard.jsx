@@ -314,8 +314,8 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                                             onClick={() => toggleMatrixPayment(matriz.id)}
                                             className={`rounded-2xl px-4 py-2 text-xs font-semibold text-white transition ${
                                                 matriz.payment_status
-                                                    ? 'bg-rose-600 hover:bg-rose-700'
-                                                    : 'bg-emerald-600 hover:bg-emerald-700'
+                                                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                                                    : 'bg-rose-600 hover:bg-rose-700'
                                             }`}
                                         >
                                             {matriz.payment_status ? 'Pago' : 'Nao Pago'}
@@ -413,8 +413,8 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                                                                         onClick={() => toggleUnitPayment(branch.id)}
                                                                         className={`rounded-xl px-3 py-1.5 text-[11px] font-semibold text-white transition ${
                                                                             branch.payment_status
-                                                                                ? 'bg-rose-600 hover:bg-rose-700'
-                                                                                : 'bg-emerald-600 hover:bg-emerald-700'
+                                                                                ? 'bg-emerald-600 hover:bg-emerald-700'
+                                                                                : 'bg-rose-600 hover:bg-rose-700'
                                                                         }`}
                                                                     >
                                                                         {branch.payment_status ? 'Pago' : 'Nao Pago'}
