@@ -95,9 +95,16 @@ class UnitController extends Controller
 
         $data = $this->validateUnit($request);
         $planSettings = BillingPlanSettings::current();
+        $matrixId = ManagementScope::scopedMatrixId($request->user());
+
+        if ($matrixId <= 0) {
+            return Redirect::back()
+                ->withInput()
+                ->with('error', 'Selecione primeiro uma matriz valida na troca de perfil antes de cadastrar uma filial.');
+        }
 
         $unit = Unidade::create([
-            'matriz_id' => ManagementScope::scopedMatrixId($request->user()),
+            'matriz_id' => $matrixId,
             'tb2_tipo' => 'filial',
             'tb2_nome' => $data['tb2_nome'],
             'tb2_endereco' => $data['tb2_endereco'],

@@ -20,7 +20,13 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_the_login_screen(): void
     {
-        $user = User::factory()->create();
+        $unit = $this->makeLoginUnit('Loja Teste Login');
+        $user = User::factory()->create([
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $unit->tb2_id,
+        ]);
+        $user->units()->sync([$unit->tb2_id]);
 
         $response = $this->post('/login', [
             'email' => $user->email,
@@ -33,7 +39,13 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
-        $user = User::factory()->create();
+        $unit = $this->makeLoginUnit('Loja Teste Senha');
+        $user = User::factory()->create([
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $unit->tb2_id,
+        ]);
+        $user->units()->sync([$unit->tb2_id]);
 
         $this->post('/login', [
             'email' => $user->email,
@@ -45,7 +57,13 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_logout(): void
     {
-        $user = User::factory()->create();
+        $unit = $this->makeLoginUnit('Loja Teste Logout');
+        $user = User::factory()->create([
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $unit->tb2_id,
+        ]);
+        $user->units()->sync([$unit->tb2_id]);
 
         $response = $this->actingAs($user)->post('/logout');
 

@@ -65,7 +65,7 @@ class UserManagementTest extends TestCase
         ]);
     }
 
-    public function test_switch_role_updates_funcao_in_database_without_changing_funcao_original(): void
+    public function test_switch_role_keeps_funcao_persisted_and_updates_only_the_session(): void
     {
         $matrix = $this->makeMatrix('Matriz Troca');
         $matrixUnit = $this->makeUnit('Loja Matriz', $matrix, 'matriz');
@@ -92,7 +92,7 @@ class UserManagementTest extends TestCase
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
-            'funcao' => 3,
+            'funcao' => 0,
             'funcao_original' => 0,
             'tb2_id' => $matrixUnit->tb2_id,
         ]);
@@ -110,10 +110,10 @@ class UserManagementTest extends TestCase
         $unitB1 = $this->makeUnit('Loja B1', $matrixB, 'matriz');
 
         $user = User::factory()->create([
-            'name' => 'Cliente Troca',
-            'email' => 'cliente.troca@example.com',
-            'funcao' => 6,
-            'funcao_original' => 6,
+            'name' => 'Caixa Troca',
+            'email' => 'caixa.troca@example.com',
+            'funcao' => 3,
+            'funcao_original' => 3,
             'tb2_id' => $unitA1->tb2_id,
             'matriz_id' => $matrixA->id,
         ]);
@@ -134,23 +134,31 @@ class UserManagementTest extends TestCase
 
         $response->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Reports/SwitchUnit')
+            ->where('initialRole', null)
+            ->where('currentUnitId', $unitA1->tb2_id)
+            ->where('currentMatrixUnitId', $unitA1->tb2_id)
+            ->where('initialSelectedUnitId', $unitA1->tb2_id)
             ->where('roles', [
-                ['value' => 0, 'label' => 'MASTER', 'active' => false],
-                ['value' => 1, 'label' => 'GERENTE', 'active' => false],
-                ['value' => 2, 'label' => 'SUB-GERENTE', 'active' => false],
                 ['value' => 3, 'label' => 'CAIXA', 'active' => false],
                 ['value' => 4, 'label' => 'LANCHONETE', 'active' => false],
                 ['value' => 5, 'label' => 'FUNCIONARIO', 'active' => false],
                 ['value' => 6, 'label' => 'CLIENTE', 'active' => true],
+            ])
+            ->where('currentSessionUnitLabel', 'Loja A1')
+            ->where('units', [
+                ['id' => $unitA1->tb2_id, 'name' => 'Matriz A', 'type' => 'matriz', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => true],
             ])
             ->has('unitGroups', 1)
             ->where('unitGroups.0.matrix.name', 'Matriz A')
             ->where('unitGroups.0.matrixUnit.id', $unitA1->tb2_id)
             ->where('unitGroups.0.matrixUnit.name', 'Matriz A')
             ->where('unitGroups.0.matrixUnit.type', 'matriz')
+            ->where('unitGroups.0.matrixUnit.status', 1)
+            ->where('unitGroups.0.matrixUnit.loginEnabled', true)
+            ->where('unitGroups.0.matrixUnit.selectable', true)
             ->where('unitGroups.0.matrixUnit.active', true)
             ->where('unitGroups.0.branches', [
-                ['id' => $unitA2->tb2_id, 'name' => 'Loja A2', 'type' => 'filial', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz A', 'active' => false],
+                ['id' => $unitA2->tb2_id, 'name' => 'Loja A2', 'type' => 'filial', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => false, 'matrixUnitId' => $unitA1->tb2_id],
             ])
             ->missing('roles.7')
         );
@@ -224,18 +232,33 @@ class UserManagementTest extends TestCase
 
         $response->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Reports/SwitchUnit')
+            ->where('initialRole', null)
+            ->where('currentUnitId', $unitA1->tb2_id)
+            ->where('currentMatrixUnitId', $unitA1->tb2_id)
+            ->where('initialSelectedUnitId', $unitA1->tb2_id)
+            ->where('currentSessionUnitLabel', 'Loja Boss A1')
+            ->where('units', [
+                ['id' => $unitA1->tb2_id, 'name' => 'Matriz Boss A', 'type' => 'matriz', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz Boss A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => true],
+                ['id' => $unitB1->tb2_id, 'name' => 'Matriz Boss B', 'type' => 'matriz', 'matrixId' => $matrixB->id, 'matrixName' => 'Matriz Boss B', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => false],
+            ])
             ->has('unitGroups', 2)
             ->where('unitGroups.0.matrix.name', 'Matriz Boss A')
             ->where('unitGroups.0.matrixUnit.id', $unitA1->tb2_id)
+            ->where('unitGroups.0.matrixUnit.status', 1)
+            ->where('unitGroups.0.matrixUnit.loginEnabled', true)
+            ->where('unitGroups.0.matrixUnit.selectable', true)
             ->where('unitGroups.0.matrixUnit.active', true)
             ->where('unitGroups.0.branches', [
-                ['id' => $unitA2->tb2_id, 'name' => 'Loja Boss A2', 'type' => 'filial', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz Boss A', 'active' => false],
+                ['id' => $unitA2->tb2_id, 'name' => 'Loja Boss A2', 'type' => 'filial', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz Boss A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => false, 'matrixUnitId' => $unitA1->tb2_id],
             ])
             ->where('unitGroups.1.matrix.name', 'Matriz Boss B')
             ->where('unitGroups.1.matrixUnit.id', $unitB1->tb2_id)
+            ->where('unitGroups.1.matrixUnit.status', 1)
+            ->where('unitGroups.1.matrixUnit.loginEnabled', true)
+            ->where('unitGroups.1.matrixUnit.selectable', true)
             ->where('unitGroups.1.matrixUnit.active', false)
             ->where('unitGroups.1.branches', [
-                ['id' => $unitB2->tb2_id, 'name' => 'Loja Boss B2', 'type' => 'filial', 'matrixId' => $matrixB->id, 'matrixName' => 'Matriz Boss B', 'active' => false],
+                ['id' => $unitB2->tb2_id, 'name' => 'Loja Boss B2', 'type' => 'filial', 'matrixId' => $matrixB->id, 'matrixName' => 'Matriz Boss B', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => false, 'matrixUnitId' => $unitB1->tb2_id],
             ])
             ->where('roles', [
                 ['value' => 7, 'label' => 'BOSS', 'active' => true],
@@ -250,6 +273,51 @@ class UserManagementTest extends TestCase
         );
     }
 
+    public function test_boss_sees_inactive_units_but_can_not_select_them(): void
+    {
+        $matrixA = $this->makeMatrix('Matriz Boss Ativa');
+        $matrixB = $this->makeMatrix('Matriz Boss Inativa');
+        $activeUnit = $this->makeUnit('Loja Boss Ativa', $matrixA, 'matriz');
+        $inactiveUnit = $this->makeUnit('Loja Boss Inativa', $matrixB, 'matriz', 0);
+
+        $boss = User::factory()->create([
+            'name' => 'Boss Inativa',
+            'email' => 'boss.inativa@example.com',
+            'funcao' => 7,
+            'funcao_original' => 7,
+            'tb2_id' => $activeUnit->tb2_id,
+            'matriz_id' => $matrixA->id,
+        ]);
+        $boss->units()->sync([$activeUnit->tb2_id]);
+
+        $response = $this
+            ->actingAs($boss)
+            ->get(route('reports.switch-unit'));
+
+        $response->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Reports/SwitchUnit')
+            ->where('initialRole', null)
+            ->where('currentUnitId', $activeUnit->tb2_id)
+            ->where('currentMatrixUnitId', $activeUnit->tb2_id)
+            ->where('initialSelectedUnitId', $activeUnit->tb2_id)
+            ->where('units', [
+                ['id' => $activeUnit->tb2_id, 'name' => 'Matriz Boss Ativa', 'type' => 'matriz', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz Boss Ativa', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => true],
+                ['id' => $inactiveUnit->tb2_id, 'name' => 'Matriz Boss Inativa', 'type' => 'matriz', 'matrixId' => $matrixB->id, 'matrixName' => 'Matriz Boss Inativa', 'status' => 0, 'loginEnabled' => true, 'selectable' => false, 'active' => false],
+            ])
+            ->where('unitGroups.0.branches', [])
+            ->where('unitGroups.1.branches', [])
+        );
+
+        $updateResponse = $this
+            ->actingAs($boss)
+            ->post(route('reports.switch-unit.update'), [
+                'unit_id' => $inactiveUnit->tb2_id,
+                'role' => 7,
+            ]);
+
+        $updateResponse->assertForbidden();
+    }
+
     private function makeMatrix(string $name): Matriz
     {
         return Matriz::create([
@@ -260,7 +328,13 @@ class UserManagementTest extends TestCase
         ]);
     }
 
-    private function makeUnit(string $name, ?Matriz $matrix = null, string $type = 'filial'): Unidade
+    private function makeUnit(
+        string $name,
+        ?Matriz $matrix = null,
+        string $type = 'filial',
+        int $status = 1,
+        bool $loginEnabled = true,
+    ): Unidade
     {
         return Unidade::create([
             'tb2_nome' => $name,
@@ -271,9 +345,9 @@ class UserManagementTest extends TestCase
             'tb2_fone' => '(61) 99999-9999',
             'tb2_cnpj' => fake()->unique()->numerify('##.###.###/####-##'),
             'tb2_localizacao' => 'https://maps.example.com/' . fake()->slug(),
-            'tb2_status' => 1,
+            'tb2_status' => $status,
             'pagamento_ativo' => true,
-            'login_liberado' => true,
+            'login_liberado' => $loginEnabled,
         ]);
     }
 }
