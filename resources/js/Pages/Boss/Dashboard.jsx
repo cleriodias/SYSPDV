@@ -318,7 +318,7 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                                                     : 'bg-emerald-600 hover:bg-emerald-700'
                                             }`}
                                         >
-                                            {matriz.payment_status ? 'Marcar nao pago' : 'Marcar pago'}
+                                            {matriz.payment_status ? 'Pago' : 'Nao Pago'}
                                         </button>
                                         <button
                                             type="button"
@@ -417,7 +417,7 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                                                                                 : 'bg-emerald-600 hover:bg-emerald-700'
                                                                         }`}
                                                                     >
-                                                                        {branch.payment_status ? 'Nao pago' : 'Pago'}
+                                                                        {branch.payment_status ? 'Pago' : 'Nao Pago'}
                                                                     </button>
                                                                     <button
                                                                         type="button"
