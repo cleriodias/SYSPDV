@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -153,6 +154,7 @@ class UserController extends Controller
 
         return Inertia::render('Users/UserCreate', [
             'units' => $units,
+            'roleOptions' => $this->roleOptionsForCreate(),
         ]);
     }
 
@@ -210,6 +212,8 @@ class UserController extends Controller
             ]
         );
 
+        $this->ensureRequestedRoleIsAllowedForNewUser((int) $request->input('funcao'));
+
         $unitIds = [(int) $request->input('tb2_id')];
 
         if (ManagementScope::isManager($authUser)) {
@@ -260,6 +264,7 @@ class UserController extends Controller
         return Inertia::render('Users/UserEdit', [
             'user' => $user,
             'units' => $units,
+            'roleOptions' => $this->roleOptionsForTarget($user),
         ]);
     }
 
@@ -306,6 +311,8 @@ class UserController extends Controller
                 'tb2_id.exists' => 'Unidade selecionada nao existe.',
             ]
         );
+
+        $this->ensureRequestedRoleIsAllowedForExistingUser($user, (int) $request->input('funcao'));
 
         $unitIds = [(int) $request->input('tb2_id')];
 
@@ -576,5 +583,55 @@ class UserController extends Controller
         }, $words);
 
         return implode(' ', $formattedWords);
+    }
+
+    private function roleOptionsForCreate(): array
+    {
+        return [
+            ['value' => 0, 'label' => 'MASTER'],
+            ['value' => 1, 'label' => 'GERENTE'],
+            ['value' => 2, 'label' => 'SUB-GERENTE'],
+            ['value' => 3, 'label' => 'CAIXA'],
+            ['value' => 4, 'label' => 'LANCHONETE'],
+            ['value' => 5, 'label' => 'FUNCIONARIO'],
+            ['value' => 6, 'label' => 'CLIENTE'],
+        ];
+    }
+
+    private function roleOptionsForTarget(User $user): array
+    {
+        if ((int) $user->id === ManagementScope::BOSS_USER_ID) {
+            return [
+                ['value' => 7, 'label' => 'BOSS'],
+            ];
+        }
+
+        return $this->roleOptionsForCreate();
+    }
+
+    private function ensureRequestedRoleIsAllowedForNewUser(int $role): void
+    {
+        if ($role === 7) {
+            throw ValidationException::withMessages([
+                'funcao' => 'A funcao BOSS e exclusiva do usuario #1.',
+            ]);
+        }
+    }
+
+    private function ensureRequestedRoleIsAllowedForExistingUser(User $user, int $role): void
+    {
+        $isBossUser = (int) $user->id === ManagementScope::BOSS_USER_ID;
+
+        if ($isBossUser && $role !== 7) {
+            throw ValidationException::withMessages([
+                'funcao' => 'O usuario #1 deve permanecer com a funcao BOSS.',
+            ]);
+        }
+
+        if (! $isBossUser && $role === 7) {
+            throw ValidationException::withMessages([
+                'funcao' => 'A funcao BOSS e exclusiva do usuario #1.',
+            ]);
+        }
     }
 }

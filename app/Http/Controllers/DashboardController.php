@@ -6,6 +6,7 @@ use App\Models\Matriz;
 use App\Models\Unidade;
 use App\Support\BillingPlanSettings;
 use App\Support\ManagementScope;
+use App\Support\ProfileSwitchData;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -59,6 +60,9 @@ class DashboardController extends Controller
                         'status' => (int) ($matriz->status ?? 0),
                         'payment_status' => (bool) ($matriz->pagamento_ativo ?? true),
                         'matrix_unit_id' => $matrixUnit ? (int) $matrixUnit->tb2_id : null,
+                        'matrix_unit_name' => trim((string) ($matrixUnit?->tb2_nome ?? '')) !== ''
+                            ? trim((string) $matrixUnit->tb2_nome)
+                            : ((string) $matriz->nome !== '' ? (string) $matriz->nome : 'Matriz'),
                         'matrix_login_enabled' => (bool) ($matrixUnit?->login_liberado ?? true),
                         'matrix_unit_status' => (int) ($matrixUnit?->tb2_status ?? 0),
                         'matrix_monthly_value' => $matrixFee,
@@ -87,6 +91,14 @@ class DashboardController extends Controller
             ]);
         }
 
-        return Inertia::render('Dashboard');
+        $profileSwitch = null;
+
+        if ((int) ($user?->funcao ?? -1) === 0 && ProfileSwitchData::canAccess($user)) {
+            $profileSwitch = ProfileSwitchData::forRequest($request);
+        }
+
+        return Inertia::render('Dashboard', [
+            'profileSwitch' => $profileSwitch,
+        ]);
     }
 }

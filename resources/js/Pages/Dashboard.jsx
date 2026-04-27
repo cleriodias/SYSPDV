@@ -1,5 +1,6 @@
 ﻿import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Modal from '@/Components/Modal';
+import ProfileSwitchPanel from '@/Components/ProfileSwitchPanel';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import { formatBrazilDate, formatBrazilDateTime } from '@/Utils/date';
 import { buildFiscalReceiptHtml, buildReceiptHtml, resolveReceiptComanda, resolveReceiptId } from '@/Utils/receipt';
@@ -293,7 +294,7 @@ const parseWeightedBarcode = (value) => {
     };
 };
 
-export default function Dashboard() {
+export default function Dashboard({ profileSwitch = null }) {
     const pageProps = usePage().props;
     const { auth } = pageProps;
     const effectiveRole = Number(auth?.user?.funcao ?? -1);
@@ -1843,9 +1844,26 @@ export default function Dashboard() {
                                         Apenas o perfil CAIXA pode fazer lancamentos no Dashboard.
                                     </p>
                                     <p className="mt-1">
-                                        Para registrar vendas, troque o perfil atual para CAIXA na tela de troca de funcao.
+                                        Para registrar vendas, troque o perfil atual para CAIXA no formulario abaixo.
                                     </p>
                                 </div>
+                                {isMaster && profileSwitch && (
+                                    <ProfileSwitchPanel
+                                        className="mt-6"
+                                        title={`Troca rapida do perfil ${profileSwitch.originalRoleLabel ?? '---'}`}
+                                        units={profileSwitch.units ?? []}
+                                        unitGroups={profileSwitch.unitGroups ?? []}
+                                        roles={profileSwitch.roles ?? []}
+                                        currentUnitId={profileSwitch.currentUnitId}
+                                        currentMatrixUnitId={profileSwitch.currentMatrixUnitId}
+                                        initialSelectedUnitId={profileSwitch.initialSelectedUnitId}
+                                        currentSessionUnitLabel={profileSwitch.currentSessionUnitLabel}
+                                        currentRole={profileSwitch.currentRole}
+                                        currentRoleLabel={profileSwitch.currentRoleLabel}
+                                        originalRoleLabel={profileSwitch.originalRoleLabel}
+                                        initialRole={profileSwitch.initialRole}
+                                    />
+                                )}
                                 {isMaster && (
                                     <div className="mt-6">
                                         <div className="mb-3">

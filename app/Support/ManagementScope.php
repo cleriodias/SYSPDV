@@ -10,9 +10,34 @@ use Illuminate\Support\Collection;
 
 class ManagementScope
 {
+    public const BOSS_USER_ID = 1;
+
+    public const BOSS_UNIT_NAME = 'DASH';
+
     public static function originalRole(?User $user): int
     {
-        return (int) ($user?->funcao_original ?? $user?->funcao ?? -1);
+        $role = (int) ($user?->funcao_original ?? $user?->funcao ?? -1);
+
+        if ($role === 7 && ! self::isBossAccount($user)) {
+            return 6;
+        }
+
+        return $role;
+    }
+
+    public static function isBossAccount(?User $user): bool
+    {
+        return $user instanceof User && (int) $user->id === self::BOSS_USER_ID;
+    }
+
+    public static function isBossUnitName(?string $unitName): bool
+    {
+        return mb_strtolower(trim((string) $unitName)) === mb_strtolower(self::BOSS_UNIT_NAME);
+    }
+
+    public static function isBossUnit(?Unidade $unit): bool
+    {
+        return $unit instanceof Unidade && self::isBossUnitName($unit->tb2_nome ?? null);
     }
 
     private static function isDelegatedBoss(?User $user): bool
@@ -53,7 +78,7 @@ class ManagementScope
 
     public static function isBoss(?User $user): bool
     {
-        return $user instanceof User && (int) $user->funcao === 7;
+        return self::isBossAccount($user) && (int) $user->funcao === 7;
     }
 
     public static function isMaster(?User $user): bool

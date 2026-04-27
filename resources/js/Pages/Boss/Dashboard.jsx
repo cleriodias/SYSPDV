@@ -286,7 +286,7 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
 
                                     <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                                         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                                            Matriz
+                                            {matriz.matrix_unit_name ?? matriz.name ?? 'Matriz'}
                                         </span>
                                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
                                             Number(matriz.status) === 1

@@ -4,17 +4,6 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, useForm, router, usePage } from "@inertiajs/react";
 import { useState } from "react";
 
-const roleOptions = [
-    { value: 7, label: 'BOSS' },
-    { value: 0, label: 'MASTER' },
-    { value: 1, label: 'GERENTE' },
-    { value: 2, label: 'SUB-GERENTE' },
-    { value: 3, label: 'CAIXA' },
-    { value: 4, label: 'LANCHONETE' },
-    { value: 5, label: 'FUNCIONARIO' },
-    { value: 6, label: 'CLIENTE' },
-];
-
 const formatTime = (value) => {
     if (!value) {
         return '';
@@ -23,7 +12,7 @@ const formatTime = (value) => {
     return value.substring(0, 5);
 };
 
-export default function UserEdit({ auth, user, units = [] }) {
+export default function UserEdit({ auth, user, units = [], roleOptions = [] }) {
     const pageProps = usePage().props;
     const csrfToken = pageProps?.csrf_token ?? '';
 

@@ -3,17 +3,6 @@ import SuccessButton from "@/Components/Button/SuccessButton";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, useForm } from "@inertiajs/react";
 
-const roleOptions = [
-    { value: 7, label: 'Boss' },
-    { value: 0, label: 'Master' },
-    { value: 1, label: 'Gerente' },
-    { value: 2, label: 'Sub-gerente' },
-    { value: 3, label: 'Caixa' },
-    { value: 4, label: 'Lanchonete' },
-    { value: 5, label: 'Funcionario' },
-    { value: 6, label: 'Cliente' },
-];
-
 const formatNameInput = (value) => {
     const sanitizedValue = value
         .replace(/[^A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF\s]/g, '')
@@ -32,7 +21,7 @@ const formatNameInput = (value) => {
     return formattedName.slice(0, 15);
 };
 
-export default function UserCreate({ auth, units = [] }) {
+export default function UserCreate({ auth, units = [], roleOptions = [] }) {
     const now = new Date();
     const generatedPassword = `${String(now.getHours()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
 

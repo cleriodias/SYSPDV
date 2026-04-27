@@ -18,16 +18,8 @@ class ActiveUnitSessionData
 
     public static function displayName(Unidade $unit): string
     {
-        $unitType = mb_strtolower((string) ($unit->tb2_tipo ?? 'filial'));
-
-        if ($unitType === 'matriz') {
-            $matrixName = trim((string) ($unit->matriz?->nome ?? ''));
-
-            if ($matrixName !== '') {
-                return $matrixName;
-            }
-        }
-
-        return (string) $unit->tb2_nome;
+        return trim((string) $unit->tb2_nome) !== ''
+            ? trim((string) $unit->tb2_nome)
+            : ('Unidade #' . (int) ($unit->tb2_id ?? 0));
     }
 }
