@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\Aplicacao;
 use App\Models\CashierClosure;
 use App\Models\OnlineUser;
 use App\Models\Unidade;
@@ -102,7 +103,10 @@ class AuthenticatedSessionController extends Controller
         $selectedUnit = Unidade::active()
             ->loginAllowed()
             ->select('tb2_id', 'tb2_nome', 'tb2_endereco', 'tb2_cnpj', 'tb2_tipo', 'matriz_id')
-            ->with('matriz:id,nome')
+            ->with([
+                'matriz:id,nome,tb28_id',
+                'matriz.aplicacao:tb28_id,tb28_rota_inicial',
+            ])
             ->find($unitId);
 
         if (! $selectedUnit) {
@@ -119,7 +123,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->put('active_role', $funcaoOriginal);
         app(PaymentControlNotificationService::class)->notifyUserOnLogin($user, (int) $selectedUnit->tb2_id);
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended($this->resolveLoginRedirectPath($selectedUnit));
     }
 
     /**
@@ -138,5 +142,80 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    private function resolveLoginRedirectPath(Unidade $selectedUnit): string
+    {
+        $applicationId = (int) ($selectedUnit->matriz?->tb28_id ?? Aplicacao::PADARIA_NFE);
+        $routeDefinition = (string) ($selectedUnit->matriz?->aplicacao?->tb28_rota_inicial
+            ?: Aplicacao::defaultInitialRoute($applicationId));
+        [$routeName, $queryParameters] = $this->parseLoginRouteDefinition($routeDefinition, $selectedUnit);
+
+        if (! Route::has($routeName)) {
+            $routeName = 'dashboard';
+            $queryParameters = [];
+        }
+
+        return route(
+            $routeName,
+            array_merge($this->resolveLoginRedirectParameters($routeName, $selectedUnit), $queryParameters),
+            false
+        );
+    }
+
+    private function resolveLoginRedirectParameters(string $routeName, Unidade $selectedUnit): array
+    {
+        $route = Route::getRoutes()->getByName($routeName);
+
+        if (! $route) {
+            return [];
+        }
+
+        $parameters = [];
+
+        foreach ($route->parameterNames() as $parameterName) {
+            if (in_array($parameterName, ['unit', 'unit_id'], true)) {
+                $parameters[$parameterName] = (int) $selectedUnit->tb2_id;
+                continue;
+            }
+
+            if (in_array($parameterName, ['matriz', 'matriz_id', 'matrix'], true) && $selectedUnit->matriz_id) {
+                $parameters[$parameterName] = (int) $selectedUnit->matriz_id;
+            }
+        }
+
+        return $parameters;
+    }
+
+    private function parseLoginRouteDefinition(string $routeDefinition, Unidade $selectedUnit): array
+    {
+        $parts = explode('?', $routeDefinition, 2);
+        $routeName = trim($parts[0]) !== '' ? trim($parts[0]) : 'dashboard';
+
+        if (! isset($parts[1]) || trim($parts[1]) === '') {
+            return [$routeName, []];
+        }
+
+        parse_str($parts[1], $queryParameters);
+
+        foreach ($queryParameters as $key => $value) {
+            if (! is_string($value)) {
+                continue;
+            }
+
+            $queryParameters[$key] = str_replace(
+                ['{unit_id}', '{unit}', '{matriz_id}', '{matriz}', '{matrix}'],
+                [
+                    (string) $selectedUnit->tb2_id,
+                    (string) $selectedUnit->tb2_id,
+                    (string) ($selectedUnit->matriz_id ?? ''),
+                    (string) ($selectedUnit->matriz_id ?? ''),
+                    (string) ($selectedUnit->matriz_id ?? ''),
+                ],
+                $value
+            );
+        }
+
+        return [$routeName, $queryParameters];
     }
 }

@@ -16,11 +16,16 @@ const formatCurrency = (value) =>
         currency: 'BRL',
     });
 
-export default function MatrixEdit({ auth, matriz, matrixUnit, branchUnits = [] }) {
+export default function MatrixEdit({ auth, applications = [], matriz, matrixUnit, masterUser, branchUnits = [] }) {
     const { flash } = usePage().props;
     const { data, setData, put, processing, errors, transform } = useForm({
         nome: matriz?.nome ?? '',
         cnpj: matriz?.cnpj ?? '',
+        tb28_id: matriz?.tb28_id ? String(matriz.tb28_id) : (applications[0]?.tb28_id ? String(applications[0].tb28_id) : '1'),
+        master_name: masterUser?.name ?? '',
+        master_email: masterUser?.email ?? '',
+        master_password: '',
+        master_password_confirmation: '',
         unit_name: matrixUnit?.tb2_nome ?? '',
         unit_address: matrixUnit?.tb2_endereco ?? '',
         unit_cep: matrixUnit?.tb2_cep ?? '',
@@ -104,6 +109,78 @@ export default function MatrixEdit({ auth, matriz, matrixUnit, branchUnits = [] 
                                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                                     />
                                     {errors.cnpj && <span className="text-red-600">{errors.cnpj}</span>}
+                                </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700">Aplicacao</label>
+                                <select
+                                    value={data.tb28_id}
+                                    onChange={(e) => setData('tb28_id', e.target.value)}
+                                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                                >
+                                    {applications.map((application) => (
+                                        <option key={application.tb28_id} value={application.tb28_id}>
+                                            {application.tb28_nome}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.tb28_id && <span className="text-red-600">{errors.tb28_id}</span>}
+                            </div>
+
+                            <div className="mb-6 mt-8">
+                                <h4 className="text-base font-semibold text-gray-800">Usuario master</h4>
+                                <p className="mt-2 text-sm text-gray-600">
+                                    Este usuario e o responsavel inicial pela matriz e podera cadastrar filiais e usuarios.
+                                </p>
+                            </div>
+
+                            <div className="mb-4 grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Nome do master</label>
+                                    <input
+                                        type="text"
+                                        value={data.master_name}
+                                        onChange={(e) => setData('master_name', e.target.value)}
+                                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                                    />
+                                    {errors.master_name && <span className="text-red-600">{errors.master_name}</span>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">E-mail do master</label>
+                                    <input
+                                        type="email"
+                                        value={data.master_email}
+                                        onChange={(e) => setData('master_email', e.target.value)}
+                                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                                    />
+                                    {errors.master_email && <span className="text-red-600">{errors.master_email}</span>}
+                                </div>
+                            </div>
+
+                            <div className="mb-6 grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Nova senha do master</label>
+                                    <input
+                                        type="password"
+                                        value={data.master_password}
+                                        onChange={(e) => setData('master_password', e.target.value)}
+                                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                                    />
+                                    {errors.master_password && (
+                                        <span className="text-red-600">{errors.master_password}</span>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Confirmar nova senha</label>
+                                    <input
+                                        type="password"
+                                        value={data.master_password_confirmation}
+                                        onChange={(e) => setData('master_password_confirmation', e.target.value)}
+                                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                                    />
                                 </div>
                             </div>
 

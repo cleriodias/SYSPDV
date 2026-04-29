@@ -84,6 +84,14 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
+Route::get('/padaria', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('padaria');
+
+Route::get('/nfe', [FiscalConfigurationController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('nfe');
+
 Route::get('/supplier/access', [SupplierPortalController::class, 'access'])->name('supplier.access');
 Route::post('/supplier/access', [SupplierPortalController::class, 'authenticate'])->name('supplier.authenticate');
 Route::post('/supplier/logout', [SupplierPortalController::class, 'logout'])->name('supplier.logout');
@@ -303,6 +311,8 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+Route::middleware('auth')->group(function () {
     Route::get('/matrizes', [MatrixController::class, 'index'])->name('matrizes.index');
     Route::get('/matrizes/create', [MatrixController::class, 'create'])->name('matrizes.create');
     Route::post('/matrizes', [MatrixController::class, 'store'])->name('matrizes.store');
@@ -315,3 +325,4 @@ require __DIR__.'/auth.php';
     Route::put('/matrizes/{matriz}/filiais/{unit}/mensalidade', [MatrixController::class, 'updateBranchMonthlyValue'])
         ->missing(fn () => redirect()->route('matrizes.index')->with('error', 'Matriz nao encontrada.'))
         ->name('matrizes.branches.monthly-value.update');
+});

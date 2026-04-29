@@ -9,10 +9,11 @@ const formatCurrency = (value) =>
         currency: 'BRL',
     });
 
-export default function MatrixCreate({ auth, planSettings }) {
+export default function MatrixCreate({ auth, applications = [], planSettings }) {
     const { data, setData, post, processing, errors } = useForm({
         matriz_nome: '',
         matriz_cnpj: '',
+        tb28_id: applications[0]?.tb28_id ? String(applications[0].tb28_id) : '1',
         master_name: '',
         master_email: '',
         master_password: '',
@@ -78,6 +79,22 @@ export default function MatrixCreate({ auth, planSettings }) {
                                     />
                                     {errors.matriz_cnpj && <span className="text-red-600">{errors.matriz_cnpj}</span>}
                                 </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700">Aplicacao</label>
+                                <select
+                                    value={data.tb28_id}
+                                    onChange={(e) => setData('tb28_id', e.target.value)}
+                                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                                >
+                                    {applications.map((application) => (
+                                        <option key={application.tb28_id} value={application.tb28_id}>
+                                            {application.tb28_nome}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.tb28_id && <span className="text-red-600">{errors.tb28_id}</span>}
                             </div>
 
                             <div className="mb-6 mt-8">

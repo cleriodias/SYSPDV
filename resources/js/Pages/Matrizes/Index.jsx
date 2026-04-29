@@ -39,7 +39,7 @@ export default function MatrixIndex({ auth, matrizes = [] }) {
                             <tr>
                                 <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">ID</td>
                                 <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Matriz</td>
-                                <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">CNPJ</td>
+                                <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Aplicacao</td>
                                 <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Unidades</td>
                                 <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Usuarios</td>
                                 <td className="px-4 py-3 text-left text-sm font-medium text-gray-500 tracking-wider">Plano matriz</td>
@@ -54,7 +54,7 @@ export default function MatrixIndex({ auth, matrizes = [] }) {
                                 <tr key={matriz.id}>
                                     <td className="px-4 py-2 text-sm text-gray-500">{matriz.id}</td>
                                     <td className="px-4 py-2 text-sm text-gray-500">{matriz.nome}</td>
-                                    <td className="px-4 py-2 text-sm text-gray-500">{matriz.cnpj || '--'}</td>
+                                    <td className="px-4 py-2 text-sm text-gray-500">{matriz.aplicacao?.tb28_nome || '--'}</td>
                                     <td className="px-4 py-2 text-sm text-gray-500">{matriz.units_count}</td>
                                     <td className="px-4 py-2 text-sm text-gray-500">{matriz.users_count}</td>
                                     <td className="px-4 py-2 text-sm font-semibold text-gray-700">

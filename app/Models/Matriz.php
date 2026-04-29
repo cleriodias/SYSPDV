@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Matriz extends Model
@@ -16,6 +17,7 @@ class Matriz extends Model
         'nome',
         'slug',
         'cnpj',
+        'tb28_id',
         'status',
         'plano_mensal_valor',
         'plano_contratado_em',
@@ -23,11 +25,17 @@ class Matriz extends Model
     ];
 
     protected $casts = [
+        'tb28_id' => 'integer',
         'status' => 'integer',
         'plano_mensal_valor' => 'float',
         'plano_contratado_em' => 'datetime',
         'pagamento_ativo' => 'boolean',
     ];
+
+    public function aplicacao(): BelongsTo
+    {
+        return $this->belongsTo(Aplicacao::class, 'tb28_id', 'tb28_id');
+    }
 
     public function units(): HasMany
     {

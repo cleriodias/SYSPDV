@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Aplicacao;
 use App\Models\Matriz;
 use App\Models\Unidade;
 use App\Models\User;
@@ -12,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,6 +24,7 @@ class MatrixController extends Controller
         $this->ensureBoss();
 
         $matrizes = Matriz::query()
+            ->with('aplicacao:tb28_id,tb28_nome')
             ->withCount(['units', 'users'])
             ->orderBy('nome')
             ->get();
@@ -36,6 +39,9 @@ class MatrixController extends Controller
         $this->ensureBoss();
 
         return Inertia::render('Matrizes/Create', [
+            'applications' => Aplicacao::query()
+                ->orderBy('tb28_id')
+                ->get(['tb28_id', 'tb28_nome']),
             'planSettings' => BillingPlanSettings::current(),
         ]);
     }
@@ -44,6 +50,7 @@ class MatrixController extends Controller
     {
         $this->ensureBoss();
         $matrixUnit = $this->resolveMatrixUnit($matriz, true);
+        $masterUser = $this->resolveMatrixMaster($matriz);
         $branchUnits = $matriz->units()
             ->where('tb2_tipo', 'filial')
             ->orderBy('tb2_nome')
@@ -56,8 +63,16 @@ class MatrixController extends Controller
             ]);
 
         return Inertia::render('Matrizes/Edit', [
+            'applications' => Aplicacao::query()
+                ->orderBy('tb28_id')
+                ->get(['tb28_id', 'tb28_nome']),
             'matriz' => $matriz,
             'matrixUnit' => $matrixUnit,
+            'masterUser' => $masterUser ? [
+                'id' => (int) $masterUser->id,
+                'name' => $masterUser->name,
+                'email' => $masterUser->email,
+            ] : null,
             'branchUnits' => $branchUnits,
         ]);
     }
@@ -69,6 +84,7 @@ class MatrixController extends Controller
         $data = $request->validate([
             'matriz_nome' => ['required', 'string', 'max:255'],
             'matriz_cnpj' => ['nullable', 'string', 'max:20'],
+            'tb28_id' => ['required', 'integer', 'exists:tb28_aplicacoes,tb28_id'],
             'master_name' => ['required', 'string', 'max:255'],
             'master_email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'master_password' => ['required', 'string', 'min:4', 'confirmed'],
@@ -88,6 +104,7 @@ class MatrixController extends Controller
                 'nome' => $data['matriz_nome'],
                 'slug' => $this->generateUniqueSlug($data['matriz_nome']),
                 'cnpj' => $data['matriz_cnpj'] ?: null,
+                'tb28_id' => (int) $data['tb28_id'],
                 'status' => 1,
                 'plano_mensal_valor' => $planSettings['matrix_monthly_price'],
                 'plano_contratado_em' => now(),
@@ -137,10 +154,22 @@ class MatrixController extends Controller
     public function update(Request $request, Matriz $matriz): RedirectResponse
     {
         $this->ensureBoss();
+        $matrixUnit = $this->resolveMatrixUnit($matriz);
+        $masterUser = $this->resolveMatrixMaster($matriz);
 
         $data = $request->validate([
             'nome' => ['required', 'string', 'max:255'],
             'cnpj' => ['nullable', 'string', 'max:20'],
+            'tb28_id' => ['required', 'integer', 'exists:tb28_aplicacoes,tb28_id'],
+            'master_name' => ['required', 'string', 'max:255'],
+            'master_email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($masterUser?->id),
+            ],
+            'master_password' => [$masterUser ? 'nullable' : 'required', 'string', 'min:4', 'confirmed'],
             'unit_name' => ['required', 'string', 'max:255'],
             'unit_address' => ['required', 'string', 'max:255'],
             'unit_cep' => ['required', 'string', 'max:20'],
@@ -153,9 +182,7 @@ class MatrixController extends Controller
             'plano_contratado_em' => ['nullable', 'date_format:Y-m-d'],
         ]);
 
-        $matrixUnit = $this->resolveMatrixUnit($matriz);
-
-        DB::transaction(function () use ($data, $matriz, $matrixUnit) {
+        DB::transaction(function () use ($data, $matriz, $matrixUnit, $masterUser) {
             $contractedAt = $data['plano_contratado_em']
                 ? Carbon::createFromFormat('Y-m-d', $data['plano_contratado_em'])->startOfDay()
                 : null;
@@ -166,6 +193,7 @@ class MatrixController extends Controller
                 'nome' => $data['nome'],
                 'slug' => $this->generateUniqueSlug($data['nome'], $matriz),
                 'cnpj' => $data['cnpj'] ?: null,
+                'tb28_id' => (int) $data['tb28_id'],
                 'status' => (int) $data['status'],
                 'pagamento_ativo' => (bool) $data['pagamento_ativo'],
                 'plano_mensal_valor' => $monthlyValue,
@@ -184,6 +212,41 @@ class MatrixController extends Controller
                 'plano_mensal_valor' => $monthlyValue,
                 'plano_contratado_em' => $contractedAt,
             ])->save();
+
+            if ($masterUser) {
+                $masterUser->fill([
+                    'name' => $data['master_name'],
+                    'email' => Str::lower($data['master_email']),
+                    'tb2_id' => $matrixUnit->tb2_id,
+                    'matriz_id' => $matriz->id,
+                ]);
+
+                if (filled($data['master_password'] ?? null)) {
+                    $masterUser->password = $data['master_password'];
+                }
+
+                $masterUser->save();
+                $masterUser->units()->syncWithoutDetaching([$matrixUnit->tb2_id]);
+            } else {
+                $accessCode = $this->generateUniqueAccessCode($data['master_password']);
+
+                $createdMaster = User::create([
+                    'name' => $data['master_name'],
+                    'email' => Str::lower($data['master_email']),
+                    'password' => $data['master_password'],
+                    'cod_acesso' => $accessCode,
+                    'funcao' => 0,
+                    'funcao_original' => 0,
+                    'hr_ini' => '00:00',
+                    'hr_fim' => '23:00',
+                    'salario' => 0,
+                    'vr_cred' => 0,
+                    'tb2_id' => $matrixUnit->tb2_id,
+                    'matriz_id' => $matriz->id,
+                ]);
+
+                $createdMaster->units()->sync([$matrixUnit->tb2_id]);
+            }
         });
 
         return redirect()->route('matrizes.index')->with('success', 'Dados da matriz atualizados com sucesso.');
@@ -278,6 +341,14 @@ class MatrixController extends Controller
         return Unidade::query()
             ->whereKey($unit->getKey())
             ->firstOrFail($columns);
+    }
+
+    private function resolveMatrixMaster(Matriz $matriz): ?User
+    {
+        return $matriz->users()
+            ->where('funcao_original', 0)
+            ->orderBy('id')
+            ->first();
     }
 
     private function generateUniqueSlug(string $name, ?Matriz $ignore = null): string

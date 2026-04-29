@@ -2,11 +2,42 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 
 const TONE_CLASS_MAP = {
-    Dark: 'border-slate-800 bg-slate-800 text-white dark:border-slate-200 dark:bg-slate-200 dark:text-slate-950',
-    Primary: 'border-blue-500 bg-blue-500 text-white dark:border-blue-200 dark:bg-blue-200 dark:text-blue-950',
-    Info: 'border-cyan-500 bg-cyan-500 text-white dark:border-cyan-200 dark:bg-cyan-200 dark:text-cyan-950',
-    Success: 'border-green-500 bg-green-500 text-white dark:border-green-200 dark:bg-green-200 dark:text-green-950',
-    Error: 'border-red-500 bg-red-500 text-white dark:border-red-200 dark:bg-red-200 dark:text-red-950',
+    Dark: {
+        card: 'border-slate-800 bg-slate-800 text-white hover:border-slate-700 hover:bg-slate-700 dark:border-slate-800 dark:bg-slate-800 dark:text-white',
+        icon: 'text-white',
+        label: 'text-white',
+        action: 'text-white/90',
+    },
+    Primary: {
+        card: 'border-blue-500 bg-blue-500 text-white hover:border-blue-600 hover:bg-blue-600 dark:border-blue-500 dark:bg-blue-500 dark:text-white',
+        icon: 'text-white',
+        label: 'text-white',
+        action: 'text-white/90',
+    },
+    Info: {
+        card: 'border-cyan-500 bg-cyan-500 text-white hover:border-cyan-600 hover:bg-cyan-600 dark:border-cyan-500 dark:bg-cyan-500 dark:text-white',
+        icon: 'text-white',
+        label: 'text-white',
+        action: 'text-white/90',
+    },
+    Warning: {
+        card: 'border-amber-400 bg-amber-400 text-slate-950 hover:border-amber-500 hover:bg-amber-500 dark:border-amber-400 dark:bg-amber-400 dark:text-slate-950',
+        icon: 'text-slate-950',
+        label: 'text-slate-950',
+        action: 'text-slate-900/80',
+    },
+    Success: {
+        card: 'border-green-500 bg-green-500 text-white hover:border-green-600 hover:bg-green-600 dark:border-green-500 dark:bg-green-500 dark:text-white',
+        icon: 'text-white',
+        label: 'text-white',
+        action: 'text-white/90',
+    },
+    Error: {
+        card: 'border-red-500 bg-red-500 text-white hover:border-red-600 hover:bg-red-600 dark:border-red-500 dark:bg-red-500 dark:text-white',
+        icon: 'text-white',
+        label: 'text-white',
+        action: 'text-white/90',
+    },
 };
 
 export default function Config({ auth }) {
@@ -51,12 +82,6 @@ export default function Config({ auth }) {
             tone: 'Dark',
         },
         {
-            label: 'Organizar Menu',
-            icon: 'bi-list-ol',
-            href: route('settings.menu-order'),
-            tone: 'Error',
-        },
-        {
             label: 'Relatorio Gastos',
             icon: 'bi-receipt',
             href: route('reports.gastos'),
@@ -66,13 +91,13 @@ export default function Config({ auth }) {
             label: 'Configuracao do Discarte',
             icon: 'bi-percent',
             href: route('settings.discard-config'),
-            tone: 'Success',
+            tone: 'Warning',
         },
         {
             label: 'Controle de Pagamentos',
             icon: 'bi-cash-coin',
             href: route('settings.payment-control'),
-            tone: 'Success',
+            tone: 'Warning',
         },
         {
             label: 'Configuracao Fiscal',
@@ -147,28 +172,27 @@ export default function Config({ auth }) {
             <div className="py-8">
                 <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 lg:px-8">
                     <div className="grid gap-4 sm:grid-cols-2">
-                        {options.map((opt) => (
-                            <a
-                                key={opt.label}
-                                href={opt.href ?? '#'}
-                                className="flex items-center justify-between rounded-3xl border border-gray-200 bg-white px-4 py-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-900"
-                            >
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <i className={`bi ${opt.icon} text-xl text-indigo-500`} aria-hidden="true"></i>
-                                    <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
-                                        {opt.label}
+                        {options.map((opt) => {
+                            const tone = TONE_CLASS_MAP[opt.tone] ?? TONE_CLASS_MAP.Dark;
+
+                            return (
+                                <a
+                                    key={opt.label}
+                                    href={opt.href ?? '#'}
+                                    className={`flex items-center justify-between rounded-3xl border px-4 py-4 shadow-sm transition hover:shadow-md ${tone.card}`}
+                                >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <i className={`bi ${opt.icon} text-xl ${tone.icon}`} aria-hidden="true"></i>
+                                        <span className={`truncate text-sm font-semibold ${tone.label}`}>
+                                            {opt.label}
+                                        </span>
+                                    </div>
+                                    <span className={`text-xs font-medium ${tone.action}`}>
+                                        {opt.href ? 'Abrir' : 'Em breve'}
                                     </span>
-                                    <span
-                                        className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold leading-5 ${TONE_CLASS_MAP[opt.tone] ?? TONE_CLASS_MAP.Dark}`}
-                                    >
-                                        {opt.tone}
-                                    </span>
-                                </div>
-                                <span className="text-xs font-medium text-indigo-600 dark:text-indigo-300">
-                                    {opt.href ? 'Abrir' : 'Em breve'}
-                                </span>
-                            </a>
-                        ))}
+                                </a>
+                            );
+                        })}
                     </div>
                 </div>
             </div>

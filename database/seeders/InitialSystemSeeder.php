@@ -12,6 +12,39 @@ class InitialSystemSeeder extends Seeder
     {
         $now = now();
 
+        DB::table('tb28_aplicacoes')->updateOrInsert(
+            ['tb28_id' => 1],
+            [
+                'tb28_nome' => 'Padaria + NFe',
+                'tb28_slug' => 'padaria-nfe',
+                'tb28_rota_inicial' => 'dashboard',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]
+        );
+
+        DB::table('tb28_aplicacoes')->updateOrInsert(
+            ['tb28_id' => 2],
+            [
+                'tb28_nome' => 'Padaria',
+                'tb28_slug' => 'padaria',
+                'tb28_rota_inicial' => 'padaria',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]
+        );
+
+        DB::table('tb28_aplicacoes')->updateOrInsert(
+            ['tb28_id' => 3],
+            [
+                'tb28_nome' => 'NFe',
+                'tb28_slug' => 'nfe',
+                'tb28_rota_inicial' => 'nfe?unit_id={unit_id}',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]
+        );
+
         DB::table('billing_plan_settings')->updateOrInsert(
             ['id' => 1],
             [
@@ -41,6 +74,7 @@ class InitialSystemSeeder extends Seeder
                 'nome' => 'DASH',
                 'slug' => 'dash',
                 'cnpj' => '00.000.000/0000-00',
+                'tb28_id' => 1,
                 'status' => 1,
                 'plano_mensal_valor' => 0,
                 'plano_contratado_em' => null,

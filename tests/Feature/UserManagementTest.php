@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Aplicacao;
 use App\Models\Matriz;
 use App\Models\Unidade;
 use App\Models\User;
@@ -16,7 +17,8 @@ class UserManagementTest extends TestCase
 
     public function test_edit_user_updates_funcao_original_with_new_role(): void
     {
-        $unit = $this->makeUnit('Loja Gestao');
+        $matrix = $this->makeMatrix('Matriz Gestao');
+        $unit = $this->makeUnit('Loja Gestao', $matrix, 'matriz');
 
         $manager = User::factory()->create([
             'name' => 'Master Gestao',
@@ -24,6 +26,7 @@ class UserManagementTest extends TestCase
             'funcao' => 0,
             'funcao_original' => 0,
             'tb2_id' => $unit->tb2_id,
+            'matriz_id' => $matrix->id,
         ]);
         $manager->units()->sync([$unit->tb2_id]);
 
@@ -33,6 +36,7 @@ class UserManagementTest extends TestCase
             'funcao' => 5,
             'funcao_original' => 5,
             'tb2_id' => $unit->tb2_id,
+            'matriz_id' => $matrix->id,
             'hr_ini' => '08:00',
             'hr_fim' => '17:00',
             'salario' => 1518.00,
@@ -50,7 +54,7 @@ class UserManagementTest extends TestCase
                 'hr_fim' => '18:00',
                 'salario' => 2100.50,
                 'vr_cred' => 420.75,
-                'tb2_id' => [$unit->tb2_id],
+                'tb2_id' => $unit->tb2_id,
             ]);
 
         $response->assertRedirect(route('users.show', ['user' => $targetUser->id]));
@@ -139,26 +143,26 @@ class UserManagementTest extends TestCase
             ->where('currentMatrixUnitId', $unitA1->tb2_id)
             ->where('initialSelectedUnitId', $unitA1->tb2_id)
             ->where('roles', [
-                ['value' => 3, 'label' => 'CAIXA', 'active' => false],
-                ['value' => 4, 'label' => 'LANCHONETE', 'active' => false],
-                ['value' => 5, 'label' => 'FUNCIONARIO', 'active' => false],
-                ['value' => 6, 'label' => 'CLIENTE', 'active' => true],
+                ['value' => 3, 'label' => 'CAIXA', 'bossOnly' => false, 'active' => false],
+                ['value' => 4, 'label' => 'LANCHONETE', 'bossOnly' => false, 'active' => false],
+                ['value' => 5, 'label' => 'FUNCIONARIO', 'bossOnly' => false, 'active' => false],
+                ['value' => 6, 'label' => 'CLIENTE', 'bossOnly' => false, 'active' => true],
             ])
             ->where('currentSessionUnitLabel', 'Loja A1')
             ->where('units', [
-                ['id' => $unitA1->tb2_id, 'name' => 'Matriz A', 'type' => 'matriz', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => true],
+                ['id' => $unitA1->tb2_id, 'name' => 'Loja A1', 'type' => 'matriz', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'bossOnly' => false, 'active' => true],
             ])
             ->has('unitGroups', 1)
             ->where('unitGroups.0.matrix.name', 'Matriz A')
             ->where('unitGroups.0.matrixUnit.id', $unitA1->tb2_id)
-            ->where('unitGroups.0.matrixUnit.name', 'Matriz A')
+            ->where('unitGroups.0.matrixUnit.name', 'Loja A1')
             ->where('unitGroups.0.matrixUnit.type', 'matriz')
             ->where('unitGroups.0.matrixUnit.status', 1)
             ->where('unitGroups.0.matrixUnit.loginEnabled', true)
             ->where('unitGroups.0.matrixUnit.selectable', true)
             ->where('unitGroups.0.matrixUnit.active', true)
             ->where('unitGroups.0.branches', [
-                ['id' => $unitA2->tb2_id, 'name' => 'Loja A2', 'type' => 'filial', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => false, 'matrixUnitId' => $unitA1->tb2_id],
+                ['id' => $unitA2->tb2_id, 'name' => 'Loja A2', 'type' => 'filial', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'bossOnly' => false, 'active' => false, 'matrixUnitId' => $unitA1->tb2_id],
             ])
             ->missing('roles.7')
         );
@@ -208,6 +212,7 @@ class UserManagementTest extends TestCase
         $unitB2 = $this->makeUnit('Loja Boss B2', $matrixB, 'filial');
 
         $boss = User::factory()->create([
+            'id' => 1,
             'name' => 'Boss Global',
             'email' => 'boss.global@example.com',
             'funcao' => 7,
@@ -238,8 +243,8 @@ class UserManagementTest extends TestCase
             ->where('initialSelectedUnitId', $unitA1->tb2_id)
             ->where('currentSessionUnitLabel', 'Loja Boss A1')
             ->where('units', [
-                ['id' => $unitA1->tb2_id, 'name' => 'Matriz Boss A', 'type' => 'matriz', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz Boss A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => true],
-                ['id' => $unitB1->tb2_id, 'name' => 'Matriz Boss B', 'type' => 'matriz', 'matrixId' => $matrixB->id, 'matrixName' => 'Matriz Boss B', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => false],
+                ['id' => $unitA1->tb2_id, 'name' => 'Loja Boss A1', 'type' => 'matriz', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz Boss A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'bossOnly' => false, 'active' => true],
+                ['id' => $unitB1->tb2_id, 'name' => 'Loja Boss B1', 'type' => 'matriz', 'matrixId' => $matrixB->id, 'matrixName' => 'Matriz Boss B', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'bossOnly' => false, 'active' => false],
             ])
             ->has('unitGroups', 2)
             ->where('unitGroups.0.matrix.name', 'Matriz Boss A')
@@ -249,7 +254,7 @@ class UserManagementTest extends TestCase
             ->where('unitGroups.0.matrixUnit.selectable', true)
             ->where('unitGroups.0.matrixUnit.active', true)
             ->where('unitGroups.0.branches', [
-                ['id' => $unitA2->tb2_id, 'name' => 'Loja Boss A2', 'type' => 'filial', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz Boss A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => false, 'matrixUnitId' => $unitA1->tb2_id],
+                ['id' => $unitA2->tb2_id, 'name' => 'Loja Boss A2', 'type' => 'filial', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz Boss A', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'bossOnly' => false, 'active' => false, 'matrixUnitId' => $unitA1->tb2_id],
             ])
             ->where('unitGroups.1.matrix.name', 'Matriz Boss B')
             ->where('unitGroups.1.matrixUnit.id', $unitB1->tb2_id)
@@ -258,17 +263,17 @@ class UserManagementTest extends TestCase
             ->where('unitGroups.1.matrixUnit.selectable', true)
             ->where('unitGroups.1.matrixUnit.active', false)
             ->where('unitGroups.1.branches', [
-                ['id' => $unitB2->tb2_id, 'name' => 'Loja Boss B2', 'type' => 'filial', 'matrixId' => $matrixB->id, 'matrixName' => 'Matriz Boss B', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => false, 'matrixUnitId' => $unitB1->tb2_id],
+                ['id' => $unitB2->tb2_id, 'name' => 'Loja Boss B2', 'type' => 'filial', 'matrixId' => $matrixB->id, 'matrixName' => 'Matriz Boss B', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'bossOnly' => false, 'active' => false, 'matrixUnitId' => $unitB1->tb2_id],
             ])
             ->where('roles', [
-                ['value' => 7, 'label' => 'BOSS', 'active' => true],
-                ['value' => 0, 'label' => 'MASTER', 'active' => false],
-                ['value' => 1, 'label' => 'GERENTE', 'active' => false],
-                ['value' => 2, 'label' => 'SUB-GERENTE', 'active' => false],
-                ['value' => 3, 'label' => 'CAIXA', 'active' => false],
-                ['value' => 4, 'label' => 'LANCHONETE', 'active' => false],
-                ['value' => 5, 'label' => 'FUNCIONARIO', 'active' => false],
-                ['value' => 6, 'label' => 'CLIENTE', 'active' => false],
+                ['value' => 7, 'label' => 'BOSS', 'bossOnly' => true, 'active' => false],
+                ['value' => 0, 'label' => 'MASTER', 'bossOnly' => false, 'active' => true],
+                ['value' => 1, 'label' => 'GERENTE', 'bossOnly' => false, 'active' => false],
+                ['value' => 2, 'label' => 'SUB-GERENTE', 'bossOnly' => false, 'active' => false],
+                ['value' => 3, 'label' => 'CAIXA', 'bossOnly' => false, 'active' => false],
+                ['value' => 4, 'label' => 'LANCHONETE', 'bossOnly' => false, 'active' => false],
+                ['value' => 5, 'label' => 'FUNCIONARIO', 'bossOnly' => false, 'active' => false],
+                ['value' => 6, 'label' => 'CLIENTE', 'bossOnly' => false, 'active' => false],
             ])
         );
     }
@@ -281,6 +286,7 @@ class UserManagementTest extends TestCase
         $inactiveUnit = $this->makeUnit('Loja Boss Inativa', $matrixB, 'matriz', 0);
 
         $boss = User::factory()->create([
+            'id' => 1,
             'name' => 'Boss Inativa',
             'email' => 'boss.inativa@example.com',
             'funcao' => 7,
@@ -301,8 +307,8 @@ class UserManagementTest extends TestCase
             ->where('currentMatrixUnitId', $activeUnit->tb2_id)
             ->where('initialSelectedUnitId', $activeUnit->tb2_id)
             ->where('units', [
-                ['id' => $activeUnit->tb2_id, 'name' => 'Matriz Boss Ativa', 'type' => 'matriz', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz Boss Ativa', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'active' => true],
-                ['id' => $inactiveUnit->tb2_id, 'name' => 'Matriz Boss Inativa', 'type' => 'matriz', 'matrixId' => $matrixB->id, 'matrixName' => 'Matriz Boss Inativa', 'status' => 0, 'loginEnabled' => true, 'selectable' => false, 'active' => false],
+                ['id' => $activeUnit->tb2_id, 'name' => 'Loja Boss Ativa', 'type' => 'matriz', 'matrixId' => $matrixA->id, 'matrixName' => 'Matriz Boss Ativa', 'status' => 1, 'loginEnabled' => true, 'selectable' => true, 'bossOnly' => false, 'active' => true],
+                ['id' => $inactiveUnit->tb2_id, 'name' => 'Loja Boss Inativa', 'type' => 'matriz', 'matrixId' => $matrixB->id, 'matrixName' => 'Matriz Boss Inativa', 'status' => 0, 'loginEnabled' => true, 'selectable' => false, 'bossOnly' => false, 'active' => false],
             ])
             ->where('unitGroups.0.branches', [])
             ->where('unitGroups.1.branches', [])
@@ -323,6 +329,7 @@ class UserManagementTest extends TestCase
         return Matriz::create([
             'nome' => $name,
             'slug' => Str::slug($name . '-' . fake()->unique()->numerify('###')),
+            'tb28_id' => Aplicacao::PADARIA_NFE,
             'status' => 1,
             'pagamento_ativo' => true,
         ]);
