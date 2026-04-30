@@ -7,6 +7,7 @@ use App\Models\Matriz;
 use App\Models\Unidade;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -14,6 +15,85 @@ use Tests\TestCase;
 class UserManagementTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_manager_can_create_user_with_numeric_password(): void
+    {
+        $matrix = $this->makeMatrix('Matriz Cadastro');
+        $unit = $this->makeUnit('Loja Cadastro', $matrix, 'matriz');
+
+        $manager = User::factory()->create([
+            'name' => 'Master Cadastro',
+            'email' => 'master.cadastro@example.com',
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $unit->tb2_id,
+            'matriz_id' => $matrix->id,
+        ]);
+        $manager->units()->sync([$unit->tb2_id]);
+
+        $response = $this
+            ->actingAs($manager)
+            ->post(route('users.store'), [
+                'name' => 'Joao Silva',
+                'email' => 'joao.silva@example.com',
+                'password' => '1234',
+                'password_confirmation' => '1234',
+                'funcao' => 5,
+                'hr_ini' => '08:00',
+                'hr_fim' => '17:00',
+                'salario' => 1518.00,
+                'vr_cred' => 350.00,
+                'tb2_id' => $unit->tb2_id,
+            ]);
+
+        $createdUser = User::query()->where('email', 'joao.silva@example.com')->first();
+
+        $this->assertNotNull($createdUser);
+        $response->assertRedirect(route('users.show', ['user' => $createdUser->id]));
+        $this->assertTrue(Hash::check('1234', $createdUser->password));
+        $this->assertSame($unit->tb2_id, (int) $createdUser->tb2_id);
+        $this->assertSame($matrix->id, (int) $createdUser->matriz_id);
+    }
+
+    public function test_manager_can_not_create_user_with_non_numeric_password(): void
+    {
+        $matrix = $this->makeMatrix('Matriz Cadastro Regra');
+        $unit = $this->makeUnit('Loja Cadastro Regra', $matrix, 'matriz');
+
+        $manager = User::factory()->create([
+            'name' => 'Master Regra',
+            'email' => 'master.regra@example.com',
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $unit->tb2_id,
+            'matriz_id' => $matrix->id,
+        ]);
+        $manager->units()->sync([$unit->tb2_id]);
+
+        $response = $this
+            ->actingAs($manager)
+            ->from(route('users.create'))
+            ->post(route('users.store'), [
+                'name' => 'Joao Silva',
+                'email' => 'joao.regra@example.com',
+                'password' => '12ab',
+                'password_confirmation' => '12ab',
+                'funcao' => 5,
+                'hr_ini' => '08:00',
+                'hr_fim' => '17:00',
+                'salario' => 1518.00,
+                'vr_cred' => 350.00,
+                'tb2_id' => $unit->tb2_id,
+            ]);
+
+        $response
+            ->assertRedirect(route('users.create'))
+            ->assertSessionHasErrors('password');
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'joao.regra@example.com',
+        ]);
+    }
 
     public function test_edit_user_updates_funcao_original_with_new_role(): void
     {

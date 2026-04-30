@@ -21,11 +21,27 @@ class RegistrationTest extends TestCase
         $response = $this->post('/register', [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => '1234',
+            'password_confirmation' => '1234',
         ]);
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    public function test_registration_rejects_non_numeric_password(): void
+    {
+        $response = $this->from('/register')->post('/register', [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => '12ab',
+            'password_confirmation' => '12ab',
+        ]);
+
+        $response
+            ->assertRedirect('/register')
+            ->assertSessionHasErrors('password');
+
+        $this->assertGuest();
     }
 }

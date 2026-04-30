@@ -28,7 +28,15 @@ class LoginRequest extends FormRequest
     {
         return [
             'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string'],
+            'password' => ['required', 'digits:4'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'password.required' => 'O campo senha e obrigatorio.',
+            'password.digits' => 'A senha deve conter exatamente 4 numeros.',
         ];
     }
 

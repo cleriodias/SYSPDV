@@ -266,7 +266,7 @@ class ControlePagamentoTest extends TestCase
         $manager = User::factory()->create([
             'name' => 'Gerente Teste',
             'email' => 'gerente@paoecafe83.com.br',
-            'password' => 'password',
+            'password' => '1234',
             'funcao' => 1,
             'funcao_original' => 1,
             'tb2_id' => $unit->tb2_id,
@@ -321,7 +321,7 @@ class ControlePagamentoTest extends TestCase
 
         $response = $this->post(route('login'), [
             'username' => 'gerente',
-            'password' => 'password',
+            'password' => '1234',
             'unit_id' => $unit->tb2_id,
         ]);
 

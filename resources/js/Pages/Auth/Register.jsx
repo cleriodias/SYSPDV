@@ -5,6 +5,8 @@ import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 
+const normalizeNumericPassword = (value) => value.replace(/\D/g, '').slice(0, 4);
+
 export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
@@ -69,11 +71,14 @@ export default function Register() {
                         id="password"
                         type="password"
                         name="password"
-                        placeholder="Digite a senha"
+                        placeholder="Digite 4 numeros"
                         value={data.password}
                         className="mt-1 block w-full"
                         autoComplete="new-password"
-                        onChange={(e) => setData('password', e.target.value)}
+                        inputMode="numeric"
+                        maxLength={4}
+                        pattern="[0-9]*"
+                        onChange={(e) => setData('password', normalizeNumericPassword(e.target.value))}
                         required
                     />
 
@@ -90,12 +95,15 @@ export default function Register() {
                         id="password_confirmation"
                         type="password"
                         name="password_confirmation"
-                        placeholder="Confirme a senha"
+                        placeholder="Confirme os 4 numeros"
                         value={data.password_confirmation}
                         className="mt-1 block w-full"
                         autoComplete="new-password"
+                        inputMode="numeric"
+                        maxLength={4}
+                        pattern="[0-9]*"
                         onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
+                            setData('password_confirmation', normalizeNumericPassword(e.target.value))
                         }
                         required
                     />

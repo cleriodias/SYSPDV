@@ -36,14 +36,14 @@ class AuthenticationTest extends TestCase
 
         $response = $this->post('/login', [
             'email' => $user->email,
-            'password' => 'password',
+            'password' => '1234',
         ]);
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
     }
 
-    public function test_users_can_not_authenticate_with_invalid_password(): void
+    public function test_users_can_not_authenticate_with_invalid_numeric_password(): void
     {
         $matrix = $this->makeMatrix('Matriz Teste Senha');
         $unit = $this->makeLoginUnit('Loja Teste Senha', $matrix);
@@ -57,8 +57,32 @@ class AuthenticationTest extends TestCase
 
         $this->post('/login', [
             'email' => $user->email,
-            'password' => 'wrong-password',
+            'password' => '9999',
         ]);
+
+        $this->assertGuest();
+    }
+
+    public function test_login_rejects_non_numeric_password(): void
+    {
+        $matrix = $this->makeMatrix('Matriz Teste Regra Senha');
+        $unit = $this->makeLoginUnit('Loja Teste Regra Senha', $matrix);
+        $user = User::factory()->create([
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $unit->tb2_id,
+            'matriz_id' => $matrix->id,
+        ]);
+        $user->units()->sync([$unit->tb2_id]);
+
+        $response = $this->from('/login')->post('/login', [
+            'email' => $user->email,
+            'password' => '12ab',
+        ]);
+
+        $response
+            ->assertRedirect('/login')
+            ->assertSessionHasErrors('password');
 
         $this->assertGuest();
     }
@@ -87,7 +111,7 @@ class AuthenticationTest extends TestCase
         $unit = $this->makeLoginUnit('Loja Login', $matrix);
         $user = User::factory()->create([
             'email' => 'master.login@example.com',
-            'password' => 'password',
+            'password' => '1234',
             'funcao' => 6,
             'funcao_original' => 0,
             'tb2_id' => $unit->tb2_id,
@@ -97,7 +121,7 @@ class AuthenticationTest extends TestCase
 
         $response = $this->post('/login', [
             'email' => $user->email,
-            'password' => 'password',
+            'password' => '1234',
         ]);
 
         $this->assertAuthenticated();
@@ -117,7 +141,7 @@ class AuthenticationTest extends TestCase
         $unit = $this->makeLoginUnit('Loja Boss', $matrix);
         $user = User::factory()->create([
             'email' => 'boss.login@example.com',
-            'password' => 'password',
+            'password' => '1234',
             'funcao' => 3,
             'funcao_original' => 7,
             'tb2_id' => $unit->tb2_id,
@@ -127,7 +151,7 @@ class AuthenticationTest extends TestCase
 
         $response = $this->post('/login', [
             'email' => $user->email,
-            'password' => 'password',
+            'password' => '1234',
         ]);
 
         $this->assertAuthenticated();
@@ -148,7 +172,7 @@ class AuthenticationTest extends TestCase
         $unit = $this->makeLoginUnit('Loja NFe', $matrix);
         $user = User::factory()->create([
             'email' => 'nfe.login@example.com',
-            'password' => 'password',
+            'password' => '1234',
             'funcao' => 0,
             'funcao_original' => 0,
             'tb2_id' => $unit->tb2_id,
@@ -158,7 +182,7 @@ class AuthenticationTest extends TestCase
 
         $response = $this->post('/login', [
             'email' => $user->email,
-            'password' => 'password',
+            'password' => '1234',
         ]);
 
         $this->assertAuthenticated();
@@ -173,7 +197,7 @@ class AuthenticationTest extends TestCase
         $unit = $this->makeLoginUnit('Loja NFe Dashboard', $matrix);
         $user = User::factory()->create([
             'email' => 'nfe.dashboard@example.com',
-            'password' => 'password',
+            'password' => '1234',
             'funcao' => 0,
             'funcao_original' => 0,
             'tb2_id' => $unit->tb2_id,
@@ -208,7 +232,7 @@ class AuthenticationTest extends TestCase
         $unit = $this->makeLoginUnit('Loja NFe Operacional', $matrix);
         $user = User::factory()->create([
             'email' => 'nfe.operacional@example.com',
-            'password' => 'password',
+            'password' => '1234',
             'funcao' => 2,
             'funcao_original' => 2,
             'tb2_id' => $unit->tb2_id,
@@ -242,7 +266,7 @@ class AuthenticationTest extends TestCase
         $unit = $this->makeLoginUnit('Loja Padaria', $matrix);
         $user = User::factory()->create([
             'email' => 'padaria.login@example.com',
-            'password' => 'password',
+            'password' => '1234',
             'funcao' => 0,
             'funcao_original' => 0,
             'tb2_id' => $unit->tb2_id,
@@ -252,7 +276,7 @@ class AuthenticationTest extends TestCase
 
         $response = $this->post('/login', [
             'email' => $user->email,
-            'password' => 'password',
+            'password' => '1234',
         ]);
 
         $this->assertAuthenticated();

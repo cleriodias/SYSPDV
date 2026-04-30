@@ -9,7 +9,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -33,7 +32,7 @@ class RegisteredUserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:'.User::class,
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'digits:4', 'confirmed'],
         ],[
             'name.required' => 'O campo nome é obrigatório!',
             'name.string' => 'O nome deve ser uma string válida.',
@@ -44,6 +43,7 @@ class RegisteredUserController extends Controller
             'email.max' => 'O e-mail não pode ter mais que :max caracteres.',
             'email.unique' => 'Este e-mail já está cadastrado.',
             'password.required' => 'O campo senha é obrigatório.',
+            'password.digits' => 'A senha deve conter exatamente 4 números.',
             'password.confirmed' => 'A confirmação da senha não corresponde.',
         ]);
 

@@ -21,6 +21,8 @@ const formatNameInput = (value) => {
     return formattedName.slice(0, 15);
 };
 
+const normalizeNumericPassword = (value) => value.replace(/\D/g, '').slice(0, 4);
+
 export default function UserCreate({ auth, units = [], roleOptions = [] }) {
     const now = new Date();
     const generatedPassword = `${String(now.getHours()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
@@ -209,9 +211,12 @@ export default function UserCreate({ auth, units = [], roleOptions = [] }) {
                                         id="password"
                                         type="password"
                                         autoComplete="password"
-                                        placeholder={'Senha para o usu\u00E1rio acessar o sistema'}
+                                        inputMode="numeric"
+                                        maxLength={4}
+                                        pattern="[0-9]*"
+                                        placeholder={'Senha numerica de 4 digitos'}
                                         value={data.password}
-                                        onChange={(e) => setData('password', e.target.value)}
+                                        onChange={(e) => setData('password', normalizeNumericPassword(e.target.value))}
                                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                     />
                                     {errors.password && <span className="text-red-600">{errors.password}</span>}
@@ -223,9 +228,12 @@ export default function UserCreate({ auth, units = [], roleOptions = [] }) {
                                         id="password_confirmation"
                                         type="password"
                                         autoComplete="password_confirmation"
-                                        placeholder="Confirmar a senha"
+                                        inputMode="numeric"
+                                        maxLength={4}
+                                        pattern="[0-9]*"
+                                        placeholder="Confirmar a senha numerica"
                                         value={data.password_confirmation}
-                                        onChange={(e) => setData('password_confirmation', e.target.value)}
+                                        onChange={(e) => setData('password_confirmation', normalizeNumericPassword(e.target.value))}
                                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                     />
                                     {errors.password_confirmation && <span className="text-red-600">{errors.password_confirmation}</span>}
