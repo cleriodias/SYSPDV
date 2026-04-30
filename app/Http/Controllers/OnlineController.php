@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AnyDesckCode;
 use App\Models\ChatMessage;
 use App\Models\OnlineUser;
+use App\Models\Unidade;
 use App\Models\User;
 use App\Support\ManagementScope;
 use Carbon\Carbon;
@@ -228,6 +229,7 @@ class OnlineController extends Controller
     {
         $user = $this->ensureCanAccessOnline($request->user());
         $this->purgeExpiredPresence();
+        $viewerRole = $this->resolveViewerRole($request, $user);
 
         $visibleContacts = $this->buildVisibleContacts($request, $user);
         $onlineUsers = $visibleContacts['online'];
@@ -256,8 +258,10 @@ class OnlineController extends Controller
             'currentUser' => [
                 'id' => (int) $user->id,
                 'name' => (string) $user->name,
-                'role' => (int) $user->funcao,
-                'role_label' => self::ROLE_LABELS[(int) $user->funcao] ?? '---',
+                'role' => $viewerRole,
+                'role_label' => self::ROLE_LABELS[$viewerRole] ?? '---',
+                'original_role' => (int) ($user->funcao_original ?? $user->funcao),
+                'original_role_label' => self::ROLE_LABELS[(int) ($user->funcao_original ?? $user->funcao)] ?? '---',
                 'unit_id' => $this->resolveActiveUnitId($request),
                 'unit_name' => $this->resolveActiveUnitName($request),
             ],
@@ -267,20 +271,22 @@ class OnlineController extends Controller
 
     private function buildVisibleContacts(Request $request, User $viewer): array
     {
-        $viewerRole = (int) $viewer->funcao;
+        $viewerRole = $this->resolveViewerRole($request, $viewer);
         $viewerUnitId = $this->resolveActiveUnitId($request);
-        $managedUnitIds = $this->managedUnitIds($viewer);
+        $viewerMatrixId = $this->resolveActiveMatrixId($request, $viewerUnitId, $viewer);
+        $managedUnitIds = $this->managedUnitIds($viewer, $viewerRole, $viewerMatrixId, $viewerUnitId);
         $activeSince = now()->subMinutes(self::ONLINE_WINDOW_MINUTES);
 
         $visiblePresences = OnlineUser::query()
             ->with([
+                'user:id,name,funcao,funcao_original,tb2_id,matriz_id',
                 'user.units:tb2_id,tb2_nome',
-                'unit:tb2_id,tb2_nome',
+                'unit:tb2_id,tb2_nome,matriz_id',
             ])
             ->where('last_seen_at', '>=', $activeSince)
             ->orderByDesc('last_seen_at')
             ->get()
-            ->filter(function (?OnlineUser $presence) use ($viewer, $viewerRole, $viewerUnitId, $managedUnitIds) {
+            ->filter(function (?OnlineUser $presence) use ($viewer, $viewerRole, $viewerUnitId, $viewerMatrixId, $managedUnitIds) {
                 if (! $presence || ! $presence->user) {
                     return false;
                 }
@@ -289,12 +295,16 @@ class OnlineController extends Controller
                     return false;
                 }
 
+                $targetMatrixId = (int) ($presence->unit?->matriz_id ?? $presence->user?->matriz_id ?? 0);
+
                 return $this->canSeePresence(
                     $viewerRole,
                     $viewerUnitId,
+                    $viewerMatrixId,
                     $managedUnitIds,
                     (int) $presence->active_role,
-                    $presence->active_unit_id ? (int) $presence->active_unit_id : null
+                    $presence->active_unit_id ? (int) $presence->active_unit_id : null,
+                    $targetMatrixId > 0 ? $targetMatrixId : null
                 );
             })
             ->groupBy('user_id')
@@ -305,7 +315,7 @@ class OnlineController extends Controller
 
         $onlineUsers = $visiblePresences
             ->map(function (OnlineUser $presence) {
-                $displayRole = (int) ($presence->user?->funcao_original ?? $presence->user?->funcao ?? $presence->active_role);
+                $displayRole = (int) ($presence->active_role ?? $presence->user?->funcao_original ?? $presence->user?->funcao);
 
                 return [
                     'id' => (int) $presence->user_id,
@@ -325,11 +335,15 @@ class OnlineController extends Controller
             ->with(['primaryUnit:tb2_id,tb2_nome', 'units:tb2_id,tb2_nome'])
             ->whereNotIn('id', array_merge($onlineUserIds, [(int) $viewer->id]))
             ->when(
+                $viewerMatrixId > 0,
+                fn ($query) => $query->where('matriz_id', $viewerMatrixId)
+            )
+            ->when(
                 ! ManagementScope::isBoss($viewer),
                 fn ($query) => $query->whereIn('funcao', [0, 1, 2, 3, 4])
             )
             ->get()
-            ->filter(function (User $target) use ($viewerRole, $viewerUnitId, $managedUnitIds) {
+            ->filter(function (User $target) use ($viewerRole, $viewerUnitId, $viewerMatrixId, $managedUnitIds) {
                 $targetRole = (int) $target->funcao;
                 $targetUnitIds = ManagementScope::targetUserUnitIds($target);
                 $primaryTargetUnitId = $targetUnitIds->first();
@@ -337,10 +351,12 @@ class OnlineController extends Controller
                 return $this->canSeeOfflineUser(
                     $viewerRole,
                     $viewerUnitId,
+                    $viewerMatrixId,
                     $managedUnitIds,
                     $targetRole,
                     $targetUnitIds,
-                    $primaryTargetUnitId ? (int) $primaryTargetUnitId : null
+                    $primaryTargetUnitId ? (int) $primaryTargetUnitId : null,
+                    (int) ($target->matriz_id ?? 0) ?: null
                 );
             })
             ->map(function (User $target) {
@@ -595,19 +611,21 @@ class OnlineController extends Controller
     private function canSeePresence(
         int $viewerRole,
         ?int $viewerUnitId,
+        int $viewerMatrixId,
         Collection $managedUnitIds,
         int $targetRole,
-        ?int $targetUnitId
+        ?int $targetUnitId,
+        ?int $targetMatrixId
     ): bool {
-        if ($viewerRole === 7) {
-            return true;
-        }
-
         if (in_array($targetRole, [5, 6], true)) {
             return false;
         }
 
-        if ($viewerRole === 0) {
+        if (! $this->sharesMatrixScope($viewerMatrixId, $targetMatrixId)) {
+            return false;
+        }
+
+        if (in_array($viewerRole, [7, 0], true)) {
             return true;
         }
 
@@ -633,20 +651,22 @@ class OnlineController extends Controller
     private function canSeeOfflineUser(
         int $viewerRole,
         ?int $viewerUnitId,
+        int $viewerMatrixId,
         Collection $managedUnitIds,
         int $targetRole,
         Collection $targetUnitIds,
-        ?int $primaryTargetUnitId
+        ?int $primaryTargetUnitId,
+        ?int $targetMatrixId
     ): bool {
-        if ($viewerRole === 7) {
-            return true;
-        }
-
         if (in_array($targetRole, [5, 6], true)) {
             return false;
         }
 
-        if ($viewerRole === 0) {
+        if (! $this->sharesMatrixScope($viewerMatrixId, $targetMatrixId)) {
+            return false;
+        }
+
+        if (in_array($viewerRole, [7, 0], true)) {
             return true;
         }
 
@@ -668,12 +688,73 @@ class OnlineController extends Controller
         }
 
         return $primaryTargetUnitId !== null
-            && $this->canSeePresence($viewerRole, $viewerUnitId, $managedUnitIds, $targetRole, $primaryTargetUnitId);
+            && $this->canSeePresence(
+                $viewerRole,
+                $viewerUnitId,
+                $viewerMatrixId,
+                $managedUnitIds,
+                $targetRole,
+                $primaryTargetUnitId,
+                $targetMatrixId
+            );
     }
 
-    private function managedUnitIds(User $user): Collection
+    private function managedUnitIds(User $user, int $viewerRole, int $viewerMatrixId, ?int $viewerUnitId): Collection
     {
-        return ManagementScope::managedUnitIds($user);
+        if ($viewerMatrixId <= 0) {
+            return $viewerUnitId ? collect([$viewerUnitId]) : collect();
+        }
+
+        if (in_array($viewerRole, [7, 0], true)) {
+            return Unidade::query()
+                ->where('matriz_id', $viewerMatrixId)
+                ->orderBy('tb2_id')
+                ->pluck('tb2_id')
+                ->map(fn ($value) => (int) $value)
+                ->values();
+        }
+
+        $userUnitIds = ManagementScope::targetUserUnitIds($user);
+
+        if ($userUnitIds->isEmpty()) {
+            return $viewerUnitId ? collect([$viewerUnitId]) : collect();
+        }
+
+        return Unidade::query()
+            ->whereIn('tb2_id', $userUnitIds->all())
+            ->where('matriz_id', $viewerMatrixId)
+            ->orderBy('tb2_id')
+            ->pluck('tb2_id')
+            ->map(fn ($value) => (int) $value)
+            ->values();
+    }
+
+    private function resolveViewerRole(Request $request, User $user): int
+    {
+        $activeRole = $request->session()->get('active_role');
+
+        return is_numeric($activeRole) ? (int) $activeRole : (int) $user->funcao;
+    }
+
+    private function resolveActiveMatrixId(Request $request, ?int $activeUnitId, User $user): int
+    {
+        $unitId = $activeUnitId ?: $this->resolveActiveUnitId($request);
+
+        if ($unitId) {
+            return (int) (Unidade::query()
+                ->where('tb2_id', $unitId)
+                ->value('matriz_id') ?? 0);
+        }
+
+        return (int) ($user->matriz_id ?? 0);
+    }
+
+    private function sharesMatrixScope(int $viewerMatrixId, ?int $targetMatrixId): bool
+    {
+        return $viewerMatrixId > 0
+            && $targetMatrixId !== null
+            && $targetMatrixId > 0
+            && $viewerMatrixId === $targetMatrixId;
     }
 
     private function resolveActiveUnitId(Request $request): ?int

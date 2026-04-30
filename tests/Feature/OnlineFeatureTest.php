@@ -3,11 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\ChatMessage;
+use App\Models\Matriz;
 use App\Models\OnlineUser;
 use App\Models\Unidade;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class OnlineFeatureTest extends TestCase
@@ -16,8 +18,9 @@ class OnlineFeatureTest extends TestCase
 
     public function test_lanchonete_only_sees_cashier_profiles_from_same_active_unit(): void
     {
-        $unitA = $this->makeUnit('Loja A');
-        $unitB = $this->makeUnit('Loja B');
+        $matrix = $this->makeMatrix('Matriz Lanchonete');
+        $unitA = $this->makeUnit('Loja A', $matrix, 'matriz');
+        $unitB = $this->makeUnit('Loja B', $matrix);
 
         $viewer = $this->makeUser('Lanchonete', 4, $unitA);
         $sameUnitSubManager = $this->makeUser('SubCaixa', 2, $unitA);
@@ -49,8 +52,9 @@ class OnlineFeatureTest extends TestCase
 
     public function test_cashier_sees_master_all_managers_and_same_unit_users(): void
     {
-        $unitA = $this->makeUnit('Loja A');
-        $unitB = $this->makeUnit('Loja B');
+        $matrix = $this->makeMatrix('Matriz Caixa');
+        $unitA = $this->makeUnit('Loja A', $matrix, 'matriz');
+        $unitB = $this->makeUnit('Loja B', $matrix);
 
         $viewer = $this->makeUser('CaixaBase', 3, $unitA);
         $master = $this->makeUser('Master', 0, $unitB, [$unitA, $unitB]);
@@ -86,8 +90,9 @@ class OnlineFeatureTest extends TestCase
 
     public function test_lanchonete_cannot_message_master_but_can_message_cashier_of_same_unit(): void
     {
-        $unitA = $this->makeUnit('Loja A');
-        $unitB = $this->makeUnit('Loja B');
+        $matrix = $this->makeMatrix('Matriz Chat');
+        $unitA = $this->makeUnit('Loja A', $matrix, 'matriz');
+        $unitB = $this->makeUnit('Loja B', $matrix);
 
         $viewer = $this->makeUser('Lanchonete', 4, $unitA);
         $master = $this->makeUser('Master', 0, $unitB, [$unitA, $unitB]);
@@ -121,25 +126,107 @@ class OnlineFeatureTest extends TestCase
         ]);
     }
 
+    public function test_master_cannot_see_or_message_users_from_other_matrix(): void
+    {
+        $matrixA = $this->makeMatrix('Matriz Alpha');
+        $matrixB = $this->makeMatrix('Matriz Beta');
+        $unitA = $this->makeUnit('Loja Alpha', $matrixA, 'matriz');
+        $unitB = $this->makeUnit('Loja Beta', $matrixB, 'matriz');
+
+        $viewer = $this->makeUser('Master Alpha', 0, $unitA, [$unitA]);
+        $sameMatrixManager = $this->makeUser('Gerente Alpha', 1, $unitA, [$unitA]);
+        $otherMatrixMaster = $this->makeUser('Master Beta', 0, $unitB, [$unitB]);
+
+        $this->makePresence($sameMatrixManager, 1, $unitA);
+
+        $response = $this
+            ->actingAs($viewer)
+            ->withSession($this->activeSessionPayload($unitA, 0))
+            ->get(route('online.snapshot'));
+
+        $response->assertOk();
+
+        $onlineUsers = collect($response->json('onlineUsers'));
+        $offlineUsers = collect($response->json('offlineUsers'));
+
+        $this->assertTrue($onlineUsers->pluck('id')->contains($sameMatrixManager->id));
+        $this->assertFalse($onlineUsers->pluck('id')->contains($otherMatrixMaster->id));
+        $this->assertFalse($offlineUsers->pluck('id')->contains($otherMatrixMaster->id));
+
+        $this->actingAs($viewer)
+            ->withSession($this->activeSessionPayload($unitA, 0))
+            ->post(route('online.messages.store'), [
+                'recipient_user_id' => $otherMatrixMaster->id,
+                'message' => 'Nao deveria sair da matriz',
+            ])
+            ->assertSessionHasErrors('recipient_user_id');
+
+        $this->assertDatabaseMissing('tb22_chat_mensagens', [
+            'sender_id' => $viewer->id,
+            'recipient_id' => $otherMatrixMaster->id,
+            'message' => 'Nao deveria sair da matriz',
+        ]);
+    }
+
+    public function test_delegated_boss_as_master_only_sees_contacts_from_active_matrix(): void
+    {
+        $matrixA = $this->makeMatrix('Matriz Dash');
+        $matrixB = $this->makeMatrix('Matriz Operacional');
+        $unitA = $this->makeUnit('Dash', $matrixA, 'matriz');
+        $unitB = $this->makeUnit('Loja Operacional', $matrixB, 'matriz');
+
+        $delegatedBoss = User::factory()->create([
+            'id' => 1,
+            'name' => 'Boss Delegado',
+            'email' => 'boss.delegado@example.com',
+            'password' => Hash::make('1234'),
+            'funcao' => 7,
+            'funcao_original' => 7,
+            'tb2_id' => $unitA->tb2_id,
+            'matriz_id' => $unitA->matriz_id,
+        ]);
+        $delegatedBoss->units()->sync([$unitA->tb2_id, $unitB->tb2_id]);
+        $masterA = $this->makeUser('Master Dash', 0, $unitA, [$unitA]);
+        $masterB = $this->makeUser('Master Operacional', 0, $unitB, [$unitB]);
+
+        $this->makePresence($masterA, 0, $unitA);
+        $this->makePresence($masterB, 0, $unitB);
+
+        $response = $this
+            ->actingAs($delegatedBoss)
+            ->withSession($this->activeSessionPayload($unitB, 0))
+            ->get(route('online.snapshot'));
+
+        $response->assertOk();
+
+        $users = collect($response->json('onlineUsers'));
+
+        $this->assertSame(0, (int) $response->json('currentUser.role'));
+        $this->assertTrue($users->pluck('id')->contains($masterB->id));
+        $this->assertFalse($users->pluck('id')->contains($masterA->id));
+    }
+
     public function test_funcionario_and_cliente_profiles_cannot_log_in(): void
     {
         $unit = $this->makeUnit('Loja Login');
 
         foreach ([5 => 'funcionario', 6 => 'cliente'] as $role => $username) {
-            User::factory()->create([
+            $user = User::factory()->create([
                 'name' => ucfirst($username),
                 'email' => $username . '@paoecafe83.com.br',
                 'password' => Hash::make('1234'),
                 'funcao' => $role,
                 'funcao_original' => $role,
                 'tb2_id' => $unit->tb2_id,
-            ])->units()->sync([$unit->tb2_id]);
+                'matriz_id' => $unit->matriz_id,
+            ]);
+            $user->units()->sync([$unit->tb2_id]);
 
             $this->post(route('login'), [
-                'username' => $username,
+                'email' => $user->email,
                 'password' => '1234',
                 'unit_id' => $unit->tb2_id,
-            ])->assertSessionHasErrors('username');
+            ])->assertSessionHasErrors('email');
 
             $this->assertGuest();
         }
@@ -233,10 +320,21 @@ class OnlineFeatureTest extends TestCase
         ]);
     }
 
-    private function makeUnit(string $name): Unidade
+    private function makeMatrix(string $name): Matriz
+    {
+        return Matriz::create([
+            'nome' => $name,
+            'slug' => Str::slug($name . '-' . fake()->unique()->numerify('###')),
+            'status' => 1,
+        ]);
+    }
+
+    private function makeUnit(string $name, ?Matriz $matrix = null, string $type = 'filial'): Unidade
     {
         return Unidade::create([
             'tb2_nome' => $name,
+            'matriz_id' => $matrix?->id,
+            'tb2_tipo' => $type,
             'tb2_endereco' => 'Endereco ' . $name,
             'tb2_cep' => '72900-000',
             'tb2_fone' => '(61) 99999-9999',
@@ -253,6 +351,7 @@ class OnlineFeatureTest extends TestCase
             'funcao' => $role,
             'funcao_original' => $role,
             'tb2_id' => $primaryUnit->tb2_id,
+            'matriz_id' => $primaryUnit->matriz_id,
         ]);
 
         $unitIds = collect($allowedUnits)
