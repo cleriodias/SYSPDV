@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ConfiguracaoFiscal;
 use App\Models\NotaFiscal;
+use App\Models\Produto;
 use App\Models\Unidade;
 use App\Models\Venda;
 use App\Models\VendaPagamento;
@@ -16,6 +17,7 @@ use DOMDocument;
 use DOMXPath;
 use Illuminate\Http\UploadedFile;
 use App\Support\ManagementScope;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +33,94 @@ use Throwable;
 class FiscalConfigurationController extends Controller
 {
     private const INVOICE_FILTER_OPTIONS = ['all', 'error', 'signed', 'issued'];
+
+    public function dashboard(Request $request): Response
+    {
+        $user = $request->user();
+        $units = ManagementScope::managedUnits($user, ['tb2_id', 'tb2_nome', 'tb2_cnpj', 'tb2_endereco', 'matriz_id'])
+            ->map(fn (Unidade $unit) => [
+                'id' => (int) $unit->tb2_id,
+                'name' => (string) $unit->tb2_nome,
+                'cnpj' => (string) ($unit->tb2_cnpj ?? ''),
+                'endereco' => (string) ($unit->tb2_endereco ?? ''),
+                'matriz_id' => (int) ($unit->matriz_id ?? 0),
+            ])
+            ->values();
+        $selectedUnitId = (int) $request->query('unit_id', 0);
+
+        if ($selectedUnitId <= 0) {
+            $selectedUnitId = $this->resolveDefaultSelectedUnitId($request, $units);
+        }
+
+        if ($selectedUnitId > 0 && ! $units->contains(fn (array $unit) => (int) ($unit['id'] ?? 0) === $selectedUnitId)) {
+            abort(403, 'Acesso negado.');
+        }
+
+        $unit = $selectedUnitId > 0
+            ? Unidade::query()->find($selectedUnitId)
+            : null;
+
+        if ($unit && ! $units->contains(fn (array $item) => (int) ($item['id'] ?? 0) === (int) $unit->tb2_id)) {
+            abort(403, 'Acesso negado.');
+        }
+
+        $matrixId = (int) ($unit?->matriz_id
+            ?? ($units->first()['matriz_id'] ?? 0)
+            ?? ($user?->matriz_id ?? 0));
+
+        $productCount = 0;
+        $serviceCount = 0;
+        $configurationReady = false;
+        $invoiceSummary = [
+            'issued' => 0,
+            'signed' => 0,
+            'errors' => 0,
+        ];
+
+        if ($matrixId > 0) {
+            $productQuery = Produto::query()->forMatrix($matrixId);
+            $productCount = (clone $productQuery)->where('tb1_tipo', '!=', 2)->count();
+            $serviceCount = (clone $productQuery)->where('tb1_tipo', 2)->count();
+        }
+
+        if ($selectedUnitId > 0 && $this->fiscalTablesAreAvailable()) {
+            $configuration = ConfiguracaoFiscal::query()
+                ->where('tb2_id', $selectedUnitId)
+                ->first();
+
+            $configurationReady = $configuration instanceof ConfiguracaoFiscal
+                && (bool) $configuration->tb26_emitir_nfe
+                && filled($configuration->tb26_uf)
+                && filled($configuration->tb26_codigo_municipio)
+                && filled($configuration->tb26_razao_social)
+                && filled($configuration->tb26_certificado_arquivo);
+
+            $invoiceQuery = NotaFiscal::query()->where('tb2_id', $selectedUnitId);
+            $invoiceSummary = [
+                'issued' => (clone $invoiceQuery)->where('tb27_status', 'emitida')->count(),
+                'signed' => (clone $invoiceQuery)->where('tb27_status', 'xml_assinado')->count(),
+                'errors' => (clone $invoiceQuery)->whereIn('tb27_status', ['erro_validacao', 'erro_transmissao'])->count(),
+            ];
+        }
+
+        return Inertia::render('Nfe/Dashboard', [
+            'units' => $units,
+            'selectedUnitId' => $selectedUnitId > 0 ? $selectedUnitId : null,
+            'unit' => $unit ? [
+                'id' => (int) $unit->tb2_id,
+                'name' => (string) $unit->tb2_nome,
+                'cnpj' => (string) ($unit->tb2_cnpj ?? ''),
+                'endereco' => (string) ($unit->tb2_endereco ?? ''),
+                'matriz_id' => (int) ($unit->matriz_id ?? 0),
+            ] : null,
+            'canAccessFiscalSettings' => ManagementScope::isAdmin($user),
+            'canAccessInvoiceMonitor' => ManagementScope::isAdmin($user),
+            'configurationReady' => $configurationReady,
+            'productCount' => $productCount,
+            'serviceCount' => $serviceCount,
+            'invoiceSummary' => $invoiceSummary,
+        ]);
+    }
 
     public function index(
         Request $request,
@@ -198,6 +288,103 @@ class FiscalConfigurationController extends Controller
                 ),
                 null,
                 $invoiceStatusFilter,
+            );
+        }
+    }
+
+    public function nfeIndex(Request $request): Response
+    {
+        $user = $request->user();
+        $this->ensureAdmin($user);
+        $units = collect();
+        $selectedUnitId = (int) $request->query('unit_id', 0);
+        $signedMode = $this->normalizeNfeSignedMode($request->query('signed_mode', 'signed'));
+        $lastStep = 'inicializar tela NFe';
+
+        try {
+            $lastStep = 'carregar unidades gerenciadas';
+            $units = ManagementScope::managedUnits($user, ['tb2_id', 'tb2_nome', 'tb2_cnpj'])
+                ->map(fn (Unidade $unit) => [
+                    'id' => (int) $unit->tb2_id,
+                    'name' => $unit->tb2_nome,
+                    'cnpj' => $unit->tb2_cnpj,
+                ])
+                ->values();
+
+            if ($selectedUnitId <= 0) {
+                $selectedUnitId = $this->resolveDefaultSelectedUnitId($request, $units);
+            }
+
+            if ($selectedUnitId > 0 && ! ManagementScope::canManageUnit($user, $selectedUnitId)) {
+                abort(403, 'Acesso negado.');
+            }
+
+            if (! $this->fiscalTablesAreAvailable()) {
+                return $this->renderNfePage(
+                    $units,
+                    $selectedUnitId,
+                    null,
+                    collect(),
+                    $this->emptyNfePaginator($request, 'signed_page'),
+                    $this->emptyNfePaginator($request, 'issued_page'),
+                    'As tabelas fiscais ainda nao estao disponiveis neste ambiente. Execute as migrations fiscais do deploy antes de usar esta tela.',
+                    null,
+                    $signedMode,
+                );
+            }
+
+            $lastStep = 'carregar dados da unidade';
+            $unit = $selectedUnitId > 0
+                ? Unidade::query()->find($selectedUnitId)
+                : null;
+
+            $invoiceLoadWarning = null;
+            $errorInvoices = collect();
+            $signedInvoices = $this->emptyNfePaginator($request, 'signed_page');
+            $issuedInvoices = $this->emptyNfePaginator($request, 'issued_page');
+
+            if ($selectedUnitId > 0) {
+                try {
+                    $lastStep = 'carregar ultimas notas fiscais da unidade';
+                    $errorInvoices = $this->loadPreparedInvoicesForUnit($selectedUnitId, 'error');
+                    $signedInvoices = $this->loadPreparedInvoicesPageForUnit($request, $selectedUnitId, 'signed', 10, 'signed_page');
+                    $issuedInvoices = $this->loadPreparedInvoicesPageForUnit($request, $selectedUnitId, 'issued', 10, 'issued_page');
+                } catch (Throwable) {
+                    $invoiceLoadWarning = 'Nao foi possivel carregar todas as notas fiscais desta unidade neste ambiente. A tela foi mantida aberta sem derrubar a configuracao.';
+                    $errorInvoices = collect();
+                    $signedInvoices = $this->emptyNfePaginator($request, 'signed_page');
+                    $issuedInvoices = $this->emptyNfePaginator($request, 'issued_page');
+                }
+            }
+
+            return $this->renderNfePage(
+                $units,
+                $selectedUnitId,
+                $unit,
+                $errorInvoices,
+                $signedInvoices,
+                $issuedInvoices,
+                null,
+                $invoiceLoadWarning,
+                $signedMode,
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return $this->renderNfePage(
+                $units,
+                $selectedUnitId,
+                null,
+                collect(),
+                $this->emptyNfePaginator($request, 'signed_page'),
+                $this->emptyNfePaginator($request, 'issued_page'),
+                sprintf(
+                    'O ambiente de producao retornou um erro interno ao montar os dados fiscais. Etapa: %s. Detalhe tecnico: %s',
+                    $lastStep,
+                    $this->buildSafeExceptionMessage($exception)
+                ),
+                null,
+                $signedMode,
             );
         }
     }
@@ -429,15 +616,13 @@ class FiscalConfigurationController extends Controller
         $notaFiscal->loadMissing('pagamento.vendas.produto', 'pagamento.vendas.unidade');
 
         if (! $notaFiscal->pagamento) {
-            return redirect()
-                ->route('settings.fiscal', ['unit_id' => $notaFiscal->tb2_id])
+            return $this->redirectToInvoiceListing($request, (int) $notaFiscal->tb2_id)
                 ->with('error', 'Nao foi encontrado o pagamento vinculado a esta nota fiscal.');
         }
 
         $invoice = $fiscalInvoicePreparationService->prepareForPayment($notaFiscal->pagamento);
 
-        return redirect()
-            ->route('settings.fiscal', ['unit_id' => $notaFiscal->tb2_id])
+        return $this->redirectToInvoiceListing($request, (int) $notaFiscal->tb2_id)
             ->with('success', sprintf(
                 'Nota fiscal da venda %d regenerada com status %s.',
                 (int) $notaFiscal->tb4_id,
@@ -455,8 +640,7 @@ class FiscalConfigurationController extends Controller
         }
 
         if (! $this->canDeletePreparedInvoice($notaFiscal)) {
-            return redirect()
-                ->route('settings.fiscal', ['unit_id' => $notaFiscal->tb2_id])
+            return $this->redirectToInvoiceListing($request, (int) $notaFiscal->tb2_id)
                 ->with('error', 'Somente notas preparadas que ainda nao foram transmitidas podem ser excluidas.');
         }
 
@@ -465,8 +649,7 @@ class FiscalConfigurationController extends Controller
 
         $notaFiscal->delete();
 
-        return redirect()
-            ->route('settings.fiscal', ['unit_id' => $unitId])
+        return $this->redirectToInvoiceListing($request, $unitId)
             ->with('success', sprintf(
                 'Nota fiscal preparada da venda %d excluida com sucesso.',
                 $paymentId
@@ -511,34 +694,29 @@ class FiscalConfigurationController extends Controller
             $notaFiscal->loadMissing('pagamento.vendas.produto', 'pagamento.vendas.unidade');
 
             if (! $notaFiscal->pagamento) {
-                return redirect()
-                    ->route('settings.fiscal', ['unit_id' => $notaFiscal->tb2_id])
+                return $this->redirectToInvoiceListing($request, (int) $notaFiscal->tb2_id)
                     ->with('error', 'Nao foi encontrado o pagamento vinculado a esta nota fiscal.');
             }
 
             $refreshedInvoice = $fiscalInvoicePreparationService->prepareForPayment($notaFiscal->pagamento);
 
             if (! $refreshedInvoice) {
-                return redirect()
-                    ->route('settings.fiscal', ['unit_id' => $notaFiscal->tb2_id])
+                return $this->redirectToInvoiceListing($request, (int) $notaFiscal->tb2_id)
                     ->with('error', 'Esta forma de pagamento nao gera nota fiscal automatica para transmissao.');
             }
 
             if (! filled($refreshedInvoice->tb27_xml_envio)) {
-                return redirect()
-                    ->route('settings.fiscal', ['unit_id' => $notaFiscal->tb2_id])
+                return $this->redirectToInvoiceListing($request, (int) $notaFiscal->tb2_id)
                     ->with('error', $refreshedInvoice->tb27_mensagem ?: 'A nota ainda nao possui XML assinado para transmissao.');
             }
 
             $fiscalNfceTransmissionService->transmit($refreshedInvoice);
         } catch (RuntimeException $exception) {
-            return redirect()
-                ->route('settings.fiscal', ['unit_id' => $notaFiscal->tb2_id])
+            return $this->redirectToInvoiceListing($request, (int) $notaFiscal->tb2_id)
                 ->with('error', $exception->getMessage());
         }
 
-        return redirect()
-            ->route('settings.fiscal', ['unit_id' => $notaFiscal->tb2_id])
+        return $this->redirectToInvoiceListing($request, (int) $notaFiscal->tb2_id)
             ->with('success', sprintf('Nota fiscal da venda %d enviada para a SEFAZ.', (int) $notaFiscal->tb4_id));
     }
 
@@ -877,6 +1055,7 @@ class FiscalConfigurationController extends Controller
     {
         return match ((string) $paymentType) {
             'dinheiro' => 'Dinheiro',
+            'pix' => 'PiX',
             'cartao_credito' => 'Cartao credito',
             'cartao_debito' => 'Cartao debito',
             'dinheiro_cartao_credito' => 'Dinheiro + Cartao credito',
@@ -955,6 +1134,181 @@ class FiscalConfigurationController extends Controller
             && ! filled($invoice->tb27_recibo);
     }
 
+    private function resolveDefaultSelectedUnitId(Request $request, $units): int
+    {
+        $activeUnit = $request->session()->get('active_unit');
+        $activeUnitId = 0;
+        $loggedUnitId = (int) ($request->user()?->tb2_id ?? 0);
+
+        if (is_array($activeUnit)) {
+            $activeUnitId = (int) ($activeUnit['id'] ?? $activeUnit['tb2_id'] ?? 0);
+        } elseif (is_object($activeUnit)) {
+            $activeUnitId = (int) ($activeUnit->id ?? $activeUnit->tb2_id ?? 0);
+        }
+
+        if ($activeUnitId > 0 && collect($units)->contains(fn ($unit) => (int) ($unit['id'] ?? 0) === $activeUnitId)) {
+            return $activeUnitId;
+        }
+
+        if ($loggedUnitId > 0 && collect($units)->contains(fn ($unit) => (int) ($unit['id'] ?? 0) === $loggedUnitId)) {
+            return $loggedUnitId;
+        }
+
+        return (int) ($units->first()['id'] ?? 0);
+    }
+
+    private function normalizeInvoiceStatusFilter(mixed $invoiceStatusFilter): string
+    {
+        $invoiceStatusFilter = strtolower(trim((string) $invoiceStatusFilter));
+
+        if (! in_array($invoiceStatusFilter, self::INVOICE_FILTER_OPTIONS, true)) {
+            return 'all';
+        }
+
+        return $invoiceStatusFilter;
+    }
+
+    private function normalizeNfeSignedMode(mixed $signedMode): string
+    {
+        $signedMode = strtolower(trim((string) $signedMode));
+
+        return in_array($signedMode, ['signed', 'issued'], true) ? $signedMode : 'signed';
+    }
+
+    private function loadPreparedInvoicesForUnit(int $selectedUnitId, string $invoiceStatusFilter)
+    {
+        return $this->buildPreparedInvoicesQuery($selectedUnitId, $invoiceStatusFilter)
+            ->with([
+                'pagamento.vendas.unidade:tb2_id,tb2_nome,tb2_endereco,tb2_cnpj',
+                'pagamento.vendas.caixa:id,name',
+                'pagamento.vendas.valeUser:id,name',
+                'configuracaoFiscal:tb26_id,tb26_razao_social,tb26_nome_fantasia,tb26_ie,tb26_logradouro,tb26_numero,tb26_complemento,tb26_bairro,tb26_municipio,tb26_uf,tb26_cep',
+            ])
+            ->orderByDesc('tb27_id')
+            ->limit(20)
+            ->get([
+                'tb27_id',
+                'tb4_id',
+                'tb2_id',
+                'tb26_id',
+                'tb27_modelo',
+                'tb27_ambiente',
+                'tb27_serie',
+                'tb27_numero',
+                'tb27_status',
+                'tb27_payload',
+                'tb27_mensagem',
+                'tb27_chave_acesso',
+                'tb27_protocolo',
+                'tb27_recibo',
+                'tb27_xml_envio',
+                'tb27_emitida_em',
+                'created_at',
+            ])
+            ->map(fn (NotaFiscal $invoice) => $this->buildInvoiceListPayload($invoice))
+            ->values();
+    }
+
+    private function loadPreparedInvoicesPageForUnit(
+        Request $request,
+        int $selectedUnitId,
+        string $invoiceStatusFilter,
+        int $perPage,
+        string $pageName,
+    ): LengthAwarePaginator {
+        $paginator = $this->buildPreparedInvoicesQuery($selectedUnitId, $invoiceStatusFilter)
+            ->with([
+                'pagamento.vendas.unidade:tb2_id,tb2_nome,tb2_endereco,tb2_cnpj',
+                'pagamento.vendas.caixa:id,name',
+                'pagamento.vendas.valeUser:id,name',
+                'configuracaoFiscal:tb26_id,tb26_razao_social,tb26_nome_fantasia,tb26_ie,tb26_logradouro,tb26_numero,tb26_complemento,tb26_bairro,tb26_municipio,tb26_uf,tb26_cep',
+            ])
+            ->orderByDesc('tb27_id')
+            ->paginate($perPage, [
+                'tb27_id',
+                'tb4_id',
+                'tb2_id',
+                'tb26_id',
+                'tb27_modelo',
+                'tb27_ambiente',
+                'tb27_serie',
+                'tb27_numero',
+                'tb27_status',
+                'tb27_payload',
+                'tb27_mensagem',
+                'tb27_chave_acesso',
+                'tb27_protocolo',
+                'tb27_recibo',
+                'tb27_xml_envio',
+                'tb27_emitida_em',
+                'created_at',
+            ], $pageName)
+            ->withQueryString();
+
+        $paginator->setCollection(
+            $paginator->getCollection()
+                ->map(fn (NotaFiscal $invoice) => $this->buildInvoiceListPayload($invoice))
+                ->values()
+        );
+
+        return $paginator;
+    }
+
+    private function buildPreparedInvoicesQuery(int $selectedUnitId, string $invoiceStatusFilter)
+    {
+        $invoiceQuery = NotaFiscal::query()
+            ->where('tb2_id', $selectedUnitId);
+
+        if ($invoiceStatusFilter === 'error') {
+            $invoiceQuery->whereIn('tb27_status', ['erro_validacao', 'erro_transmissao']);
+        } elseif ($invoiceStatusFilter === 'signed') {
+            $invoiceQuery->where('tb27_status', 'xml_assinado');
+        } elseif ($invoiceStatusFilter === 'issued') {
+            $invoiceQuery->where('tb27_status', 'emitida');
+        }
+
+        return $invoiceQuery;
+    }
+
+    private function emptyNfePaginator(Request $request, string $pageName): LengthAwarePaginator
+    {
+        return (new LengthAwarePaginator(
+            [],
+            0,
+            10,
+            1,
+            [
+                'path' => $request->url(),
+                'pageName' => $pageName,
+                'query' => $request->query(),
+            ]
+        ))->withQueryString();
+    }
+
+    private function redirectToInvoiceListing(Request $request, int $unitId): RedirectResponse
+    {
+        $routeName = strtolower(trim((string) $request->input('origin', $request->query('origin', '')))) === 'nfe'
+            ? 'settings.nfe'
+            : 'settings.fiscal';
+
+        $routeParameters = ['unit_id' => $unitId];
+        $invoiceStatusFilter = $this->normalizeInvoiceStatusFilter(
+            $request->input('invoice_status', $request->query('invoice_status', 'all'))
+        );
+
+        if ($invoiceStatusFilter !== '') {
+            $routeParameters['invoice_status'] = $invoiceStatusFilter;
+        }
+
+        if ($routeName === 'settings.nfe') {
+            $routeParameters['signed_mode'] = $this->normalizeNfeSignedMode(
+                $request->input('signed_mode', $request->query('signed_mode', 'signed'))
+            );
+        }
+
+        return redirect()->route($routeName, $routeParameters);
+    }
+
     private function fiscalTablesAreAvailable(): bool
     {
         try {
@@ -994,6 +1348,36 @@ class FiscalConfigurationController extends Controller
             'fiscalUnavailableMessage' => $fiscalUnavailableMessage,
             'invoiceLoadWarning' => $invoiceLoadWarning,
             'invoiceStatusFilter' => $invoiceStatusFilter,
+        ]);
+    }
+
+    private function renderNfePage(
+        $units,
+        int $selectedUnitId,
+        ?Unidade $unit,
+        $errorInvoices,
+        $signedInvoices,
+        $issuedInvoices,
+        ?string $fiscalUnavailableMessage,
+        ?string $invoiceLoadWarning,
+        string $signedMode = 'signed',
+    ): Response {
+        return Inertia::render('Settings/Nfe', [
+            'units' => $units,
+            'selectedUnitId' => $selectedUnitId > 0 ? $selectedUnitId : null,
+            'unit' => $unit ? [
+                'id' => (int) $unit->tb2_id,
+                'name' => $unit->tb2_nome,
+                'cnpj' => $unit->tb2_cnpj,
+                'endereco' => $unit->tb2_endereco,
+                'cnpj_digits' => $this->onlyDigits($unit->tb2_cnpj),
+            ] : null,
+            'errorInvoices' => $errorInvoices,
+            'signedInvoices' => $signedInvoices,
+            'issuedInvoices' => $issuedInvoices,
+            'fiscalUnavailableMessage' => $fiscalUnavailableMessage,
+            'invoiceLoadWarning' => $invoiceLoadWarning,
+            'signedMode' => $signedMode,
         ]);
     }
 

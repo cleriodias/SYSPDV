@@ -4,7 +4,7 @@ import InputError from '@/Components/InputError';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { buildFiscalReceiptHtml, formatReceiptCurrency } from '@/Utils/receipt';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const STATUS_CLASS = {
     pendente_configuracao: 'border-amber-200 bg-amber-50 text-amber-800',
@@ -43,6 +43,40 @@ const EMITTER_FIELDS = [
     ['tb26_municipio', 'Municipio'],
     ['tb26_uf', 'UF'],
 ];
+
+const buildFiscalFormData = (configuration = {}, selectedUnitId = null) => ({
+    tb2_id: configuration?.tb2_id ?? selectedUnitId ?? '',
+    tb26_emitir_nfe: Boolean(configuration?.tb26_emitir_nfe),
+    tb26_emitir_nfce: Boolean(configuration?.tb26_emitir_nfce),
+    tb26_geracao_automatica_ativa: configuration?.tb26_geracao_automatica_ativa ?? true,
+    tb26_ambiente: configuration?.tb26_ambiente ?? 'homologacao',
+    tb26_serie: configuration?.tb26_serie ?? '1',
+    tb26_proximo_numero: configuration?.tb26_proximo_numero ?? 1,
+    tb26_crt: configuration?.tb26_crt ?? '',
+    tb26_csc_id: configuration?.tb26_csc_id ?? '',
+    tb26_csc: configuration?.tb26_csc ?? '',
+    tb26_certificado_tipo: configuration?.tb26_certificado_tipo ?? 'A1',
+    tb26_certificado_nome: configuration?.tb26_certificado_nome ?? '',
+    tb26_certificado_cnpj: configuration?.tb26_certificado_cnpj ?? '',
+    tb26_certificado_arquivo_upload: null,
+    tb26_certificado_senha: '',
+    remover_certificado: false,
+    tb26_razao_social: configuration?.tb26_razao_social ?? '',
+    tb26_nome_fantasia: configuration?.tb26_nome_fantasia ?? '',
+    tb26_ie: configuration?.tb26_ie ?? '',
+    tb26_im: configuration?.tb26_im ?? '',
+    tb26_cnae: configuration?.tb26_cnae ?? '',
+    tb26_logradouro: configuration?.tb26_logradouro ?? '',
+    tb26_numero: configuration?.tb26_numero ?? '',
+    tb26_complemento: configuration?.tb26_complemento ?? '',
+    tb26_bairro: configuration?.tb26_bairro ?? '',
+    tb26_codigo_municipio: configuration?.tb26_codigo_municipio ?? '',
+    tb26_municipio: configuration?.tb26_municipio ?? '',
+    tb26_uf: configuration?.tb26_uf ?? '',
+    tb26_cep: configuration?.tb26_cep ?? '',
+    tb26_telefone: configuration?.tb26_telefone ?? '',
+    tb26_email: configuration?.tb26_email ?? '',
+});
 
 const badgeClassName = (status) =>
     `inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
@@ -337,58 +371,47 @@ export default function FiscalConfig({
 }) {
     const [printError, setPrintError] = useState('');
     const { flash = {} } = usePage().props;
-    const { data, setData, post, processing, errors } = useForm({
-        tb2_id: configuration?.tb2_id ?? selectedUnitId ?? '',
-        tb26_emitir_nfe: Boolean(configuration?.tb26_emitir_nfe),
-        tb26_emitir_nfce: Boolean(configuration?.tb26_emitir_nfce),
-        tb26_geracao_automatica_ativa: configuration?.tb26_geracao_automatica_ativa ?? true,
-        tb26_ambiente: configuration?.tb26_ambiente ?? 'homologacao',
-        tb26_serie: configuration?.tb26_serie ?? '1',
-        tb26_proximo_numero: configuration?.tb26_proximo_numero ?? 1,
-        tb26_crt: configuration?.tb26_crt ?? '',
-        tb26_csc_id: configuration?.tb26_csc_id ?? '',
-        tb26_csc: configuration?.tb26_csc ?? '',
-        tb26_certificado_tipo: configuration?.tb26_certificado_tipo ?? 'A1',
-        tb26_certificado_nome: configuration?.tb26_certificado_nome ?? '',
-        tb26_certificado_cnpj: configuration?.tb26_certificado_cnpj ?? '',
-        tb26_certificado_arquivo_upload: null,
-        tb26_certificado_senha: '',
-        remover_certificado: false,
-        tb26_razao_social: configuration?.tb26_razao_social ?? '',
-        tb26_nome_fantasia: configuration?.tb26_nome_fantasia ?? '',
-        tb26_ie: configuration?.tb26_ie ?? '',
-        tb26_im: configuration?.tb26_im ?? '',
-        tb26_cnae: configuration?.tb26_cnae ?? '',
-        tb26_logradouro: configuration?.tb26_logradouro ?? '',
-        tb26_numero: configuration?.tb26_numero ?? '',
-        tb26_complemento: configuration?.tb26_complemento ?? '',
-        tb26_bairro: configuration?.tb26_bairro ?? '',
-        tb26_codigo_municipio: configuration?.tb26_codigo_municipio ?? '',
-        tb26_municipio: configuration?.tb26_municipio ?? '',
-        tb26_uf: configuration?.tb26_uf ?? '',
-        tb26_cep: configuration?.tb26_cep ?? '',
-        tb26_telefone: configuration?.tb26_telefone ?? '',
-        tb26_email: configuration?.tb26_email ?? '',
-    });
+    const fiscalFormData = buildFiscalFormData(configuration, selectedUnitId);
+    const fiscalFormDataKey = JSON.stringify(fiscalFormData);
+    const { data, setData, post, processing, errors, clearErrors } = useForm(
+        fiscalFormData
+    );
     const fiscalGenerationEnabled = Boolean(data.tb26_geracao_automatica_ativa);
     const reprocess = useForm({
         tb2_id: selectedUnitId ?? '',
     });
+    const formSetDataRef = useRef(setData);
+    const formClearErrorsRef = useRef(clearErrors);
+    const reprocessSetDataRef = useRef(reprocess.setData);
+    const lastSyncedFiscalFormKeyRef = useRef(null);
 
     useEffect(() => {
-        setData('tb2_id', configuration?.tb2_id ?? selectedUnitId ?? '');
-    }, [configuration?.tb2_id, selectedUnitId, setData]);
+        formSetDataRef.current = setData;
+        formClearErrorsRef.current = clearErrors;
+        reprocessSetDataRef.current = reprocess.setData;
+    });
 
     useEffect(() => {
-        reprocess.setData('tb2_id', selectedUnitId ?? '');
-    }, [reprocess.setData, selectedUnitId]);
+        if (lastSyncedFiscalFormKeyRef.current === fiscalFormDataKey) {
+            return;
+        }
+
+        lastSyncedFiscalFormKeyRef.current = fiscalFormDataKey;
+        formSetDataRef.current(fiscalFormData);
+        formClearErrorsRef.current();
+        setPrintError('');
+    }, [fiscalFormData, fiscalFormDataKey]);
+
+    useEffect(() => {
+        reprocessSetDataRef.current('tb2_id', selectedUnitId ?? '');
+    }, [selectedUnitId]);
 
     const handleSelectUnit = (unitId) => {
         router.get(route('settings.fiscal'), {
             unit_id: unitId,
             invoice_status: invoiceStatusFilter,
         }, {
-            preserveState: true,
+            preserveState: false,
             preserveScroll: true,
             replace: true,
         });
@@ -719,6 +742,7 @@ export default function FiscalConfig({
                                         <div className="xl:col-span-2">
                                             <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Arquivo do certificado</label>
                                             <input
+                                                key={`certificado-upload-${selectedUnitId ?? 'sem-loja'}`}
                                                 type="file"
                                                 accept=".pfx,.p12"
                                                 onChange={(event) => setData('tb26_certificado_arquivo_upload', event.target.files?.[0] ?? null)}

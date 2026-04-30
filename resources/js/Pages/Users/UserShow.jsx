@@ -24,6 +24,7 @@ const paymentLabels = {
     vale: 'Vale',
     dinheiro: 'Dinheiro',
     maquina: 'Maquina',
+    pix: 'PiX',
 };
 
 const formatTime = (value) => {

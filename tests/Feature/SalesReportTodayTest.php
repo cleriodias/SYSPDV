@@ -102,7 +102,7 @@ class SalesReportTodayTest extends TestCase
             ->component('Reports/SalesToday')
             ->where('selectedUnitId', null)
             ->where('selectedUnit.name', 'Todas as unidades')
-            ->where('totals.maquina', 30.0)
+            ->where('totals.maquina', 30)
             ->has('details.maquina', 2)
         );
     }
@@ -206,11 +206,62 @@ class SalesReportTodayTest extends TestCase
 
         $response->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Reports/SalesToday')
-            ->where('totals.maquina', 10.0)
+            ->where('totals.maquina', 10)
             ->where('filterUnits', [
                 ['id' => $unitA1->tb2_id, 'name' => 'Loja A1'],
                 ['id' => $unitA2->tb2_id, 'name' => 'Loja A2'],
             ])
+        );
+    }
+
+    public function test_pix_payments_are_grouped_with_maquina_in_sales_today_report(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-04-04 10:00:00'));
+
+        $unit = $this->makeUnit('Loja Pix');
+        $manager = $this->makeUser('Gerente', 1, $unit, [$unit]);
+        $cashier = $this->makeUser('Caixa Pix', 3, $unit);
+        $product = $this->makeProduct();
+
+        $payment = VendaPagamento::create([
+            'valor_total' => 12,
+            'tipo_pagamento' => 'pix',
+            'valor_pago' => null,
+            'troco' => 0,
+            'dois_pgto' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Venda::create([
+            'tb4_id' => $payment->tb4_id,
+            'tb1_id' => $product->tb1_id,
+            'id_comanda' => 3001,
+            'produto_nome' => $product->tb1_nome,
+            'valor_unitario' => 12,
+            'quantidade' => 1,
+            'valor_total' => 12,
+            'data_hora' => now(),
+            'id_user_caixa' => $cashier->id,
+            'id_user_vale' => null,
+            'id_unidade' => $unit->tb2_id,
+            'tipo_pago' => 'maquina',
+            'status_pago' => true,
+            'status' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($manager)
+            ->withSession($this->activeSessionPayload($unit))
+            ->get(route('reports.sales.today', ['unit_id' => $unit->tb2_id]));
+
+        $response->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Reports/SalesToday')
+            ->where('selectedUnitId', $unit->tb2_id)
+            ->where('totals.maquina', 12)
+            ->has('details.maquina', 1)
         );
     }
 

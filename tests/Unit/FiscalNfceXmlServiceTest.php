@@ -350,6 +350,25 @@ class FiscalNfceXmlServiceTest extends TestCase
         $this->assertStringNotContainsString('<xPag>', $debitXml);
         $this->assertStringContainsString('<card><tpIntegra>2</tpIntegra></card>', $debitXml);
 
+        $pixDocument = new DOMDocument('1.0', 'UTF-8');
+        $pixInfNfe = $pixDocument->createElement('infNFe');
+        $pixDocument->appendChild($pixInfNfe);
+
+        $pixPayment = new VendaPagamento([
+            'tipo_pagamento' => 'pix',
+            'valor_total' => 4.2,
+            'troco' => 0,
+        ]);
+
+        $appendPayment->invoke($service, $pixDocument, $pixInfNfe, $pixPayment, 4.2);
+
+        $pixXml = $pixDocument->saveXML();
+
+        $this->assertNotFalse($pixXml);
+        $this->assertStringContainsString('<tPag>17</tPag>', $pixXml);
+        $this->assertStringNotContainsString('<xPag>', $pixXml);
+        $this->assertStringContainsString('<card><tpIntegra>2</tpIntegra></card>', $pixXml);
+
         $mixedDocument = new DOMDocument('1.0', 'UTF-8');
         $mixedInfNfe = $mixedDocument->createElement('infNFe');
         $mixedDocument->appendChild($mixedInfNfe);

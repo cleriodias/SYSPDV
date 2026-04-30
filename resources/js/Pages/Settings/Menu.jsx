@@ -61,6 +61,7 @@ const SECTIONS = [
             { label: 'Disputas Fornecedor', icon: 'bi-hammer', href: routeTo('supplier.disputes') },
             { label: 'Configuracao do Discarte', icon: 'bi-percent', href: routeTo('settings.discard-config') },
             { label: 'Controle de Pagamentos', icon: 'bi-cash-coin', href: routeTo('settings.payment-control') },
+            { label: 'NFe', icon: 'bi-file-earmark-text', href: routeTo('settings.nfe') },
             { label: 'Contra-Cheque', icon: 'bi-receipt-cutoff', href: routeTo('settings.contra-cheque') },
             { label: 'Folha de Pagamento', icon: 'bi-receipt', href: routeTo('settings.payroll') },
             { label: 'Adiantamentos', icon: 'bi-wallet2', href: routeTo('salary-advances.index') },

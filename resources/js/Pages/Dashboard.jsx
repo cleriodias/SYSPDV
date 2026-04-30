@@ -14,6 +14,7 @@ const WEIGHTED_BARCODE_PREFIX = '2';
 const WEIGHTED_BARCODE_LENGTH = 13;
 const paymentLabels = {
     maquina: 'Maquina',
+    pix: 'PiX',
     cartao_credito: 'Credito',
     cartao_debito: 'Debito',
     dinheiro: 'Dinheiro',
@@ -51,6 +52,11 @@ const paymentOptions = [
         classes: 'bg-green-600 hover:bg-green-700 focus:ring-green-200 text-white',
     },
     ...cardTypeOptions,
+    {
+        value: 'pix',
+        label: paymentLabels.pix,
+        classes: 'bg-cyan-600 hover:bg-cyan-700 focus:ring-cyan-200 text-white',
+    },
     {
         value: 'vale',
         label: paymentLabels.vale,
@@ -2106,14 +2112,14 @@ export default function Dashboard({ profileSwitch = null }) {
                                         </div>
                                     )}
 
-                                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+                                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
                                         {paymentOptions.slice(0, 2).map((option) => (
                                             <button
                                                 type="button"
                                                 key={option.value}
                                                 onClick={() => handlePaymentClick(option.value)}
                                                 disabled={saleLoading || items.length === 0 || isSalesBlocked}
-                                                className={`min-w-0 rounded-lg px-3 py-3 text-center text-sm font-semibold shadow focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 lg:text-base ${option.classes}`}
+                                                className={`min-w-0 rounded-lg px-2 py-3 text-center text-sm font-semibold shadow focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 lg:px-3 ${option.classes}`}
                                             >
                                                 {option.label}
                                             </button>
@@ -2122,10 +2128,10 @@ export default function Dashboard({ profileSwitch = null }) {
                                             type="button"
                                             onClick={handleSaveCart}
                                             disabled={items.length === 0}
-                                            className="inline-flex min-w-0 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-3 text-center text-sm font-semibold text-white shadow focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60 lg:text-base"
+                                            className="inline-flex min-w-0 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-2 py-3 text-center text-sm font-semibold text-white shadow focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60 lg:px-3"
                                         >
                                             <i className="bi bi-download" aria-hidden="true"></i>
-                                            Guardar {totalItems} Itens
+                                            {totalItems} Itens
                                         </button>
                                         {paymentOptions.slice(2).map((option) => (
                                             <button
@@ -2133,7 +2139,7 @@ export default function Dashboard({ profileSwitch = null }) {
                                                 key={option.value}
                                                 onClick={() => handlePaymentClick(option.value)}
                                                 disabled={saleLoading || items.length === 0 || isSalesBlocked}
-                                                className={`min-w-0 rounded-lg px-3 py-3 text-center text-sm font-semibold shadow focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 lg:text-base ${option.classes}`}
+                                                className={`min-w-0 rounded-lg px-2 py-3 text-center text-sm font-semibold shadow focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 lg:px-3 ${option.classes}`}
                                             >
                                                 {option.label}
                                             </button>

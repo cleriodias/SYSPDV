@@ -161,7 +161,11 @@ const normalizeMenuAccessConfig = (config, allowedKeys) => {
 export default function AuthenticatedLayout({ header, headerClassName = '', children }) {
     const pageProps = usePage().props;
     const user = pageProps.auth.user;
+    const applicationId = user ? Number(user.matriz?.tb28_id ?? 0) : 0;
+    const isNfeApplication = applicationId === 3;
+    const productCatalogMode = String(pageProps.catalogMode ?? 'all');
     const activeUnitName = pageProps.auth.unit?.name ?? 'Dashboard';
+    const activeUnitId = Number(pageProps.auth.unit?.id ?? pageProps.auth.unit?.tb2_id ?? 0);
     const discardAlert = pageProps.discardAlert ?? null;
     const supportTicketsMenu = pageProps.supportTicketsMenu ?? null;
     const pendingFiscalTransmissions = pageProps.pendingFiscalTransmissions ?? {
@@ -301,6 +305,8 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
         hasMenuAccess('online_users');
     const canManageProducts = !isBoss && hasMenuAccess('products');
     const canManageDiscard = !isBoss && hasMenuAccess('discard');
+    const dashboardRouteName = isNfeApplication ? 'nfe' : 'dashboard';
+    const dashboardMenuLabel = isNfeApplication ? 'NFe' : activeUnitName;
     const unreadOnlineTotal = Number(onlineSummary?.unread_total ?? 0);
     const supportTicketCounters = useMemo(
         () => buildSupportTicketMenuCounters(supportTicketsMenu),
@@ -311,7 +317,8 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
         ? pendingFiscalTransmissions.items
         : [];
     const fiscalSettingsShortcutUrl =
-        pendingFiscalTransmissionItems[0]?.settings_url ?? (isAdmin ? route('settings.fiscal') : null);
+        pendingFiscalTransmissionItems[0]?.settings_url
+        ?? (isAdmin ? route(isNfeApplication ? 'settings.nfe' : 'settings.fiscal') : null);
 
     useEffect(() => {
         if (
@@ -379,7 +386,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
         [
             {
                 key: 'matrizes',
-                visible: canSeeMatrices,
+                visible: !isNfeApplication && canSeeMatrices,
                 node: (
                     <NavLink
                         href={route('matrizes.index')}
@@ -394,10 +401,10 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                 visible: true,
                 node: (
                     <NavLink
-                        href={route('dashboard')}
-                        active={route().current('dashboard')}
+                        href={route(dashboardRouteName)}
+                        active={route().current(dashboardRouteName)}
                     >
-                        <MenuLabel icon="bi bi-speedometer2" text={activeUnitName} />
+                        <MenuLabel icon="bi bi-speedometer2" text={dashboardMenuLabel} />
                     </NavLink>
                 ),
             },
@@ -406,16 +413,40 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                 visible: canManageProducts,
                 node: (
                     <NavLink
-                        href={route('products.index')}
-                        active={route().current('products.*')}
+                        href={route('products.index', isNfeApplication ? { catalog: 'products' } : {})}
+                        active={route().current('products.*') && productCatalogMode !== 'services'}
                     >
                         <MenuLabel icon="bi bi-box-seam" text="Produtos" />
                     </NavLink>
                 ),
             },
             {
+                key: 'services',
+                visible: isNfeApplication && canManageProducts,
+                node: (
+                    <NavLink
+                        href={route('products.index', { catalog: 'services' })}
+                        active={route().current('products.*') && productCatalogMode === 'services'}
+                    >
+                        <MenuLabel icon="bi bi-tools" text="Servicos" />
+                    </NavLink>
+                ),
+            },
+            {
+                key: 'nfe_config',
+                visible: isNfeApplication && isAdmin,
+                node: (
+                    <NavLink
+                        href={route('settings.fiscal', activeUnitId > 0 ? { unit_id: activeUnitId } : {})}
+                        active={route().current('settings.fiscal')}
+                    >
+                        <MenuLabel icon="bi bi-gear" text="Configuracao" />
+                    </NavLink>
+                ),
+            },
+            {
                 key: 'support_tickets',
-                visible: user && hasMenuAccess('support_tickets'),
+                visible: !isNfeApplication && user && hasMenuAccess('support_tickets'),
                 node: (
                     <NavLink
                         href={route('support.tickets.index')}
@@ -431,7 +462,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'reports_control',
-                visible: isAdmin && hasMenuAccess('reports_control'),
+                visible: !isNfeApplication && isAdmin && hasMenuAccess('reports_control'),
                 node: (
                     <NavLink
                         href={route('reports.control')}
@@ -443,7 +474,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'reports_cash',
-                visible: canSeeReports && hasMenuAccess('reports_cash'),
+                visible: !isNfeApplication && canSeeReports && hasMenuAccess('reports_cash'),
                 node: (
                     <NavLink
                         href={route('reports.cash.closure')}
@@ -459,7 +490,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'cashier_close',
-                visible: isCashier && hasMenuAccess('cashier_close'),
+                visible: !isNfeApplication && isCashier && hasMenuAccess('cashier_close'),
                 node: (
                     <NavLink
                         href={route('cashier.close')}
@@ -471,7 +502,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'lanchonete_terminal',
-                visible: isLanchonete && hasMenuAccess('lanchonete_terminal') && hasLanchoneteRoute,
+                visible: !isNfeApplication && isLanchonete && hasMenuAccess('lanchonete_terminal') && hasLanchoneteRoute,
                 node: (
                     <NavLink
                         href={hasLanchoneteRoute ? route('lanchonete.terminal') : '#'}
@@ -488,7 +519,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
         [
             {
                 key: 'reports_hoje',
-                visible: canSeeHojeReportResolved && hasHojeRoute && hasMenuAccess('reports_hoje'),
+                visible: !isNfeApplication && canSeeHojeReportResolved && hasHojeRoute && hasMenuAccess('reports_hoje'),
                 node: (
                     <Dropdown.Link href={route('reports.hoje')}>
                         <MenuLabel icon="bi bi-receipt-cutoff" text="Hoje" />
@@ -497,7 +528,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'discard',
-                visible: canManageDiscard,
+                visible: !isNfeApplication && canManageDiscard,
                 node: (
                     <Dropdown.Link href={route('products.discard')}>
                         <MenuLabel icon="bi bi-recycle" text="Descarte" />
@@ -506,7 +537,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'expenses',
-                visible: canSeeExpenses && hasMenuAccess('expenses'),
+                visible: !isNfeApplication && canSeeExpenses && hasMenuAccess('expenses'),
                 node: (
                     <Dropdown.Link href={route('expenses.index')}>
                         <MenuLabel icon="bi bi-receipt" text="Gastos" />
@@ -515,7 +546,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'boletos',
-                visible: canAccessBoletos && hasMenuAccess('boletos'),
+                visible: !isNfeApplication && canAccessBoletos && hasMenuAccess('boletos'),
                 node: (
                     <Dropdown.Link href={route('boletos.index')}>
                         <MenuLabel icon="bi bi-card-text" text="Boletos" />
@@ -523,8 +554,17 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                 ),
             },
             {
+                key: 'settings_nfe',
+                visible: isAdmin,
+                node: (
+                    <Dropdown.Link href={route('settings.nfe', activeUnitId > 0 ? { unit_id: activeUnitId } : {})}>
+                        <MenuLabel icon="bi bi-file-earmark-text" text={isNfeApplication ? 'Monitor NFe' : 'NFe'} />
+                    </Dropdown.Link>
+                ),
+            },
+            {
                 key: 'reports_sales_today',
-                visible: canSeeReports && hasMenuAccess('reports_sales_today'),
+                visible: !isNfeApplication && canSeeReports && hasMenuAccess('reports_sales_today'),
                 node: (
                     <Dropdown.Link href={route('reports.sales.today')}>
                         <MenuLabel icon="bi bi-calendar-day" text="Vendas hoje" />
@@ -533,7 +573,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'reports_lanchonete',
-                visible: canSeeReports && hasMenuAccess('reports_lanchonete'),
+                visible: !isNfeApplication && canSeeReports && hasMenuAccess('reports_lanchonete'),
                 node: (
                     <Dropdown.Link href={route('reports.lanchonete')}>
                         <MenuLabel icon="bi bi-cup-hot" text="Relatório Lanchonete" />
@@ -542,7 +582,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'reports_sales_period',
-                visible: canSeeReports && hasMenuAccess('reports_sales_period'),
+                visible: !isNfeApplication && canSeeReports && hasMenuAccess('reports_sales_period'),
                 node: (
                     <Dropdown.Link href={route('reports.sales.period')}>
                         <MenuLabel icon="bi bi-calendar-range" text="Vendas periodo" />
@@ -551,7 +591,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'reports_descarte_consolidado',
-                visible: canSeeReports && hasMenuAccess('reports_descarte_consolidado'),
+                visible: !isNfeApplication && canSeeReports && hasMenuAccess('reports_descarte_consolidado'),
                 node: (
                     <Dropdown.Link href={route('reports.descarte.consolidado')}>
                         <MenuLabel icon="bi bi-bar-chart-line" text="Discarte Consolidado" />
@@ -560,7 +600,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'reports_sales_detailed',
-                visible: canSeeReports && hasMenuAccess('reports_sales_detailed'),
+                visible: !isNfeApplication && canSeeReports && hasMenuAccess('reports_sales_detailed'),
                 node: (
                     <Dropdown.Link href={route('reports.sales.detailed')}>
                         <MenuLabel icon="bi bi-card-checklist" text="Detalhado" />
@@ -569,7 +609,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'online_users',
-                visible: canSeeOnline,
+                visible: !isNfeApplication && canSeeOnline,
                 node: (
                     <Dropdown.Link href={route('online.index')}>
                         <MenuLabel icon="bi bi-broadcast-pin" text="On-Line" />
@@ -602,7 +642,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'settings',
-                visible: isAdmin && hasMenuAccess('settings'),
+                visible: !isNfeApplication && isAdmin && hasMenuAccess('settings'),
                 node: (
                     <Dropdown.Link href={route('settings.config')}>
                         <MenuLabel

@@ -8,6 +8,7 @@ use App\Models\Unidade;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -164,6 +165,75 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('nfe', ['unit_id' => $unit->tb2_id], false));
         $response->assertSessionHas('active_unit.id', $unit->tb2_id);
         $response->assertSessionHas('active_role', 0);
+    }
+
+    public function test_nfe_route_renders_the_nfe_dashboard_after_login(): void
+    {
+        $matrix = $this->makeMatrix('Matriz NFe Dashboard', Aplicacao::NFE);
+        $unit = $this->makeLoginUnit('Loja NFe Dashboard', $matrix);
+        $user = User::factory()->create([
+            'email' => 'nfe.dashboard@example.com',
+            'password' => 'password',
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $unit->tb2_id,
+            'matriz_id' => $matrix->id,
+        ]);
+        $user->units()->sync([$unit->tb2_id]);
+
+        $response = $this->actingAs($user)
+            ->withSession([
+                'active_unit' => [
+                    'id' => $unit->tb2_id,
+                    'name' => $unit->tb2_nome,
+                    'address' => $unit->tb2_endereco,
+                    'cnpj' => $unit->tb2_cnpj,
+                ],
+                'active_role' => 0,
+            ])
+            ->get(route('nfe', ['unit_id' => $unit->tb2_id], false));
+
+        $response->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Nfe/Dashboard')
+            ->where('selectedUnitId', $unit->tb2_id)
+            ->where('unit.id', $unit->tb2_id)
+            ->where('canAccessFiscalSettings', true)
+            ->where('canAccessInvoiceMonitor', true)
+        );
+    }
+
+    public function test_nfe_route_allows_non_admin_users_and_hides_fiscal_shortcuts(): void
+    {
+        $matrix = $this->makeMatrix('Matriz NFe Operacional', Aplicacao::NFE);
+        $unit = $this->makeLoginUnit('Loja NFe Operacional', $matrix);
+        $user = User::factory()->create([
+            'email' => 'nfe.operacional@example.com',
+            'password' => 'password',
+            'funcao' => 2,
+            'funcao_original' => 2,
+            'tb2_id' => $unit->tb2_id,
+            'matriz_id' => $matrix->id,
+        ]);
+        $user->units()->sync([$unit->tb2_id]);
+
+        $response = $this->actingAs($user)
+            ->withSession([
+                'active_unit' => [
+                    'id' => $unit->tb2_id,
+                    'name' => $unit->tb2_nome,
+                    'address' => $unit->tb2_endereco,
+                    'cnpj' => $unit->tb2_cnpj,
+                ],
+                'active_role' => 2,
+            ])
+            ->get(route('nfe', ['unit_id' => $unit->tb2_id], false));
+
+        $response->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Nfe/Dashboard')
+            ->where('selectedUnitId', $unit->tb2_id)
+            ->where('canAccessFiscalSettings', false)
+            ->where('canAccessInvoiceMonitor', false)
+        );
     }
 
     public function test_login_redirects_to_padaria_application_endpoint(): void

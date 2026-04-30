@@ -2896,6 +2896,7 @@ class SalesReportController extends Controller
     private function normalizePaymentTypeForDisplay(?string $paymentType): string
     {
         return match ((string) $paymentType) {
+            'pix' => 'pix',
             'cartao_credito', 'cartao_debito', 'maquina' => 'maquina',
             'dinheiro_cartao_credito', 'dinheiro_cartao_debito' => 'dinheiro',
             default => (string) $paymentType,
@@ -2905,7 +2906,7 @@ class SalesReportController extends Controller
     private function normalizePaymentTypeForBucket(?string $paymentType): ?string
     {
         return match ((string) $paymentType) {
-            'cartao_credito', 'cartao_debito', 'maquina' => 'maquina',
+            'cartao_credito', 'cartao_debito', 'maquina', 'pix' => 'maquina',
             'dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito' => 'dinheiro',
             'vale', 'refeicao', 'faturar' => (string) $paymentType,
             default => null,
@@ -3201,7 +3202,7 @@ class SalesReportController extends Controller
 
         $cardExpression = "
             CASE
-                WHEN pagamentos.tipo_pagamento IN ('cartao_credito', 'cartao_debito', 'maquina')
+                WHEN pagamentos.tipo_pagamento IN ('cartao_credito', 'cartao_debito', 'maquina', 'pix')
                     THEN GREATEST(pagamentos.valor_total, 0)
                 WHEN pagamentos.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito')
                     THEN GREATEST(COALESCE(pagamentos.dois_pgto, 0), 0)

@@ -61,6 +61,44 @@ class SaleCardPaymentTypesTest extends TestCase
         ]);
     }
 
+    public function test_pix_sale_stores_pix_subtype_and_keeps_sale_rows_as_maquina(): void
+    {
+        $unit = $this->makeUnit('Loja Centro');
+        $cashier = $this->makeUser('Caixa', 3, $unit);
+        $product = $this->makeProduct('Rosca', 7.50);
+
+        $response = $this
+            ->actingAs($cashier)
+            ->withSession($this->activeSessionPayload($unit, 3))
+            ->postJson(route('sales.store'), [
+                'tipo_pago' => 'pix',
+                'items' => [
+                    [
+                        'product_id' => $product->tb1_id,
+                        'quantity' => 1,
+                    ],
+                ],
+            ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('sale.tipo_pago', 'pix')
+            ->assertJsonPath('sale.payment.tipo_pagamento', 'pix');
+
+        $this->assertDatabaseHas('tb4_vendas_pg', [
+            'tipo_pagamento' => 'pix',
+            'valor_total' => 7.50,
+            'dois_pgto' => 0,
+        ]);
+
+        $this->assertDatabaseHas('tb3_vendas', [
+            'tb1_id' => $product->tb1_id,
+            'tipo_pago' => 'maquina',
+            'status_pago' => 1,
+            'id_unidade' => $unit->tb2_id,
+        ]);
+    }
+
     public function test_cash_sale_with_card_complement_stores_selected_card_subtype_on_payment(): void
     {
         $unit = $this->makeUnit('Loja Centro');
@@ -86,8 +124,8 @@ class SaleCardPaymentTypesTest extends TestCase
             ->assertOk()
             ->assertJsonPath('sale.tipo_pago', 'dinheiro_cartao_debito')
             ->assertJsonPath('sale.payment.tipo_pagamento', 'dinheiro_cartao_debito')
-            ->assertJsonPath('sale.payment.valor_pago', 6.0)
-            ->assertJsonPath('sale.payment.dois_pgto', 4.0);
+            ->assertJsonPath('sale.payment.valor_pago', 6)
+            ->assertJsonPath('sale.payment.dois_pgto', 4);
 
         $this->assertDatabaseHas('tb4_vendas_pg', [
             'tipo_pagamento' => 'dinheiro_cartao_debito',

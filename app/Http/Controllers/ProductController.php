@@ -15,6 +15,8 @@ use Inertia\Response;
 
 class ProductController extends Controller
 {
+    private const CATALOG_MODES = ['all', 'products', 'services'];
+
     private const RESERVED_PRODUCT_ID_START = 3000;
 
     private const RESERVED_PRODUCT_ID_END = 3100;
@@ -52,10 +54,13 @@ class ProductController extends Controller
         $search = trim((string) $request->input('search', ''));
         $vrCreditOnly = in_array(strtolower((string) $request->input('vr_credit', '0')), ['1', 'true'], true);
         $fiscalStatus = strtolower(trim((string) $request->input('fiscal_status', '')));
+        $catalogMode = $this->resolveCatalogMode($request);
         $sort = (string) $request->input('sort', '');
         $direction = strtolower((string) $request->input('direction', 'asc'));
         $matrixId = $this->resolveMatrixId($request);
         $query = Produto::query()->forMatrix($matrixId);
+
+        $this->applyCatalogMode($query, $catalogMode);
 
         if ($search !== '') {
             $isNumeric = ctype_digit($search);
@@ -139,6 +144,7 @@ class ProductController extends Controller
             'search' => $search,
             'vrCreditOnly' => $vrCreditOnly,
             'fiscalStatus' => $fiscalStatus,
+            'catalogMode' => $catalogMode,
             'sort' => $sort,
             'direction' => $direction,
         ]);
@@ -621,6 +627,28 @@ class ProductController extends Controller
     private function resolveFiscalQueueSearch(Request $request): string
     {
         return trim((string) $request->input('search', ''));
+    }
+
+    private function resolveCatalogMode(Request $request): string
+    {
+        $catalogMode = strtolower(trim((string) $request->input('catalog', 'all')));
+
+        return in_array($catalogMode, self::CATALOG_MODES, true)
+            ? $catalogMode
+            : 'all';
+    }
+
+    private function applyCatalogMode($query, string $catalogMode): void
+    {
+        if ($catalogMode === 'products') {
+            $query->where('tb1_tipo', '!=', 2);
+
+            return;
+        }
+
+        if ($catalogMode === 'services') {
+            $query->where('tb1_tipo', 2);
+        }
     }
 
     private function prepareProductData(array $data, ?Produto $product = null): array

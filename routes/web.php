@@ -88,7 +88,7 @@ Route::get('/padaria', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('padaria');
 
-Route::get('/nfe', [FiscalConfigurationController::class, 'index'])
+Route::get('/nfe', [FiscalConfigurationController::class, 'dashboard'])
     ->middleware(['auth', 'verified'])
     ->name('nfe');
 
@@ -181,6 +181,8 @@ Route::middleware('auth')->group(function () {
         ->name('settings.payment-control.destroy');
     Route::get('/settings/folha-pagamento', [PayrollController::class, 'index'])
         ->name('settings.payroll');
+    Route::get('/settings/nfe', [FiscalConfigurationController::class, 'nfeIndex'])
+        ->name('settings.nfe');
     Route::get('/settings/fiscal', [FiscalConfigurationController::class, 'index'])
         ->name('settings.fiscal');
     Route::post('/settings/fiscal', [FiscalConfigurationController::class, 'update'])

@@ -54,10 +54,19 @@ export default function ProductIndex({
     search = '',
     vrCreditOnly = false,
     fiscalStatus = '',
+    catalogMode = 'all',
     sort = '',
     direction = '',
 }) {
     const { flash } = usePage().props;
+    const isServiceCatalog = catalogMode === 'services';
+    const isProductsCatalog = catalogMode === 'products';
+    const pageTitle = isServiceCatalog ? 'Servicos' : 'Produtos';
+    const pageSubtitle = isServiceCatalog
+        ? 'Cadastre e acompanhe os servicos fiscais da matriz ativa.'
+        : (isProductsCatalog
+            ? 'Cadastre e acompanhe os produtos fiscais da matriz ativa.'
+            : 'Cadastre e acompanhe os itens da matriz ativa.');
 
     const [searchTerm, setSearchTerm] = useState(search ?? '');
     const [searchError, setSearchError] = useState('');
@@ -96,6 +105,10 @@ export default function ProductIndex({
 
         if (fiscalStatus) {
             query.fiscal_status = fiscalStatus;
+        }
+
+        if (catalogMode !== 'all') {
+            query.catalog = catalogMode;
         }
 
         return query;
@@ -155,6 +168,7 @@ export default function ProductIndex({
             ...(searchTerm.trim() !== '' ? { search: searchTerm.trim() } : {}),
             ...(sortField ? { sort: sortField, direction: sortDirection } : {}),
             vr_credit: 1,
+            ...(catalogMode !== 'all' ? { catalog: catalogMode } : {}),
         }, { preserveState: true, replace: true });
     };
 
@@ -164,6 +178,7 @@ export default function ProductIndex({
             ...(sortField ? { sort: sortField, direction: sortDirection } : {}),
             ...(vrCreditOnly ? { vr_credit: 1 } : {}),
             fiscal_status: status,
+            ...(catalogMode !== 'all' ? { catalog: catalogMode } : {}),
         }, { preserveState: true, replace: true });
     };
 
@@ -214,12 +229,17 @@ export default function ProductIndex({
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                    Produtos
-                </h2>
+                <div className="flex flex-col gap-1">
+                    <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                        {pageTitle}
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-300">
+                        {pageSubtitle}
+                    </p>
+                </div>
             }
         >
-            <Head title="Produtos" />
+            <Head title={pageTitle} />
 
             <div className="py-4 max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div className="overflow-hidden bg-white shadow-lg sm:rounded-lg dark:bg-gray-800">
@@ -230,6 +250,28 @@ export default function ProductIndex({
                             <label htmlFor="product-search" className="text-sm font-medium text-gray-700 dark:text-gray-200">
 
                             </label>
+                            <div className="flex flex-wrap gap-2">
+                                <Link
+                                    href={route('products.index', { catalog: 'products' })}
+                                    className={`inline-flex items-center rounded-md border px-3 py-2 text-sm font-semibold transition ${
+                                        isProductsCatalog
+                                            ? 'border-blue-600 bg-blue-500 text-white'
+                                            : 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                                    }`}
+                                >
+                                    Produtos
+                                </Link>
+                                <Link
+                                    href={route('products.index', { catalog: 'services' })}
+                                    className={`inline-flex items-center rounded-md border px-3 py-2 text-sm font-semibold transition ${
+                                        isServiceCatalog
+                                            ? 'border-green-700 bg-green-600 text-white'
+                                            : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+                                    }`}
+                                >
+                                    Servicos
+                                </Link>
+                            </div>
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                                 <InfoButton
                                     type="button"
@@ -240,18 +282,20 @@ export default function ProductIndex({
                                 >
                                     <i className="bi bi-credit-card text-sm" aria-hidden="true"></i>
                                 </InfoButton>
-                                <Link
-                                    href={route("products.production-stock")}
-                                    className="self-start sm:self-auto"
-                                >
-                                    <InfoButton
-                                        aria-label="Estoque de Producao"
-                                        title="Estoque de Producao"
-                                        className="whitespace-nowrap"
+                                {!isServiceCatalog && (
+                                    <Link
+                                        href={route("products.production-stock")}
+                                        className="self-start sm:self-auto"
                                     >
-                                        <i className="bi bi-boxes text-sm" aria-hidden="true"></i>
-                                    </InfoButton>
-                                </Link>
+                                        <InfoButton
+                                            aria-label="Estoque de Producao"
+                                            title="Estoque de Producao"
+                                            className="whitespace-nowrap"
+                                        >
+                                            <i className="bi bi-boxes text-sm" aria-hidden="true"></i>
+                                        </InfoButton>
+                                    </Link>
+                                )}
                                 <InfoButton
                                     type="button"
                                     onClick={() => handleFiscalFilter('incomplete')}
@@ -294,7 +338,11 @@ export default function ProductIndex({
                                     href={route("products.create")}
                                     className="self-start sm:ms-auto sm:self-auto"
                                 >
-                                    <SuccessButton aria-label="Cadastrar" title="Cadastrar" className="h-10 w-10 justify-center p-0">
+                                    <SuccessButton
+                                        aria-label={isServiceCatalog ? "Cadastrar servico" : "Cadastrar produto"}
+                                        title={isServiceCatalog ? "Cadastrar servico" : "Cadastrar produto"}
+                                        className="h-10 w-10 justify-center p-0"
+                                    >
                                         <i className="bi bi-plus-lg text-lg" aria-hidden="true"></i>
                                     </SuccessButton>
                                 </Link>

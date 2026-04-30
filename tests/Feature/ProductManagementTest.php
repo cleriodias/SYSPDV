@@ -3,14 +3,21 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\ProductController;
+use App\Models\Matriz;
 use App\Models\Produto;
+use App\Models\Unidade;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Inertia\Testing\AssertableInertia as Assert;
 use ReflectionClass;
 use Tests\TestCase;
 
 class ProductManagementTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_prepare_product_data_uses_product_id_as_barcode_for_new_balance_product(): void
     {
         $controller = new ProductController();
@@ -167,5 +174,77 @@ class ProductManagementTest extends TestCase
 
             throw $previous ?? $exception;
         }
+    }
+
+    public function test_services_catalog_lists_only_service_items_from_the_active_matrix(): void
+    {
+        $matrix = Matriz::create([
+            'nome' => 'Matriz Servicos',
+            'slug' => Str::slug('Matriz Servicos-' . fake()->unique()->numerify('###')),
+            'status' => 1,
+            'pagamento_ativo' => true,
+        ]);
+
+        $unit = Unidade::create([
+            'tb2_nome' => 'Loja Servicos',
+            'matriz_id' => $matrix->id,
+            'tb2_tipo' => 'matriz',
+            'tb2_endereco' => 'Endereco Loja Servicos',
+            'tb2_cep' => '72900-000',
+            'tb2_fone' => '(61) 99999-9999',
+            'tb2_cnpj' => '12345678000199',
+            'tb2_localizacao' => 'https://maps.example.com/loja-servicos',
+            'tb2_status' => 1,
+            'login_liberado' => true,
+        ]);
+
+        $user = User::factory()->create([
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $unit->tb2_id,
+            'matriz_id' => $matrix->id,
+        ]);
+        $user->units()->sync([$unit->tb2_id]);
+
+        Produto::create([
+            'matriz_id' => $matrix->id,
+            'produto_id' => 1,
+            'tb1_nome' => 'CAFE TORRADO',
+            'tb1_vlr_custo' => 8,
+            'tb1_vlr_venda' => 12,
+            'tb1_codbar' => '1001',
+            'tb1_tipo' => 0,
+            'tb1_status' => 1,
+        ]);
+
+        Produto::create([
+            'matriz_id' => $matrix->id,
+            'produto_id' => 2,
+            'tb1_nome' => 'SERVICO DE ENTREGA',
+            'tb1_vlr_custo' => 4,
+            'tb1_vlr_venda' => 10,
+            'tb1_codbar' => '2002',
+            'tb1_tipo' => 2,
+            'tb1_status' => 1,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->withSession([
+                'active_unit' => [
+                    'id' => $unit->tb2_id,
+                    'name' => $unit->tb2_nome,
+                    'address' => $unit->tb2_endereco,
+                    'cnpj' => $unit->tb2_cnpj,
+                ],
+            ])
+            ->get('/products?catalog=services');
+
+        $response->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Products/ProductIndex')
+            ->where('catalogMode', 'services')
+            ->has('products.data', 1)
+            ->where('products.data.0.tb1_tipo', 2)
+            ->where('products.data.0.tb1_nome', 'SERVICO DE ENTREGA')
+        );
     }
 }

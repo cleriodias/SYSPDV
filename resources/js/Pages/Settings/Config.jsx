@@ -106,6 +106,12 @@ export default function Config({ auth }) {
             tone: 'Error',
         },
         {
+            label: 'NFe',
+            icon: 'bi-file-earmark-text',
+            href: route('settings.nfe'),
+            tone: 'Error',
+        },
+        {
             label: 'Contra-Cheque',
             icon: 'bi-receipt-cutoff',
             href: route('settings.contra-cheque'),
