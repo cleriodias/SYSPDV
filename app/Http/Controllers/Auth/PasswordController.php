@@ -16,7 +16,11 @@ class PasswordController extends Controller
     {
         $validated = $request->validate([
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', 'digits:4', 'confirmed'],
+            'password' => ['required', 'string', 'regex:/^[0-9]+$/', 'confirmed'],
+        ], [
+            'password.required' => 'O campo senha e obrigatorio.',
+            'password.regex' => 'A senha deve conter apenas numeros.',
+            'password.confirmed' => 'A confirmacao da senha nao corresponde.',
         ]);
 
         $request->user()->update([

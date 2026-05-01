@@ -28,7 +28,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'digits:4'],
+            'password' => ['required', 'string', 'regex:/^[0-9]+$/'],
         ];
     }
 
@@ -36,7 +36,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'password.required' => 'O campo senha e obrigatorio.',
-            'password.digits' => 'A senha deve conter exatamente 4 numeros.',
+            'password.regex' => 'A senha deve conter apenas numeros.',
         ];
     }
 

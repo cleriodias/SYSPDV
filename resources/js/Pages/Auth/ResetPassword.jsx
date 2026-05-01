@@ -5,7 +5,7 @@ import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 
-const normalizeNumericPassword = (value) => value.replace(/\D/g, '').slice(0, 4);
+const normalizeNumericPassword = (value) => value.replace(/\D/g, '');
 
 export default function ResetPassword({ token, email }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -52,13 +52,12 @@ export default function ResetPassword({ token, email }) {
                         id="password"
                         type="password"
                         name="password"
-                        placeholder="Digite 4 numeros"
+                        placeholder="Digite sua nova senha numerica"
                         value={data.password}
                         className="mt-1 block w-full"
                         autoComplete="new-password"
                         isFocused={true}
                         inputMode="numeric"
-                        maxLength={4}
                         pattern="[0-9]*"
                         onChange={(e) => setData('password', normalizeNumericPassword(e.target.value))}
                     />
@@ -76,12 +75,11 @@ export default function ResetPassword({ token, email }) {
                         type="password"
                         id="password_confirmation"
                         name="password_confirmation"
-                        placeholder="Confirme os 4 numeros"
+                        placeholder="Confirme sua nova senha numerica"
                         value={data.password_confirmation}
                         className="mt-1 block w-full"
                         autoComplete="new-password"
                         inputMode="numeric"
-                        maxLength={4}
                         pattern="[0-9]*"
                         onChange={(e) =>
                             setData('password_confirmation', normalizeNumericPassword(e.target.value))

@@ -5,6 +5,8 @@ import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 
+const normalizeNumericPassword = (value) => value.replace(/\D/g, '');
+
 export default function ConfirmPassword() {
     const { data, setData, post, processing, errors, reset } = useForm({
         password: '',
@@ -38,7 +40,9 @@ export default function ConfirmPassword() {
                         value={data.password}
                         className="mt-1 block w-full"
                         isFocused={true}
-                        onChange={(e) => setData('password', e.target.value)}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        onChange={(e) => setData('password', normalizeNumericPassword(e.target.value))}
                     />
 
                     <InputError message={errors.password} className="mt-2" />

@@ -169,7 +169,7 @@ class UserController extends Controller
             [
                 'name' => ['required', 'string', 'max:15', 'regex:/^\pL+(?: \pL+)?$/u'],
                 'email' => 'required|string|email|max:255|unique:users',
-                'password' => 'required|digits:4|confirmed',
+                'password' => ['required', 'string', 'regex:/^[0-9]+$/', 'confirmed'],
                 'funcao' => 'required|integer|between:0,7',
                 'hr_ini' => 'required|date_format:H:i',
                 'hr_fim' => 'required|date_format:H:i|after:hr_ini',
@@ -188,7 +188,7 @@ class UserController extends Controller
                 'email.max' => 'O e-mail não pode ter mais que :max caracteres.',
                 'email.unique' => 'Este e-mail já está cadastrado.',
                 'password.required' => 'O campo senha é obrigatório.',
-                'password.digits' => 'A senha deve conter exatamente 4 numeros.',
+                'password.regex' => 'A senha deve conter apenas numeros.',
                 'password.confirmed' => 'A confirmação da senha não corresponde.',
                 'funcao.required' => 'Selecione a função do usuário.',
                 'funcao.integer' => 'Função inválida.',

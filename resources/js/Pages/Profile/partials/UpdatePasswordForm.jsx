@@ -6,6 +6,8 @@ import { Transition } from '@headlessui/react';
 import { useForm } from '@inertiajs/react';
 import { useRef } from 'react';
 
+const normalizeNumericPassword = (value) => value.replace(/\D/g, '');
+
 export default function UpdatePasswordForm({ className = '' }) {
     const passwordInput = useRef();
     const currentPasswordInput = useRef();
@@ -50,7 +52,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                 <h2 className="text-xl font-semibold text-gray-800">Atualizar senha</h2>
 
                 <p className="mt-1 text-sm text-gray-600">
-                    Use uma senha longa e segura para proteger sua conta.
+                    Use apenas numeros na senha.
                 </p>
             </header>
 
@@ -62,8 +64,10 @@ export default function UpdatePasswordForm({ className = '' }) {
                             id="current_password"
                             ref={currentPasswordInput}
                             value={data.current_password}
-                            onChange={(e) => setData('current_password', e.target.value)}
+                            onChange={(e) => setData('current_password', normalizeNumericPassword(e.target.value))}
                             type="password"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             className="mt-1 block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
                             autoComplete="current-password"
                         />
@@ -75,8 +79,10 @@ export default function UpdatePasswordForm({ className = '' }) {
                             id="password"
                             ref={passwordInput}
                             value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
+                            onChange={(e) => setData('password', normalizeNumericPassword(e.target.value))}
                             type="password"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             className="mt-1 block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
                             autoComplete="new-password"
                         />
@@ -87,8 +93,10 @@ export default function UpdatePasswordForm({ className = '' }) {
                         <TextInput
                             id="password_confirmation"
                             value={data.password_confirmation}
-                            onChange={(e) => setData('password_confirmation', e.target.value)}
+                            onChange={(e) => setData('password_confirmation', normalizeNumericPassword(e.target.value))}
                             type="password"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             className="mt-1 block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
                             autoComplete="new-password"
                         />

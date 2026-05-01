@@ -36,10 +36,10 @@ class NewPasswordController extends Controller
         $request->validate([
             'token' => 'required',
             'email' => 'required|string|email',
-            'password' => ['required', 'digits:4', 'confirmed'],
+            'password' => ['required', 'string', 'regex:/^[0-9]+$/', 'confirmed'],
         ], [
             'password.required' => 'O campo senha e obrigatorio.',
-            'password.digits' => 'A senha deve conter exatamente 4 numeros.',
+            'password.regex' => 'A senha deve conter apenas numeros.',
             'password.confirmed' => 'A confirmacao da senha nao corresponde.',
         ]);
 
