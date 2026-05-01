@@ -9,18 +9,16 @@ use App\Models\Unidade;
 use App\Models\User;
 use App\Support\ManagementScope;
 use App\Support\ReportUnitScope;
+use App\Support\SystemChatUserResolver;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ExpenseController extends Controller
 {
-    private const SYSTEM_EMAIL = 'sistema.chat@pec.local';
-
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -217,7 +215,7 @@ class ExpenseController extends Controller
 
         $unit = Unidade::query()->select(['tb2_id', 'matriz_id'])->find($unitId);
         $matrixId = (int) ($unit?->matriz_id ?? 0);
-        $systemUser = $this->ensureSystemUser($unitId);
+        $systemUser = app(SystemChatUserResolver::class)->resolve($unitId);
         $recipientIds = User::query()
             ->where(function ($query) {
                 $query->whereIn('funcao_original', [0, 1])
@@ -283,49 +281,6 @@ class ExpenseController extends Controller
             sprintf('Data/hora alteracao: %s', $updatedAt->format('d/m/y H:i:s')),
             sprintf('Minutos decorridos entre inclusao e alteracao: %d', $createdAt->diffInMinutes($updatedAt)),
         ]);
-    }
-
-    private function ensureSystemUser(?int $activeUnitId = null): User
-    {
-        $activeUnitIds = Unidade::active()
-            ->orderBy('tb2_id')
-            ->pluck('tb2_id')
-            ->map(fn ($value) => (int) $value)
-            ->values();
-
-        $primaryUnitId = $activeUnitId && $activeUnitId > 0
-            ? $activeUnitId
-            : (int) ($activeUnitIds->first() ?? 0);
-
-        $systemUser = User::query()->firstOrCreate(
-            ['email' => self::SYSTEM_EMAIL],
-            [
-                'name' => 'Sistema',
-                'password' => Str::random(32),
-                'funcao' => 1,
-                'funcao_original' => 1,
-                'hr_ini' => '00:00',
-                'hr_fim' => '23:59',
-                'salario' => 0,
-                'vr_cred' => 0,
-                'tb2_id' => $primaryUnitId > 0 ? $primaryUnitId : null,
-                'cod_acesso' => Str::upper(Str::random(6)),
-            ]
-        );
-
-        $nextPrimaryUnitId = $primaryUnitId > 0
-            ? $primaryUnitId
-            : (int) ($systemUser->tb2_id ?? 0);
-
-        if ($nextPrimaryUnitId > 0 && (int) $systemUser->tb2_id !== $nextPrimaryUnitId) {
-            $systemUser->forceFill(['tb2_id' => $nextPrimaryUnitId])->save();
-        }
-
-        if ($activeUnitIds->isNotEmpty()) {
-            $systemUser->units()->sync($activeUnitIds->all());
-        }
-
-        return $systemUser->fresh(['units']) ?? $systemUser;
     }
 
     private function formatCurrencyForMessage(float $value): string

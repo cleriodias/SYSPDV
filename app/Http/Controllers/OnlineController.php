@@ -8,6 +8,7 @@ use App\Models\OnlineUser;
 use App\Models\Unidade;
 use App\Models\User;
 use App\Support\ManagementScope;
+use App\Support\SystemChatUserResolver;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -388,6 +389,29 @@ class OnlineController extends Controller
             ->values()
             ->all();
 
+        $systemContacts = $this->buildSystemContacts(
+            (int) $viewer->id,
+            $viewerRole,
+            $viewerUnitId,
+            $viewerMatrixId,
+            $managedUnitIds,
+            $visibleUserIds,
+        );
+
+        if ($systemContacts->isNotEmpty()) {
+            $offlineUsers = $offlineUsers
+                ->merge($systemContacts)
+                ->unique(fn (array $contact) => (int) $contact['id'])
+                ->sortBy(fn (array $item) => mb_strtolower($item['name'], 'UTF-8'))
+                ->values();
+
+            $visibleUserIds = $onlineUsers->pluck('id')
+                ->merge($offlineUsers->pluck('id'))
+                ->unique()
+                ->values()
+                ->all();
+        }
+
         $latestPreviewByContact = $this->latestPreviewByContact((int) $viewer->id, $visibleUserIds);
 
         $unreadBySender = empty($visibleUserIds)
@@ -414,6 +438,66 @@ class OnlineController extends Controller
             'online' => $attachUnread($onlineUsers),
             'offline' => $attachUnread($offlineUsers),
         ];
+    }
+
+    private function buildSystemContacts(
+        int $viewerId,
+        int $viewerRole,
+        ?int $viewerUnitId,
+        int $viewerMatrixId,
+        Collection $managedUnitIds,
+        array $visibleUserIds
+    ): Collection {
+        $systemResolver = app(SystemChatUserResolver::class);
+        $systemUserId = $systemResolver->systemUserId();
+
+        if (! $systemUserId || in_array($systemUserId, $visibleUserIds, true)) {
+            return collect();
+        }
+
+        return ChatMessage::query()
+            ->with(['sender:id,name,email,funcao,funcao_original,tb2_id,matriz_id', 'senderUnit:tb2_id,tb2_nome,matriz_id'])
+            ->where('sender_id', $systemUserId)
+            ->where('recipient_id', $viewerId)
+            ->orderByDesc('id')
+            ->get()
+            ->filter(function (ChatMessage $message) use ($viewerRole, $viewerUnitId, $viewerMatrixId, $managedUnitIds, $systemResolver) {
+                if (! $systemResolver->isSystemUserId((int) $message->sender_id)) {
+                    return false;
+                }
+
+                $targetRole = (int) ($message->sender_role ?: ($message->sender?->funcao_original ?? $message->sender?->funcao ?? 1));
+                $targetUnitId = $message->sender_unit_id ? (int) $message->sender_unit_id : null;
+                $targetMatrixId = (int) ($message->senderUnit?->matriz_id ?? $message->sender?->matriz_id ?? 0);
+
+                if ($targetUnitId === null || $targetMatrixId <= 0) {
+                    return false;
+                }
+
+                return $this->canSeePresence(
+                    $viewerRole,
+                    $viewerUnitId,
+                    $viewerMatrixId,
+                    $managedUnitIds,
+                    $targetRole,
+                    $targetUnitId,
+                    $targetMatrixId
+                );
+            })
+            ->map(function (ChatMessage $message) use ($systemResolver) {
+                return [
+                    'id' => (int) $message->sender_id,
+                    'name' => $systemResolver->displayName($message->sender),
+                    'role' => (int) ($message->sender_role ?: ($message->sender?->funcao_original ?? $message->sender?->funcao ?? 1)),
+                    'role_label' => self::ROLE_LABELS[(int) ($message->sender_role ?: ($message->sender?->funcao_original ?? $message->sender?->funcao ?? 1))] ?? '---',
+                    'unit_id' => $message->sender_unit_id ? (int) $message->sender_unit_id : null,
+                    'unit_name' => $message->senderUnit?->tb2_nome ?? 'Sem loja ativa',
+                    'last_seen_at' => null,
+                    'is_online' => false,
+                ];
+            })
+            ->unique(fn (array $contact) => (int) $contact['id'])
+            ->values();
     }
 
     private function buildUnreadSummary(int $viewerId): array
@@ -502,19 +586,25 @@ class OnlineController extends Controller
             ->get()
             ->reverse()
             ->values()
-            ->map(fn (ChatMessage $message) => [
-                'id' => (int) $message->id,
-                'sender_id' => (int) $message->sender_id,
-                'recipient_id' => (int) $message->recipient_id,
-                'message' => (string) $message->message,
-                'sender_name' => (string) ($message->sender?->name ?? '---'),
-                'sent_at' => optional($message->created_at)->toIso8601String(),
-                'read_at' => optional($message->read_at)->toIso8601String(),
-                'sender_role' => (int) $message->sender_role,
-                'sender_role_label' => self::ROLE_LABELS[(int) $message->sender_role] ?? '---',
-                'is_mine' => (int) $message->sender_id === $viewerId,
-                'can_manage' => (int) $message->sender_id === $viewerId && $message->read_at === null,
-            ])
+            ->map(function (ChatMessage $message) use ($viewerId) {
+                $systemResolver = app(SystemChatUserResolver::class);
+
+                return [
+                    'id' => (int) $message->id,
+                    'sender_id' => (int) $message->sender_id,
+                    'recipient_id' => (int) $message->recipient_id,
+                    'message' => (string) $message->message,
+                    'sender_name' => $systemResolver->isSystemUserId((int) $message->sender_id)
+                        ? $systemResolver->displayName($message->sender)
+                        : (string) ($message->sender?->name ?? '---'),
+                    'sent_at' => optional($message->created_at)->toIso8601String(),
+                    'read_at' => optional($message->read_at)->toIso8601String(),
+                    'sender_role' => (int) $message->sender_role,
+                    'sender_role_label' => self::ROLE_LABELS[(int) $message->sender_role] ?? '---',
+                    'is_mine' => (int) $message->sender_id === $viewerId,
+                    'can_manage' => (int) $message->sender_id === $viewerId && $message->read_at === null,
+                ];
+            })
             ->all();
     }
 
