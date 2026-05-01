@@ -23,9 +23,22 @@ const formatCurrency = (value) =>
         currency: 'BRL',
     });
 
+const formatDateRangeLabel = (value) => {
+    if (!value) {
+        return '---';
+    }
+
+    const [year, month, day] = String(value).split('-');
+
+    if (!year || !month || !day) {
+        return value;
+    }
+
+    return `${day}/${month}/${year.slice(-2)}`;
+};
+
 export default function SalesPeriod({
     chartData,
-    totals,
     expenseTotal = 0,
     dailyTotals,
     mode,
@@ -190,7 +203,8 @@ export default function SalesPeriod({
                             </div>
                         </div>
                         <p className="mt-4 text-xs text-gray-500 dark:text-gray-300">
-                            Intervalo considerado: {startDate} a {endDate}
+                            Intervalo considerado: {formatDateRangeLabel(startDate)} a{' '}
+                            {formatDateRangeLabel(endDate)}
                         </p>
                     </form>
 

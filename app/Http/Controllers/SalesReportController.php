@@ -2123,18 +2123,15 @@ class SalesReportController extends Controller
             $dateValue = $month->format('Y-m');
         }
 
-        $payments = $this->fetchPayments($start, $end, $filterUnitId, $allowedUnitIds);
-        [$totals, $details, $chartData] = $this->summarizePayments($payments);
-        [$totals, $details] = $this->applyGlobalValeTotals($start, $end, $totals, $details, $filterUnitId, $allowedUnitIds);
+        $totals = $this->periodTotals($start, $end, $filterUnitId, $allowedUnitIds);
         $chartData = $this->buildChartData($totals);
         $expenseTotal = $this->sumExpenses($start, $end, $filterUnitId, $allowedUnitIds);
-        $dailyTotals = $this->buildDailyTotals($payments, $start, $end, $filterUnitId, $allowedUnitIds);
+        $dailyTotals = $this->buildDailyTotals($start, $end, $filterUnitId, $allowedUnitIds);
 
         return Inertia::render('Reports/SalesPeriod', [
             'meta' => self::TYPE_META,
             'chartData' => $chartData,
             'totals' => $totals,
-            'details' => $details,
             'expenseTotal' => $expenseTotal,
             'dailyTotals' => $dailyTotals,
             'mode' => $mode,
@@ -2913,52 +2910,50 @@ class SalesReportController extends Controller
         };
     }
 
+    private function periodTotals(
+        Carbon $start,
+        Carbon $end,
+        ?int $unitId = null,
+        ?Collection $allowedUnitIds = null
+    ): array {
+        $row = $this->scopedPaymentsQuery($start, $end, $unitId, $allowedUnitIds)
+            ->selectRaw('
+                COALESCE(SUM(' . $this->cashPortionExpression('pagamentos') . '), 0) as dinheiro,
+                COALESCE(SUM(' . $this->cardPortionExpression('pagamentos') . '), 0) as maquina,
+                COALESCE(SUM(
+                    CASE
+                        WHEN pagamentos.tipo_pagamento = \'faturar\'
+                            THEN GREATEST(pagamentos.valor_total, 0)
+                        ELSE 0
+                    END
+                ), 0) as faturar
+            ')
+            ->first();
+
+        $saleTypeTotals = $this->saleTypeTotals($start, $end, $unitId, $allowedUnitIds);
+
+        return [
+            'dinheiro' => round((float) ($row->dinheiro ?? 0), 2),
+            'maquina' => round((float) ($row->maquina ?? 0), 2),
+            'vale' => round((float) ($saleTypeTotals['vale'] ?? 0), 2),
+            'refeicao' => round((float) ($saleTypeTotals['refeicao'] ?? 0), 2),
+            'faturar' => round((float) ($row->faturar ?? 0), 2),
+        ];
+    }
+
     private function buildDailyTotals(
-        Collection $payments,
         Carbon $start,
         Carbon $end,
         ?int $unitId = null,
         ?Collection $allowedUnitIds = null
     ): Collection {
-        $baseTotals = [
-            'dinheiro' => 0.0,
-            'maquina' => 0.0,
-            'vale' => 0.0,
-            'refeicao' => 0.0,
-            'faturar' => 0.0,
-            'gastos' => 0.0,
-        ];
-
-        $dailyTotals = $payments
-            ->groupBy(fn (VendaPagamento $payment) => $payment->created_at->format('Y-m-d'))
-            ->map(function (Collection $group, string $date) use ($baseTotals) {
-                $carbon = Carbon::createFromFormat('Y-m-d', $date);
-                $dayTotals = $baseTotals;
-
-                foreach ($group as $payment) {
-                    foreach ($this->breakdownPayment($payment) as $type => $amount) {
-                        $dayTotals[$type] += $amount;
-                    }
-                }
-
-                return [
-                    'date' => $date,
-                    'label' => $carbon->translatedFormat('d/m/Y'),
-                    'total' => round((float) $group->sum('valor_total'), 2),
-                    'dinheiro' => round((float) $dayTotals['dinheiro'], 2),
-                    'maquina' => round((float) $dayTotals['maquina'], 2),
-                    'vale' => round((float) $dayTotals['vale'], 2),
-                    'refeicao' => round((float) $dayTotals['refeicao'], 2),
-                    'faturar' => round((float) $dayTotals['faturar'], 2),
-                    'gastos' => 0.0,
-                ];
-            });
-
+        $dailyTotals = $this->paymentTotalsByDay($start, $end, $unitId, $allowedUnitIds);
         $valeAndMealTotals = $this->saleTypeTotalsByDay($start, $end, $unitId, $allowedUnitIds);
         $expenseTotals = $this->expenseTotalsByDay($start, $end, $unitId, $allowedUnitIds);
 
         return $dailyTotals
             ->map(function (array $day, string $date) use ($valeAndMealTotals, $expenseTotals) {
+                $day['label'] = Carbon::createFromFormat('Y-m-d', $date)->translatedFormat('d/m/y');
                 $day['vale'] = round((float) ($valeAndMealTotals[$date]['vale'] ?? 0), 2);
                 $day['refeicao'] = round((float) ($valeAndMealTotals[$date]['refeicao'] ?? 0), 2);
                 $day['gastos'] = round((float) ($expenseTotals[$date] ?? 0), 2);
@@ -3007,6 +3002,36 @@ class SalesReportController extends Controller
             });
     }
 
+    private function saleTypeTotals(
+        Carbon $start,
+        Carbon $end,
+        ?int $unitId = null,
+        ?Collection $allowedUnitIds = null
+    ): array {
+        $query = Venda::query()
+            ->whereIn('tipo_pago', ['vale', 'refeicao'])
+            ->whereBetween('data_hora', [$start, $end])
+            ->selectRaw('tipo_pago as tipo, SUM(valor_total) as total')
+            ->groupBy('tipo');
+
+        $this->applySaleUnitFilters($query, $unitId, $allowedUnitIds);
+
+        $totals = [
+            'vale' => 0.0,
+            'refeicao' => 0.0,
+        ];
+
+        foreach ($query->get() as $row) {
+            $type = $row->tipo === 'refeicao' ? 'refeicao' : 'vale';
+            $totals[$type] += (float) $row->total;
+        }
+
+        return [
+            'vale' => round((float) $totals['vale'], 2),
+            'refeicao' => round((float) $totals['refeicao'], 2),
+        ];
+    }
+
     private function saleTypeTotalsByDay(
         Carbon $start,
         Carbon $end,
@@ -3019,13 +3044,7 @@ class SalesReportController extends Controller
             ->selectRaw('DATE(data_hora) as sale_date, tipo_pago as tipo, SUM(valor_total) as total')
             ->groupBy('sale_date', 'tipo');
 
-        if ($unitId) {
-            $query->where('id_unidade', $unitId);
-        } elseif ($allowedUnitIds instanceof Collection && $allowedUnitIds->isNotEmpty()) {
-            $query->whereIn('id_unidade', $allowedUnitIds);
-        } else {
-            $query->whereRaw('1 = 0');
-        }
+        $this->applySaleUnitFilters($query, $unitId, $allowedUnitIds);
 
         return $query
             ->get()
@@ -3046,6 +3065,107 @@ class SalesReportController extends Controller
                     'refeicao' => round((float) $totals['refeicao'], 2),
                 ];
             });
+    }
+
+    private function paymentTotalsByDay(
+        Carbon $start,
+        Carbon $end,
+        ?int $unitId = null,
+        ?Collection $allowedUnitIds = null
+    ): Collection {
+        return $this->scopedPaymentsQuery($start, $end, $unitId, $allowedUnitIds)
+            ->selectRaw('
+                DATE(pagamentos.created_at) as payment_date,
+                SUM(pagamentos.valor_total) as total,
+                COALESCE(SUM(' . $this->cashPortionExpression('pagamentos') . '), 0) as dinheiro,
+                COALESCE(SUM(' . $this->cardPortionExpression('pagamentos') . '), 0) as maquina,
+                COALESCE(SUM(
+                    CASE
+                        WHEN pagamentos.tipo_pagamento = \'faturar\'
+                            THEN GREATEST(pagamentos.valor_total, 0)
+                        ELSE 0
+                    END
+                ), 0) as faturar
+            ')
+            ->groupBy('payment_date')
+            ->get()
+            ->mapWithKeys(function ($row) {
+                $date = (string) $row->payment_date;
+
+                return [
+                    $date => [
+                        'date' => $date,
+                        'total' => round((float) ($row->total ?? 0), 2),
+                        'dinheiro' => round((float) ($row->dinheiro ?? 0), 2),
+                        'maquina' => round((float) ($row->maquina ?? 0), 2),
+                        'vale' => 0.0,
+                        'refeicao' => 0.0,
+                        'faturar' => round((float) ($row->faturar ?? 0), 2),
+                        'gastos' => 0.0,
+                    ],
+                ];
+            });
+    }
+
+    private function scopedPaymentsQuery(
+        Carbon $start,
+        Carbon $end,
+        ?int $unitId = null,
+        ?Collection $allowedUnitIds = null
+    ) {
+        $paymentIds = DB::table('tb3_vendas')
+            ->select('tb4_id')
+            ->whereNotNull('tb4_id')
+            ->groupBy('tb4_id');
+
+        $this->applySaleUnitFilters($paymentIds, $unitId, $allowedUnitIds);
+
+        return DB::table('tb4_vendas_pg as pagamentos')
+            ->joinSub($paymentIds, 'vendas_filtradas', function ($join) {
+                $join->on('vendas_filtradas.tb4_id', '=', 'pagamentos.tb4_id');
+            })
+            ->whereBetween('pagamentos.created_at', [$start, $end]);
+    }
+
+    private function applySaleUnitFilters($query, ?int $unitId = null, ?Collection $allowedUnitIds = null): void
+    {
+        if ($unitId) {
+            $query->where('id_unidade', $unitId);
+
+            return;
+        }
+
+        if ($allowedUnitIds instanceof Collection && $allowedUnitIds->isNotEmpty()) {
+            $query->whereIn('id_unidade', $allowedUnitIds);
+
+            return;
+        }
+
+        $query->whereRaw('1 = 0');
+    }
+
+    private function cashPortionExpression(string $paymentAlias = 'pagamentos'): string
+    {
+        return "
+            CASE
+                WHEN {$paymentAlias}.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito')
+                    THEN GREATEST({$paymentAlias}.valor_total - COALESCE({$paymentAlias}.dois_pgto, 0), 0)
+                ELSE 0
+            END
+        ";
+    }
+
+    private function cardPortionExpression(string $paymentAlias = 'pagamentos'): string
+    {
+        return "
+            CASE
+                WHEN {$paymentAlias}.tipo_pagamento IN ('cartao_credito', 'cartao_debito', 'maquina', 'pix')
+                    THEN GREATEST({$paymentAlias}.valor_total, 0)
+                WHEN {$paymentAlias}.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito')
+                    THEN GREATEST(COALESCE({$paymentAlias}.dois_pgto, 0), 0)
+                ELSE 0
+            END
+        ";
     }
 
     private function applyExpenseUnitFilters($query, ?int $unitId = null, ?Collection $allowedUnitIds = null): void
