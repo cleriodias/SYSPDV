@@ -1,7 +1,8 @@
 import AlertMessage from '@/Components/Alert/AlertMessage';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatBrazilDate, getBrazilTodayInputValue } from '@/Utils/date';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 
 const formatCurrency = (value) =>
     Number(value ?? 0).toLocaleString('pt-BR', {
@@ -30,7 +31,8 @@ export default function ExpenseIndex({
     const defaultSupplier = suppliers.length ? String(suppliers[0].id) : '';
     const today = getBrazilTodayInputValue();
     const hasActiveUnit = Boolean(activeUnit?.id);
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [editingExpenseId, setEditingExpenseId] = useState(null);
+    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         supplier_id: defaultSupplier,
         expense_date: today,
         amount: '',
@@ -59,10 +61,31 @@ export default function ExpenseIndex({
         };
     };
 
+    const resetExpenseForm = () => {
+        setEditingExpenseId(null);
+        reset();
+        clearErrors();
+        setData('supplier_id', defaultSupplier);
+        setData('expense_date', today);
+        setData('amount', '');
+        setData('notes', '');
+    };
+
     const handleSubmit = (event) => {
         event.preventDefault();
+
+        if (editingExpenseId) {
+            put(route('expenses.update', { expense: editingExpenseId, ...buildFilterParams() }), {
+                preserveScroll: true,
+                onSuccess: () => resetExpenseForm(),
+            });
+
+            return;
+        }
+
         post(route('expenses.store', buildFilterParams()), {
-            onSuccess: () => reset('amount', 'notes'),
+            preserveScroll: true,
+            onSuccess: () => resetExpenseForm(),
         });
     };
 
@@ -76,14 +99,16 @@ export default function ExpenseIndex({
         });
     };
 
-    const handleDelete = (expenseId) => {
-        if (!expenseId) {
+    const handleEdit = (expense) => {
+        if (!expense?.id) {
             return;
         }
-        if (!window.confirm('Confirma excluir este gasto?')) {
-            return;
-        }
-        router.delete(route('expenses.destroy', { expense: expenseId, ...buildFilterParams() }));
+
+        setEditingExpenseId(expense.id);
+        setData('supplier_id', String(expense.supplier_id ?? defaultSupplier));
+        setData('expense_date', String(expense.expense_date ?? today));
+        setData('amount', String(expense.amount ?? ''));
+        setData('notes', expense.notes ?? '');
     };
 
     const headerContent = (
@@ -92,7 +117,7 @@ export default function ExpenseIndex({
                 Gastos
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-300">
-                Cadastre gastos com fornecedor, data, valor e observacao.
+                Cadastre e edite gastos com fornecedor, data, valor e observacao.
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-300">
                 Unidade ativa: <span className="font-semibold text-gray-700 dark:text-gray-200">{activeUnit?.name ?? '--'}</span>
@@ -113,6 +138,11 @@ export default function ExpenseIndex({
                             <p className="mb-4 text-sm text-red-600">
                                 Nenhuma unidade ativa definida. Selecione uma unidade para cadastrar gastos.
                             </p>
+                        )}
+                        {editingExpenseId && (
+                            <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-200">
+                                Editando o gasto #{editingExpenseId}. Salve para registrar a alteracao e enviar o aviso no chat.
+                            </div>
                         )}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid gap-4 md:grid-cols-4">
@@ -193,13 +223,22 @@ export default function ExpenseIndex({
                                 )}
                             </div>
 
-                            <div className="flex justify-end">
+                            <div className="flex justify-end gap-3">
+                                {editingExpenseId && (
+                                    <button
+                                        type="button"
+                                        onClick={resetExpenseForm}
+                                        className="rounded-xl bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 shadow hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                                    >
+                                        Cancelar
+                                    </button>
+                                )}
                                 <button
                                     type="submit"
                                     disabled={processing || !suppliers.length || !hasActiveUnit}
                                     className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-50"
                                 >
-                                    Salvar
+                                    {editingExpenseId ? 'Salvar alteracao' : 'Salvar'}
                                 </button>
                             </div>
                         </form>
@@ -328,13 +367,13 @@ export default function ExpenseIndex({
                                                     {formatCurrency(expense.amount)}
                                                 </td>
                                                 <td className="px-3 py-2 text-center">
-                                                    {expense.can_delete ? (
+                                                    {expense.can_edit ? (
                                                         <button
                                                             type="button"
-                                                            onClick={() => handleDelete(expense.id)}
-                                                            className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200 dark:border-red-500/60 dark:text-red-300 dark:hover:bg-red-500/10"
+                                                            onClick={() => handleEdit(expense)}
+                                                            className="rounded-lg border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-blue-500/60 dark:text-blue-300 dark:hover:bg-blue-500/10"
                                                         >
-                                                            Excluir
+                                                            Editar
                                                         </button>
                                                     ) : (
                                                         <span className="text-xs text-gray-400 dark:text-gray-500">
