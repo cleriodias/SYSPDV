@@ -77,7 +77,7 @@ const normalizeKey = (value) =>
         .toUpperCase();
 
 export const getUserNameBadgeClassName = () =>
-    `${BADGE_BASE_CLASSNAME} border-slate-900 bg-slate-900 text-white hover:border-slate-800 hover:text-white`;
+    `${BADGE_BASE_CLASSNAME} border-slate-300 bg-white text-black hover:border-slate-400 hover:text-black`;
 
 export const getUnitBadgeClassName = () =>
     `${BADGE_BASE_CLASSNAME} whitespace-nowrap hover:text-white`;

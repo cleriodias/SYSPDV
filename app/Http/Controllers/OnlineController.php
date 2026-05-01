@@ -412,7 +412,7 @@ class OnlineController extends Controller
                 ->all();
         }
 
-        $latestPreviewByContact = $this->latestPreviewByContact((int) $viewer->id, $visibleUserIds);
+        $latestMessageMetaByContact = $this->latestMessageMetaByContact((int) $viewer->id, $visibleUserIds);
 
         $unreadBySender = empty($visibleUserIds)
             ? collect()
@@ -425,9 +425,10 @@ class OnlineController extends Controller
                 ->pluck('total', 'sender_id');
 
         $attachUnread = fn (Collection $contacts) => $contacts
-            ->map(function (array $contact) use ($unreadBySender, $latestPreviewByContact) {
+            ->map(function (array $contact) use ($unreadBySender, $latestMessageMetaByContact) {
                 $contact['unread_count'] = (int) ($unreadBySender[(int) $contact['id']] ?? 0);
-                $contact['last_message_preview'] = $latestPreviewByContact[(int) $contact['id']] ?? '';
+                $contact['last_message_preview'] = (string) ($latestMessageMetaByContact[(int) $contact['id']]['preview'] ?? '');
+                $contact['last_message_at'] = $latestMessageMetaByContact[(int) $contact['id']]['sent_at'] ?? null;
 
                 return $contact;
             })
@@ -518,14 +519,14 @@ class OnlineController extends Controller
         ];
     }
 
-    private function latestPreviewByContact(int $viewerId, array $visibleUserIds): array
+    private function latestMessageMetaByContact(int $viewerId, array $visibleUserIds): array
     {
         if (empty($visibleUserIds)) {
             return [];
         }
 
         $messages = ChatMessage::query()
-            ->select(['id', 'sender_id', 'recipient_id', 'message'])
+            ->select(['id', 'sender_id', 'recipient_id', 'message', 'created_at'])
             ->where(function ($query) use ($viewerId, $visibleUserIds) {
                 $query->where('sender_id', $viewerId)
                     ->whereIn('recipient_id', $visibleUserIds);
@@ -546,7 +547,10 @@ class OnlineController extends Controller
                 continue;
             }
 
-            $previews[$contactId] = $this->messagePreview((string) $message->message);
+            $previews[$contactId] = [
+                'preview' => $this->messagePreview((string) $message->message),
+                'sent_at' => optional($message->created_at)->toIso8601String(),
+            ];
         }
 
         return $previews;
