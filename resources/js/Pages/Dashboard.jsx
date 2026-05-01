@@ -12,6 +12,8 @@ const numericRegex = /^\d+$/;
 const BARCODE_MIN_LENGTH = 5;
 const WEIGHTED_BARCODE_PREFIX = '2';
 const WEIGHTED_BARCODE_LENGTH = 13;
+const QUANTITY_HOLD_DELAY = 350;
+const QUANTITY_HOLD_INTERVAL = 120;
 const paymentLabels = {
     maquina: 'Maquina',
     pix: 'PiX',
@@ -351,6 +353,8 @@ export default function Dashboard({ profileSwitch = null }) {
     const [cashierRestrictions, setCashierRestrictions] = useState(null);
     const [cashierRestrictionsLoading, setCashierRestrictionsLoading] = useState(false);
     const lastAutoOpenComandasKey = useRef('');
+    const quantityHoldTimeoutRef = useRef(null);
+    const quantityHoldIntervalRef = useRef(null);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -387,6 +391,20 @@ export default function Dashboard({ profileSwitch = null }) {
 
         window.localStorage.setItem(ITEMS_STORAGE_KEY, JSON.stringify(items));
     }, [items]);
+
+    const stopQuantityPress = useCallback(() => {
+        if (quantityHoldTimeoutRef.current) {
+            window.clearTimeout(quantityHoldTimeoutRef.current);
+            quantityHoldTimeoutRef.current = null;
+        }
+
+        if (quantityHoldIntervalRef.current) {
+            window.clearInterval(quantityHoldIntervalRef.current);
+            quantityHoldIntervalRef.current = null;
+        }
+    }, []);
+
+    useEffect(() => () => stopQuantityPress(), [stopQuantityPress]);
 
     const totalAmount = useMemo(
         () => items.reduce((sum, item) => sum + item.quantity * item.price, 0),
@@ -923,6 +941,33 @@ export default function Dashboard({ profileSwitch = null }) {
                 .filter((item) => item.quantity > 0),
         );
     };
+
+    const startContinuousQuantityChange = useCallback((action) => {
+        stopQuantityPress();
+        action();
+        quantityHoldTimeoutRef.current = window.setTimeout(() => {
+            quantityHoldIntervalRef.current = window.setInterval(() => {
+                action();
+            }, QUANTITY_HOLD_INTERVAL);
+        }, QUANTITY_HOLD_DELAY);
+    }, [stopQuantityPress]);
+
+    const handleQuantityButtonPointerDown = useCallback((event, action) => {
+        if (event.button !== undefined && event.button !== 0) {
+            return;
+        }
+
+        startContinuousQuantityChange(action);
+    }, [startContinuousQuantityChange]);
+
+    const handleQuantityButtonClick = useCallback((event, action) => {
+        if (event.detail > 0) {
+            event.preventDefault();
+            return;
+        }
+
+        action();
+    }, []);
 
     const removeItem = (itemId) => {
         setItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
@@ -2069,22 +2114,42 @@ export default function Dashboard({ profileSwitch = null }) {
                                                                 <div className="flex items-center justify-center gap-2">
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => incrementItemQuantity(item.id)}
-                                                                        className="text-indigo-600 transition hover:text-indigo-400 focus:outline-none disabled:opacity-50"
+                                                                        onPointerDown={(event) => handleQuantityButtonPointerDown(
+                                                                            event,
+                                                                            () => incrementItemQuantity(item.id),
+                                                                        )}
+                                                                        onPointerUp={stopQuantityPress}
+                                                                        onPointerLeave={stopQuantityPress}
+                                                                        onPointerCancel={stopQuantityPress}
+                                                                        onClick={(event) => handleQuantityButtonClick(
+                                                                            event,
+                                                                            () => incrementItemQuantity(item.id),
+                                                                        )}
+                                                                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-indigo-600 transition hover:bg-indigo-50 hover:text-indigo-400 focus:outline-none disabled:opacity-50"
                                                                         disabled={saleLoading || isSalesBlocked}
                                                                         aria-label={`Adicionar uma unidade de ${item.name}`}
                                                                     >
-                                                                        <i className="bi bi-plus-circle-fill text-lg" aria-hidden="true"></i>
+                                                                        <i className="bi bi-plus-circle-fill text-2xl" aria-hidden="true"></i>
                                                                     </button>
                                                                     <span className="text-base font-semibold">{item.quantity}</span>
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => decrementItemQuantity(item.id)}
-                                                                        className="text-red-500 transition hover:text-red-400 focus:outline-none disabled:opacity-50"
+                                                                        onPointerDown={(event) => handleQuantityButtonPointerDown(
+                                                                            event,
+                                                                            () => decrementItemQuantity(item.id),
+                                                                        )}
+                                                                        onPointerUp={stopQuantityPress}
+                                                                        onPointerLeave={stopQuantityPress}
+                                                                        onPointerCancel={stopQuantityPress}
+                                                                        onClick={(event) => handleQuantityButtonClick(
+                                                                            event,
+                                                                            () => decrementItemQuantity(item.id),
+                                                                        )}
+                                                                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-red-500 transition hover:bg-red-50 hover:text-red-400 focus:outline-none disabled:opacity-50"
                                                                         disabled={saleLoading || isSalesBlocked}
                                                                         aria-label={`Remover uma unidade de ${item.name}`}
                                                                     >
-                                                                        <i className="bi bi-dash-circle-fill text-lg" aria-hidden="true"></i>
+                                                                        <i className="bi bi-dash-circle-fill text-2xl" aria-hidden="true"></i>
                                                                     </button>
                                                                 </div>
                                                             </td>

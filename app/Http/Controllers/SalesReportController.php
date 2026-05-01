@@ -1759,6 +1759,7 @@ class SalesReportController extends Controller
                 $expenseTotal = (float) ($expenseMeta['total'] ?? 0.0);
                 $conferenceCashBase = max($cashSystem - $expenseTotal, 0.0);
                 $systemTotal = $conferenceCashBase + $cardSystem;
+                $grossSystemTotal = $cashSystem + $cardSystem;
 
                 $closureKey = $record['cashier_id'] . '-' . ($record['unit_id'] ?? 'none');
                 $closure = $closures->get($closureKey);
@@ -1776,6 +1777,8 @@ class SalesReportController extends Controller
                         ? (float) $closure->master_card_amount
                         : $cardClosure;
                     $closureTotal = $effectiveCashClosure + $effectiveCardClosure;
+                    $cashClosureWithExpenses = $effectiveCashClosure + $expenseTotal;
+                    $closureTotalWithExpenses = $closureTotal + $expenseTotal;
 
                     $record['closure'] = [
                         'id' => $closure->id,
@@ -1799,9 +1802,9 @@ class SalesReportController extends Controller
                                 : null,
                         ],
                         'differences' => [
-                            'cash' => round($conferenceCashBase - $effectiveCashClosure, 2),
+                            'cash' => round($cashSystem - $cashClosureWithExpenses, 2),
                             'card' => round($cardSystem - $effectiveCardClosure, 2),
-                            'total' => round($systemTotal - $closureTotal, 2),
+                            'total' => round($grossSystemTotal - $closureTotalWithExpenses, 2),
                         ],
                     ];
                 } else {
@@ -2057,12 +2060,14 @@ class SalesReportController extends Controller
                 $expenseTotal = (float) ($expenseTotals[$groupKey] ?? 0.0);
                 $conferenceCashBase = max($cashSystem - $expenseTotal, 0.0);
                 $systemTotal = $conferenceCashBase + $cardSystem;
+                $grossSystemTotal = $cashSystem + $cardSystem;
 
                 $cashClosure = (float) $closure->cash_amount;
                 $cardClosure = (float) $closure->card_amount;
                 $closureTotal = $cashClosure + $cardClosure;
+                $closureTotalWithExpenses = $closureTotal + $expenseTotal;
 
-                $discrepancy = round($systemTotal - $closureTotal, 2);
+                $discrepancy = round($grossSystemTotal - $closureTotalWithExpenses, 2);
 
                 $totalsRounded = array_map(fn ($value) => round((float) $value, 2), $systemTotals);
 

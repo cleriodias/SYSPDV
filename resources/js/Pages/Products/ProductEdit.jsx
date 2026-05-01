@@ -5,6 +5,8 @@ import { Head, Link, useForm } from "@inertiajs/react";
 import { useEffect } from "react";
 
 const normalizeProductName = (value) => value.toLocaleUpperCase("pt-BR");
+const fiscalMinimumFieldClass =
+    "mt-1 block w-full rounded-md border border-amber-300 bg-amber-50 px-3 py-2 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 sm:text-sm";
 
 export default function ProductEdit({ auth, product, typeOptions = [], statusOptions = [], originOptions = [] }) {
     const { data, setData, put, processing, errors } = useForm({
@@ -300,7 +302,7 @@ export default function ProductEdit({ auth, product, typeOptions = [], statusOpt
                                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                                     <div>
                                         <label htmlFor="tb1_ncm" className="block text-sm font-medium text-gray-700">NCM *</label>
-                                        <input id="tb1_ncm" type="text" required maxLength="8" value={data.tb1_ncm} onChange={(e) => setData("tb1_ncm", e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm" />
+                                        <input id="tb1_ncm" type="text" required maxLength="8" value={data.tb1_ncm} onChange={(e) => setData("tb1_ncm", e.target.value)} className={fiscalMinimumFieldClass} />
                                         {errors.tb1_ncm && <span className="text-red-600">{errors.tb1_ncm}</span>}
                                     </div>
                                     <div>
@@ -310,7 +312,7 @@ export default function ProductEdit({ auth, product, typeOptions = [], statusOpt
                                     </div>
                                     <div>
                                         <label htmlFor="tb1_cfop" className="block text-sm font-medium text-gray-700">CFOP *</label>
-                                        <input id="tb1_cfop" type="text" required maxLength="4" value={data.tb1_cfop} onChange={(e) => setData("tb1_cfop", e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm" />
+                                        <input id="tb1_cfop" type="text" required maxLength="4" value={data.tb1_cfop} onChange={(e) => setData("tb1_cfop", e.target.value)} className={fiscalMinimumFieldClass} />
                                         {errors.tb1_cfop && <span className="text-red-600">{errors.tb1_cfop}</span>}
                                     </div>
                                     <div>
@@ -334,12 +336,12 @@ export default function ProductEdit({ auth, product, typeOptions = [], statusOpt
                                     </div>
                                     <div>
                                         <label htmlFor="tb1_csosn" className="block text-sm font-medium text-gray-700">CSOSN *</label>
-                                        <input id="tb1_csosn" type="text" maxLength="4" value={data.tb1_csosn} onChange={(e) => setData("tb1_csosn", e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm" />
+                                        <input id="tb1_csosn" type="text" maxLength="4" value={data.tb1_csosn} onChange={(e) => setData("tb1_csosn", e.target.value)} className={fiscalMinimumFieldClass} />
                                         {errors.tb1_csosn && <span className="text-red-600">{errors.tb1_csosn}</span>}
                                     </div>
                                     <div>
                                         <label htmlFor="tb1_cst" className="block text-sm font-medium text-gray-700">CST *</label>
-                                        <input id="tb1_cst" type="text" maxLength="3" value={data.tb1_cst} onChange={(e) => setData("tb1_cst", e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm" />
+                                        <input id="tb1_cst" type="text" maxLength="3" value={data.tb1_cst} onChange={(e) => setData("tb1_cst", e.target.value)} className={fiscalMinimumFieldClass} />
                                         {errors.tb1_cst && <span className="text-red-600">{errors.tb1_cst}</span>}
                                     </div>
                                     <div>
