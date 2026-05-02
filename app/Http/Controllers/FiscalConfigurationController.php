@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\ConfiguracaoFiscal;
+use App\Models\NfeLaunch;
+use App\Models\NfeInsuranceProduct;
 use App\Models\NotaFiscal;
-use App\Models\Produto;
 use App\Models\Unidade;
 use App\Models\Venda;
 use App\Models\VendaPagamento;
@@ -68,19 +69,35 @@ class FiscalConfigurationController extends Controller
             ?? ($units->first()['matriz_id'] ?? 0)
             ?? ($user?->matriz_id ?? 0));
 
-        $productCount = 0;
-        $serviceCount = 0;
+        $insuranceProductCount = 0;
+        $insurerCount = 0;
         $configurationReady = false;
         $invoiceSummary = [
             'issued' => 0,
             'signed' => 0,
             'errors' => 0,
         ];
+        $launchSummary = [
+            'total' => 0,
+            'draft' => 0,
+            'ready' => 0,
+        ];
 
-        if ($matrixId > 0) {
-            $productQuery = Produto::query()->forMatrix($matrixId);
-            $productCount = (clone $productQuery)->where('tb1_tipo', '!=', 2)->count();
-            $serviceCount = (clone $productQuery)->where('tb1_tipo', 2)->count();
+        if ($matrixId > 0 && Schema::hasTable('tb30_nfe_produtos_seguro')) {
+            $insuranceProductQuery = NfeInsuranceProduct::query()->where('matriz_id', $matrixId);
+
+            if ($selectedUnitId > 0) {
+                $insuranceProductQuery->where(function ($builder) use ($selectedUnitId) {
+                    $builder->whereNull('tb2_id')
+                        ->orWhere('tb2_id', $selectedUnitId);
+                });
+            }
+
+            $insuranceProductCount = (clone $insuranceProductQuery)->where('tb30_status', 1)->count();
+            $insurerCount = (clone $insuranceProductQuery)
+                ->where('tb30_status', 1)
+                ->distinct()
+                ->count('tb30_seguradora');
         }
 
         if ($selectedUnitId > 0 && $this->fiscalTablesAreAvailable()) {
@@ -103,6 +120,15 @@ class FiscalConfigurationController extends Controller
             ];
         }
 
+        if ($selectedUnitId > 0 && Schema::hasTable('tb29_nfe_lancamentos')) {
+            $launchQuery = NfeLaunch::query()->where('tb2_id', $selectedUnitId);
+            $launchSummary = [
+                'total' => (clone $launchQuery)->count(),
+                'draft' => (clone $launchQuery)->whereIn('tb29_status', ['rascunho', 'revisao'])->count(),
+                'ready' => (clone $launchQuery)->where('tb29_status', 'pronto_emissao')->count(),
+            ];
+        }
+
         return Inertia::render('Nfe/Dashboard', [
             'units' => $units,
             'selectedUnitId' => $selectedUnitId > 0 ? $selectedUnitId : null,
@@ -116,9 +142,10 @@ class FiscalConfigurationController extends Controller
             'canAccessFiscalSettings' => ManagementScope::isAdmin($user),
             'canAccessInvoiceMonitor' => ManagementScope::isAdmin($user),
             'configurationReady' => $configurationReady,
-            'productCount' => $productCount,
-            'serviceCount' => $serviceCount,
+            'insuranceProductCount' => $insuranceProductCount,
+            'insurerCount' => $insurerCount,
             'invoiceSummary' => $invoiceSummary,
+            'launchSummary' => $launchSummary,
         ]);
     }
 

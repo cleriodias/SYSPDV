@@ -305,6 +305,8 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
         hasMenuAccess('online_users');
     const canManageProducts = !isBoss && hasMenuAccess('products');
     const canManageDiscard = !isBoss && hasMenuAccess('discard');
+    const canAccessNfeLaunches = isNfeApplication && user && [7, 0, 1, 2].includes(effectiveRole);
+    const canAccessNfeInsuranceProducts = isNfeApplication && user && [7, 0, 1, 2].includes(effectiveRole);
     const dashboardRouteName = isNfeApplication ? 'nfe' : 'dashboard';
     const dashboardMenuLabel = isNfeApplication ? 'NFe' : activeUnitName;
     const unreadOnlineTotal = Number(onlineSummary?.unread_total ?? 0);
@@ -410,10 +412,10 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
             },
             {
                 key: 'products',
-                visible: canManageProducts,
+                visible: !isNfeApplication && canManageProducts,
                 node: (
                     <NavLink
-                        href={route('products.index', isNfeApplication ? { catalog: 'products' } : {})}
+                        href={route('products.index')}
                         active={route().current('products.*') && productCatalogMode !== 'services'}
                     >
                         <MenuLabel icon="bi bi-box-seam" text="Produtos" />
@@ -421,14 +423,26 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                 ),
             },
             {
-                key: 'services',
-                visible: isNfeApplication && canManageProducts,
+                key: 'nfe_insurance_products',
+                visible: canAccessNfeInsuranceProducts,
                 node: (
                     <NavLink
-                        href={route('products.index', { catalog: 'services' })}
-                        active={route().current('products.*') && productCatalogMode === 'services'}
+                        href={route('nfe.insurance-products.index', activeUnitId > 0 ? { unit_id: activeUnitId } : {})}
+                        active={route().current('nfe.insurance-products.*')}
                     >
-                        <MenuLabel icon="bi bi-tools" text="Servicos" />
+                        <MenuLabel icon="bi bi-shield-check" text="Produtos Seguro" />
+                    </NavLink>
+                ),
+            },
+            {
+                key: 'nfe_launches',
+                visible: canAccessNfeLaunches,
+                node: (
+                    <NavLink
+                        href={route('nfe.launches.index', activeUnitId > 0 ? { unit_id: activeUnitId } : {})}
+                        active={route().current('nfe.launches.*')}
+                    >
+                        <MenuLabel icon="bi bi-journal-check" text="Lancamentos" />
                     </NavLink>
                 ),
             },

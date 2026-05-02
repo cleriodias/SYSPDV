@@ -4,6 +4,8 @@
 4. Na criacao de tabelas usar o prefixo "tb" + um sequencial, e o nome, exemplo: (tb1_nome_nome), sempre verifique as tabelas para nao duplicar o sequencial.
 
 IMPORTANT:
+- Atençao para as solicitaçoes nao afetarem as aplicacoes, sempre que for solicitado uma alteraçao ou implementaçao se nao ficar claro em qual das aplicaçoes sera pergunte: Padaria ou NFe
+- Existem 3 aplicaçoes nessa projeto, Pardaria - sem nota, NFe(apenas emissao de notas), Paradaria + NFe(esse esta pronto finalizado)
 - Qualquer Update ou Delete na base de dados deve ser informado na primeira linha do plano detalhado cercado com asteriscos e a quantidade de registros afetada
 - SEMPRE EXPLIQUE A CAUSA DO PROBLEMA (QUANDO FOR A CORRECAO DE UM PROBLEMA) E MOSTRE O PLANO QUE PRETENDE FAZER E AGUARDE MINHA AUTORIZACAO. SOMENTE E NECESSARIO PEDIR AUTORIZACAO QUANDO ENVOLVER MODIFICACOES NO CODIGO (EXPLICACOES OU QUESTIONAMENTOS NAO E NECESSARIO AUTORIZAR).
 - QUANDO FOR QUESTIONADO SE A ALTERACAO ESTA CORRETA, VERIFIQUE CAUTELOSAMENTE; NAO APENAS RESPONDA QUE ESTA CERTO.

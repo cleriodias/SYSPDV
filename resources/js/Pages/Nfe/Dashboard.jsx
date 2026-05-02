@@ -61,12 +61,17 @@ export default function Dashboard({
     canAccessFiscalSettings = false,
     canAccessInvoiceMonitor = false,
     configurationReady = false,
-    productCount = 0,
-    serviceCount = 0,
+    insuranceProductCount = 0,
+    insurerCount = 0,
     invoiceSummary = {
         issued: 0,
         signed: 0,
         errors: 0,
+    },
+    launchSummary = {
+        total: 0,
+        draft: 0,
+        ready: 0,
     },
 }) {
     const { flash } = usePage().props;
@@ -86,7 +91,7 @@ export default function Dashboard({
                 <div className="flex flex-col gap-1">
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Dashboard NFe</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-300">
-                        Entrada da aplicacao NFe com configuracao, produtos e servicos.
+                        Entrada da aplicacao NFe com configuracao fiscal, catalogo de seguros e lancamentos.
                     </p>
                 </div>
             )}
@@ -105,11 +110,11 @@ export default function Dashboard({
                                 </span>
                                 <div className="space-y-2">
                                     <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                        Emissor focado em nota fiscal por matriz.
+                                        Operacao fiscal organizada para produtos de seguro.
                                     </h1>
                                     <p className="max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
                                         Use este painel para entrar direto na configuracao fiscal da unidade selecionada
-                                        e acessar o cadastro fiscal de produtos e servicos da matriz ativa.
+                                        e acessar o catalogo de seguros e os lancamentos da matriz ativa.
                                     </p>
                                 </div>
                             </div>
@@ -169,7 +174,7 @@ export default function Dashboard({
                         </div>
                     </section>
 
-                    <section className="grid gap-5 xl:grid-cols-3">
+                    <section className="grid gap-5 xl:grid-cols-4">
                         <ActionCard
                             title="Configuracao fiscal"
                             description="Cadastre certificado, dados fiscais, ambiente e parametros da unidade selecionada."
@@ -183,25 +188,37 @@ export default function Dashboard({
                         />
 
                         <ActionCard
-                            title="Cadastro de produtos"
-                            description="Acesse os produtos fiscais da matriz ativa para manter codigos, NCM, CFOP e demais dados."
-                            href={route('products.index', { catalog: 'products' })}
+                            title="Produtos de seguro"
+                            description="Cadastre seguradora, ramo, premio base, comissao e regras operacionais da carteira."
+                            href={route('nfe.insurance-products.index', selectedUnitId ? { unit_id: selectedUnitId } : {})}
                             accentClassName="border-blue-200 hover:border-blue-300"
-                            counter={productCount}
-                            counterLabel="produtos da matriz"
-                            badge="Produtos"
+                            counter={insuranceProductCount}
+                            counterLabel="produtos ativos no catalogo"
+                            badge="Seguros"
                             icon="bi bi-box-seam"
                         />
 
                         <ActionCard
-                            title="Cadastro de servicos"
-                            description="Acesse os itens do tipo servico no mesmo cadastro central, filtrados para a matriz ativa."
-                            href={route('products.index', { catalog: 'services' })}
+                            title="Seguradoras da carteira"
+                            description="Visualize rapidamente quantas seguradoras ativas estao configuradas para o contexto selecionado."
+                            href={route('nfe.insurance-products.index', selectedUnitId ? { unit_id: selectedUnitId } : {})}
                             accentClassName="border-green-200 hover:border-green-300"
-                            counter={serviceCount}
-                            counterLabel="servicos da matriz"
-                            badge="Servicos"
-                            icon="bi bi-tools"
+                            counter={insurerCount}
+                            counterLabel="seguradoras com produtos ativos"
+                            badge="Carteira"
+                            icon="bi bi-shield-check"
+                        />
+
+                        <ActionCard
+                            title="Lancamentos NFe"
+                            description="Monte os dados da nota por unidade com pendencias, auditoria e fechamento operacional."
+                            href={selectedUnitId ? route('nfe.launches.index', { unit_id: selectedUnitId }) : null}
+                            accentClassName="border-sky-200 hover:border-sky-300"
+                            counter={launchSummary?.total}
+                            counterLabel={`${formatCounter(launchSummary?.ready)} prontos para emissao`}
+                            badge="Lancamentos"
+                            icon="bi bi-journal-check"
+                            disabled={!selectedUnitId}
                         />
                     </section>
 
@@ -220,6 +237,19 @@ export default function Dashboard({
                             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">Com erro</p>
                             <p className="mt-3 text-3xl font-bold text-slate-900">{formatCounter(invoiceSummary?.errors)}</p>
                             <p className="mt-2 text-sm text-slate-500">Notas que precisam de ajuste antes de concluir a emissao.</p>
+                        </div>
+                    </section>
+
+                    <section className="grid gap-5 md:grid-cols-2">
+                        <div className="rounded-3xl border border-sky-200 bg-white p-5 shadow-sm">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Lancamentos abertos</p>
+                            <p className="mt-3 text-3xl font-bold text-slate-900">{formatCounter(launchSummary?.draft)}</p>
+                            <p className="mt-2 text-sm text-slate-500">Rascunhos ou revisoes da unidade selecionada.</p>
+                        </div>
+                        <div className="rounded-3xl border border-emerald-200 bg-white p-5 shadow-sm">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Prontos para emissao</p>
+                            <p className="mt-3 text-3xl font-bold text-slate-900">{formatCounter(launchSummary?.ready)}</p>
+                            <p className="mt-2 text-sm text-slate-500">Lancamentos com fechamento operacional concluido.</p>
                         </div>
                     </section>
                 </div>

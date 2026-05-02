@@ -18,6 +18,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\LanchoneteTerminalController;
 use App\Http\Controllers\MatrixController;
 use App\Http\Controllers\NoticeController;
+use App\Http\Controllers\NfeLaunchController;
+use App\Http\Controllers\NfeInsuranceProductController;
 use App\Http\Controllers\OnlineController;
 use App\Http\Controllers\NewsletterSubscriptionController;
 use App\Http\Controllers\PayrollController;
@@ -100,6 +102,17 @@ Route::put('/supplier/disputes/{bid}', [SupplierPortalController::class, 'update
 Route::post('/supplier/disputes/{bid}/invoice', [SupplierPortalController::class, 'invoice'])->name('supplier.disputes.invoice');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/nfe/lancamentos', [NfeLaunchController::class, 'index'])->name('nfe.launches.index');
+    Route::get('/nfe/lancamentos/novo', [NfeLaunchController::class, 'create'])->name('nfe.launches.create');
+    Route::post('/nfe/lancamentos', [NfeLaunchController::class, 'store'])->name('nfe.launches.store');
+    Route::get('/nfe/lancamentos/{launch}/editar', [NfeLaunchController::class, 'edit'])->name('nfe.launches.edit');
+    Route::put('/nfe/lancamentos/{launch}', [NfeLaunchController::class, 'update'])->name('nfe.launches.update');
+    Route::get('/nfe/produtos-seguro', [NfeInsuranceProductController::class, 'index'])->name('nfe.insurance-products.index');
+    Route::get('/nfe/produtos-seguro/novo', [NfeInsuranceProductController::class, 'create'])->name('nfe.insurance-products.create');
+    Route::post('/nfe/produtos-seguro', [NfeInsuranceProductController::class, 'store'])->name('nfe.insurance-products.store');
+    Route::get('/nfe/produtos-seguro/{insuranceProduct}/editar', [NfeInsuranceProductController::class, 'edit'])->name('nfe.insurance-products.edit');
+    Route::put('/nfe/produtos-seguro/{insuranceProduct}', [NfeInsuranceProductController::class, 'update'])->name('nfe.insurance-products.update');
+
     Route::get('/chamados', [SupportTicketController::class, 'index'])->name('support.tickets.index');
     Route::post('/chamados', [SupportTicketController::class, 'store'])->name('support.tickets.store');
     Route::post('/chamados/{ticket}/interacoes', [SupportTicketController::class, 'reply'])->name('support.tickets.reply');
