@@ -294,15 +294,12 @@ export default function ProductEdit({ auth, product, typeOptions = [], statusOpt
                                     <p className="mt-1 text-xs text-gray-500">
                                         Esses campos alimentam a preparacao da NF-e/NFC-e.
                                     </p>
-                                    <p className="mt-1 text-xs font-medium text-amber-700">
-                                        Campos obrigatorios para emissao: NCM, CFOP e pelo menos um entre CSOSN ou CST.
-                                    </p>
                                 </div>
 
                                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                                     <div>
-                                        <label htmlFor="tb1_ncm" className="block text-sm font-medium text-gray-700">NCM *</label>
-                                        <input id="tb1_ncm" type="text" required maxLength="8" value={data.tb1_ncm} onChange={(e) => setData("tb1_ncm", e.target.value)} className={fiscalMinimumFieldClass} />
+                                        <label htmlFor="tb1_ncm" className="block text-sm font-medium text-gray-700">NCM</label>
+                                        <input id="tb1_ncm" type="text" maxLength="8" value={data.tb1_ncm} onChange={(e) => setData("tb1_ncm", e.target.value)} className={fiscalMinimumFieldClass} />
                                         {errors.tb1_ncm && <span className="text-red-600">{errors.tb1_ncm}</span>}
                                     </div>
                                     <div>
@@ -311,8 +308,8 @@ export default function ProductEdit({ auth, product, typeOptions = [], statusOpt
                                         {errors.tb1_cest && <span className="text-red-600">{errors.tb1_cest}</span>}
                                     </div>
                                     <div>
-                                        <label htmlFor="tb1_cfop" className="block text-sm font-medium text-gray-700">CFOP *</label>
-                                        <input id="tb1_cfop" type="text" required maxLength="4" value={data.tb1_cfop} onChange={(e) => setData("tb1_cfop", e.target.value)} className={fiscalMinimumFieldClass} />
+                                        <label htmlFor="tb1_cfop" className="block text-sm font-medium text-gray-700">CFOP</label>
+                                        <input id="tb1_cfop" type="text" maxLength="4" value={data.tb1_cfop} onChange={(e) => setData("tb1_cfop", e.target.value)} className={fiscalMinimumFieldClass} />
                                         {errors.tb1_cfop && <span className="text-red-600">{errors.tb1_cfop}</span>}
                                     </div>
                                     <div>
@@ -335,12 +332,12 @@ export default function ProductEdit({ auth, product, typeOptions = [], statusOpt
                                         {errors.tb1_unidade_tributavel && <span className="text-red-600">{errors.tb1_unidade_tributavel}</span>}
                                     </div>
                                     <div>
-                                        <label htmlFor="tb1_csosn" className="block text-sm font-medium text-gray-700">CSOSN *</label>
+                                        <label htmlFor="tb1_csosn" className="block text-sm font-medium text-gray-700">CSOSN</label>
                                         <input id="tb1_csosn" type="text" maxLength="4" value={data.tb1_csosn} onChange={(e) => setData("tb1_csosn", e.target.value)} className={fiscalMinimumFieldClass} />
                                         {errors.tb1_csosn && <span className="text-red-600">{errors.tb1_csosn}</span>}
                                     </div>
                                     <div>
-                                        <label htmlFor="tb1_cst" className="block text-sm font-medium text-gray-700">CST *</label>
+                                        <label htmlFor="tb1_cst" className="block text-sm font-medium text-gray-700">CST</label>
                                         <input id="tb1_cst" type="text" maxLength="3" value={data.tb1_cst} onChange={(e) => setData("tb1_cst", e.target.value)} className={fiscalMinimumFieldClass} />
                                         {errors.tb1_cst && <span className="text-red-600">{errors.tb1_cst}</span>}
                                     </div>

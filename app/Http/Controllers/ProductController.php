@@ -384,6 +384,17 @@ class ProductController extends Controller
 
     private function validateProduct(Request $request, ?Produto $product = null): array
     {
+        $request->merge([
+            'tb1_ncm' => $this->nullableTrimmedInput($request->input('tb1_ncm')),
+            'tb1_cest' => $this->nullableTrimmedInput($request->input('tb1_cest')),
+            'tb1_cfop' => $this->nullableTrimmedInput($request->input('tb1_cfop')),
+            'tb1_unidade_comercial' => $this->nullableTrimmedInput($request->input('tb1_unidade_comercial')),
+            'tb1_unidade_tributavel' => $this->nullableTrimmedInput($request->input('tb1_unidade_tributavel')),
+            'tb1_csosn' => $this->nullableTrimmedInput($request->input('tb1_csosn')),
+            'tb1_cst' => $this->nullableTrimmedInput($request->input('tb1_cst')),
+            'tb1_aliquota_icms' => $this->nullableTrimmedInput($request->input('tb1_aliquota_icms')),
+        ]);
+
         $data = $request->validate(
             [
                 'produto_id' => [
@@ -541,6 +552,17 @@ class ProductController extends Controller
         }
 
         return $data;
+    }
+
+    private function nullableTrimmedInput(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        return $normalized === '' ? null : $normalized;
     }
 
     private function formOptions(): array
