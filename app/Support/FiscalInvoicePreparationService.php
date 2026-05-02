@@ -222,6 +222,10 @@ class FiscalInvoicePreparationService
         $unit = $sales->first()?->unidade;
         $documentTotal = round((float) $eligibleSales->sum('valor_total'), 2);
         $consumer = $this->normalizeConsumerPayload($consumer);
+        $emitterDocument = $this->resolveEmitterFiscalDocument(
+            $unit?->tb2_cnpj,
+            $config?->tb26_certificado_cnpj,
+        );
 
         return [
             'pagamento_id' => (int) $payment->tb4_id,
@@ -237,7 +241,7 @@ class FiscalInvoicePreparationService
             'emitente' => [
                 'unit_id' => (int) ($unit?->tb2_id ?? 0),
                 'nome_unidade' => $unit?->tb2_nome,
-                'cnpj' => $unit?->tb2_cnpj,
+                'cnpj' => $emitterDocument,
                 'configuracao' => [
                     'razao_social' => $config?->tb26_razao_social,
                     'nome_fantasia' => $config?->tb26_nome_fantasia,
@@ -405,8 +409,13 @@ class FiscalInvoicePreparationService
 
         $unitCnpj = $this->onlyDigits($payment->vendas->first()?->unidade?->tb2_cnpj);
         $certificateCnpj = $this->onlyDigits($config->tb26_certificado_cnpj);
+        $emitterDocument = $this->resolveEmitterFiscalDocument($unitCnpj, $certificateCnpj);
 
-        if ($unitCnpj && $certificateCnpj && substr($unitCnpj, 0, 8) !== substr($certificateCnpj, 0, 8)) {
+        if (! $this->isValidCnpj($emitterDocument)) {
+            $errors[] = 'CNPJ do emitente fiscal nao configurado. Informe um CNPJ valido na unidade ou utilize uma configuracao fiscal com certificado vinculado a um CNPJ valido.';
+        }
+
+        if ($this->isValidCnpj($unitCnpj) && $this->isValidCnpj($certificateCnpj) && substr($unitCnpj, 0, 8) !== substr($certificateCnpj, 0, 8)) {
             $errors[] = 'O CNPJ do certificado nao pertence ao mesmo CNPJ base da loja da venda.';
         }
 
@@ -644,6 +653,24 @@ class FiscalInvoicePreparationService
         $value = preg_replace('/\D+/', '', (string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    private function resolveEmitterFiscalDocument(?string $unitCnpj, ?string $certificateCnpj): ?string
+    {
+        $unitCnpj = $this->onlyDigits($unitCnpj);
+
+        if ($this->isValidCnpj($unitCnpj)) {
+            return $unitCnpj;
+        }
+
+        $certificateCnpj = $this->onlyDigits($certificateCnpj);
+
+        return $this->isValidCnpj($certificateCnpj) ? $certificateCnpj : null;
+    }
+
+    private function isValidCnpj(?string $value): bool
+    {
+        return $value !== null && strlen($value) === 14;
     }
 
     private function isValidStateRegistration(?string $value): bool

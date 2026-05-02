@@ -42,7 +42,10 @@ class FiscalNfceXmlService
         }
 
         $issueDate = Carbon::now();
-        $unitCnpj = $this->onlyDigits($unit->tb2_cnpj);
+        $emitterCnpj = $this->resolveEmitterFiscalDocument(
+            $unit->tb2_cnpj,
+            $configuration->tb26_certificado_cnpj,
+        );
         $municipalityCode = $this->onlyDigits($configuration->tb26_codigo_municipio);
         $serie = $this->normalizeSerie($invoice->tb27_serie);
         $number = (int) $invoice->tb27_numero;
@@ -51,7 +54,7 @@ class FiscalNfceXmlService
         $cNf = $this->generateRandomCode($payment->tb4_id);
         $accessKeyWithoutDigit = $cUf
             . $issueDate->format('ym')
-            . $unitCnpj
+            . $emitterCnpj
             . $modelCode
             . str_pad($serie, 3, '0', STR_PAD_LEFT)
             . str_pad((string) $number, 9, '0', STR_PAD_LEFT)
@@ -77,7 +80,7 @@ class FiscalNfceXmlService
         $nfe->appendChild($infNfe);
 
         $this->appendIde($document, $infNfe, $configuration, $issueDate, $cUf, $cNf, $serie, $number, $verifierDigit);
-        $this->appendEmitter($document, $infNfe, $configuration, $unitCnpj);
+        $this->appendEmitter($document, $infNfe, $configuration, $emitterCnpj);
         $this->appendDestination($document, $infNfe, $consumer);
         $this->appendItems($document, $infNfe, $sales, (int) $configuration->tb26_crt, $configuration);
         $documentTotal = (float) $sales->sum('valor_total');
@@ -575,6 +578,30 @@ class FiscalNfceXmlService
     private function onlyDigits(?string $value): string
     {
         return preg_replace('/\D+/', '', (string) $value);
+    }
+
+    private function resolveEmitterFiscalDocument(?string $unitCnpj, ?string $certificateCnpj): string
+    {
+        $unitCnpj = $this->onlyDigits($unitCnpj);
+
+        if ($this->isValidCnpj($unitCnpj)) {
+            return $unitCnpj;
+        }
+
+        $certificateCnpj = $this->onlyDigits($certificateCnpj);
+
+        if ($this->isValidCnpj($certificateCnpj)) {
+            return $certificateCnpj;
+        }
+
+        throw new RuntimeException(
+            'Nao foi possivel definir o CNPJ do emitente fiscal. Informe um CNPJ valido na unidade ou utilize uma configuracao fiscal com certificado vinculado a um CNPJ valido.'
+        );
+    }
+
+    private function isValidCnpj(?string $value): bool
+    {
+        return $value !== null && strlen($value) === 14;
     }
 
     private function normalizeSerie(?string $serie): string

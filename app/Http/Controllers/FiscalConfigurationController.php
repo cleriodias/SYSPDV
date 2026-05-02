@@ -760,6 +760,31 @@ class FiscalConfigurationController extends Controller
         return $value === '' ? null : $value;
     }
 
+    private function resolveEmitterFiscalDocument(
+        ?array $invoicePayload,
+        ?ConfiguracaoFiscal $configuration,
+        ?Unidade $unit,
+    ): ?string {
+        $payloadEmitter = is_array($invoicePayload['emitente'] ?? null) ? $invoicePayload['emitente'] : [];
+        $payloadConfiguration = is_array($payloadEmitter['configuracao'] ?? null) ? $payloadEmitter['configuracao'] : [];
+        $candidates = [
+            $payloadEmitter['cnpj'] ?? null,
+            $payloadConfiguration['certificado_cnpj'] ?? null,
+            $configuration?->tb26_certificado_cnpj,
+            $unit?->tb2_cnpj,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $digits = $this->onlyDigits($candidate);
+
+            if ($digits !== null && strlen($digits) === 14) {
+                return $digits;
+            }
+        }
+
+        return null;
+    }
+
     private function normalizeStateRegistration(?string $value): ?string
     {
         $value = strtoupper(trim((string) $value));
@@ -893,6 +918,11 @@ class FiscalConfigurationController extends Controller
             ?: 'EMITENTE NAO INFORMADO';
         $documentTotal = round((float) ($invoicePayload['valor_total_documento'] ?? $payment->valor_total), 2);
         $statusMessage = $this->augmentFiscalStatusMessage($invoice->tb27_mensagem, $xmlData);
+        $emitterDocument = $this->resolveEmitterFiscalDocument(
+            is_array($invoicePayload) ? $invoicePayload : [],
+            $configuration,
+            $firstSale?->unidade,
+        );
 
         return [
             'title' => strtolower((string) $invoice->tb27_modelo) === 'nfce' ? 'DANFE NFC-e' : 'Documento fiscal',
@@ -908,7 +938,7 @@ class FiscalConfigurationController extends Controller
             'issued_at' => $issueDateTime?->toIso8601String(),
             'emitter_name' => $emitterName,
             'emitter_legal_name' => $configuration?->tb26_razao_social,
-            'emitter_document' => $firstSale?->unidade?->tb2_cnpj,
+            'emitter_document' => $emitterDocument,
             'emitter_ie' => $configuration?->tb26_ie,
             'emitter_address' => $this->buildEmitterAddress($configuration),
             'consumer_name' => 'CONSUMIDOR NAO IDENTIFICADO',
