@@ -42,6 +42,22 @@ const createEmptyItem = () => ({
     modalidade: '',
     tipo_contratacao: 'individual',
     periodicidade: 'mensal',
+    natureza_receita: 'premio de seguro',
+    ramo_fiscal: 'seguro de danos',
+    incide_iof: true,
+    aliquota_iof: '7.38',
+    permite_override_iof: true,
+    regra_base_iof: 'premio',
+    destacar_iof: true,
+    ha_corretagem: false,
+    gera_nfse: false,
+    item_lista_servico: '10.01',
+    codigo_servico_nfse: '',
+    municipio_iss: '',
+    uf_iss: '',
+    aliquota_iss: '0',
+    prestador_nfse: '',
+    tomador_nfse: '',
     ncm: '',
     cfop: '',
     unidade: 'UN',
@@ -151,6 +167,22 @@ const buildInitialData = (launch) => ({
             modalidade: item?.modalidade ?? '',
             tipo_contratacao: item?.tipo_contratacao ?? 'individual',
             periodicidade: item?.periodicidade ?? 'mensal',
+            natureza_receita: item?.natureza_receita ?? 'premio de seguro',
+            ramo_fiscal: item?.ramo_fiscal ?? 'seguro de danos',
+            incide_iof: item?.incide_iof ?? true,
+            aliquota_iof: item?.aliquota_iof ?? '7.38',
+            permite_override_iof: item?.permite_override_iof ?? true,
+            regra_base_iof: item?.regra_base_iof ?? 'premio',
+            destacar_iof: item?.destacar_iof ?? true,
+            ha_corretagem: item?.ha_corretagem ?? false,
+            gera_nfse: item?.gera_nfse ?? false,
+            item_lista_servico: item?.item_lista_servico ?? '10.01',
+            codigo_servico_nfse: item?.codigo_servico_nfse ?? '',
+            municipio_iss: item?.municipio_iss ?? '',
+            uf_iss: item?.uf_iss ?? '',
+            aliquota_iss: item?.aliquota_iss ?? '0',
+            prestador_nfse: item?.prestador_nfse ?? '',
+            tomador_nfse: item?.tomador_nfse ?? '',
             ncm: item?.ncm ?? '',
             cfop: item?.cfop ?? '',
             unidade: item?.unidade ?? 'UN',
@@ -249,10 +281,61 @@ export default function Form({
                 });
             }
 
-            if (!item.cfop) {
+            if (!item.natureza_receita) {
                 pending.push({
                     level: 'critical',
-                    message: `Item ${index + 1} sem CFOP.`,
+                    message: `Item ${index + 1} sem natureza da receita.`,
+                });
+            }
+
+            if (item.incide_iof && !parseDecimal(item.aliquota_iof)) {
+                pending.push({
+                    level: 'critical',
+                    message: `Item ${index + 1} sem aliquota de IOF.`,
+                });
+            }
+
+            if (item.incide_iof && !item.regra_base_iof) {
+                pending.push({
+                    level: 'critical',
+                    message: `Item ${index + 1} sem regra de base do IOF.`,
+                });
+            }
+
+            if (item.gera_nfse) {
+                if (!item.item_lista_servico) {
+                    pending.push({
+                        level: 'critical',
+                        message: `Item ${index + 1} sem item da lista de servico da NFS-e.`,
+                    });
+                }
+
+                if (!item.municipio_iss || !item.uf_iss) {
+                    pending.push({
+                        level: 'critical',
+                        message: `Item ${index + 1} sem municipio/UF de incidencia do ISS.`,
+                    });
+                }
+
+                if (!parseDecimal(item.aliquota_iss)) {
+                    pending.push({
+                        level: 'critical',
+                        message: `Item ${index + 1} sem aliquota de ISS.`,
+                    });
+                }
+
+                if (!item.prestador_nfse || !item.tomador_nfse) {
+                    pending.push({
+                        level: 'critical',
+                        message: `Item ${index + 1} sem prestador ou tomador da NFS-e.`,
+                    });
+                }
+            }
+
+            if (item.ha_corretagem && !item.gera_nfse) {
+                pending.push({
+                    level: 'warning',
+                    message: `Item ${index + 1} com corretagem sem NFS-e habilitada.`,
                 });
             }
         });
@@ -303,6 +386,22 @@ export default function Form({
                     modalidade: product.modality ?? '',
                     tipo_contratacao: product.contractType ?? 'individual',
                     periodicidade: product.periodicity ?? 'mensal',
+                    natureza_receita: product.naturezaReceita ?? 'premio de seguro',
+                    ramo_fiscal: product.ramoFiscal ?? 'seguro de danos',
+                    incide_iof: product.incideIof ?? true,
+                    aliquota_iof: String(product.aliquotaIof ?? 0),
+                    permite_override_iof: product.permiteOverrideIof ?? true,
+                    regra_base_iof: product.regraBaseIof ?? 'premio',
+                    destacar_iof: product.destacarIof ?? true,
+                    ha_corretagem: product.haCorretagem ?? false,
+                    gera_nfse: product.geraNfse ?? false,
+                    item_lista_servico: product.itemListaServico ?? '10.01',
+                    codigo_servico_nfse: product.codigoServicoNfse ?? '',
+                    municipio_iss: product.municipioIss ?? '',
+                    uf_iss: product.ufIss ?? '',
+                    aliquota_iss: String(product.aliquotaIss ?? 0),
+                    prestador_nfse: product.prestadorNfse ?? '',
+                    tomador_nfse: product.tomadorNfse ?? '',
                     ncm: product.ncm ?? '',
                     cfop: product.cfop ?? '',
                     unidade: product.unit ?? 'UN',
@@ -364,6 +463,22 @@ export default function Form({
             modalidade: item.modalidade,
             tipo_contratacao: item.tipo_contratacao,
             periodicidade: item.periodicidade,
+            natureza_receita: item.natureza_receita,
+            ramo_fiscal: item.ramo_fiscal,
+            incide_iof: !!item.incide_iof,
+            aliquota_iof: parseDecimal(item.aliquota_iof),
+            permite_override_iof: !!item.permite_override_iof,
+            regra_base_iof: item.regra_base_iof,
+            destacar_iof: !!item.destacar_iof,
+            ha_corretagem: !!item.ha_corretagem,
+            gera_nfse: !!item.gera_nfse,
+            item_lista_servico: item.item_lista_servico,
+            codigo_servico_nfse: item.codigo_servico_nfse,
+            municipio_iss: item.municipio_iss,
+            uf_iss: item.uf_iss,
+            aliquota_iss: parseDecimal(item.aliquota_iss),
+            prestador_nfse: item.prestador_nfse,
+            tomador_nfse: item.tomador_nfse,
             ncm: item.ncm,
             cfop: item.cfop,
             unidade: item.unidade,
@@ -423,12 +538,12 @@ export default function Form({
                         {isEditing ? 'Editar lancamento NFe' : 'Novo lancamento NFe'}
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-gray-300">
-                        Fluxo preparado para produtos de seguro antes da emissao fiscal.
+                        Fluxo preparado para a NFe - Corretora de Seguros antes da emissao fiscal.
                     </p>
                 </div>
             )}
         >
-            <Head title={isEditing ? 'Editar lancamento NFe' : 'Novo lancamento NFe'} />
+            <Head title={isEditing ? 'Editar lancamento NFe - Corretora de Seguros' : 'Novo lancamento NFe - Corretora de Seguros'} />
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
@@ -920,8 +1035,201 @@ export default function Form({
                                                     <FieldError message={errors[`itens.${index}.periodicidade`]} />
                                                 </div>
 
+                                                <div className="xl:col-span-2">
+                                                    <label className="text-sm font-semibold text-slate-700">Natureza da receita</label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.natureza_receita}
+                                                        onChange={(event) => updateItem(index, 'natureza_receita', event.target.value)}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    />
+                                                    <FieldError message={errors[`itens.${index}.natureza_receita`]} />
+                                                </div>
+
+                                                <div className="xl:col-span-2">
+                                                    <label className="text-sm font-semibold text-slate-700">Ramo fiscal</label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.ramo_fiscal}
+                                                        onChange={(event) => updateItem(index, 'ramo_fiscal', event.target.value)}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    />
+                                                    <FieldError message={errors[`itens.${index}.ramo_fiscal`]} />
+                                                </div>
+
                                                 <div>
-                                                    <label className="text-sm font-semibold text-slate-700">CFOP</label>
+                                                    <label className="text-sm font-semibold text-slate-700">Incide IOF</label>
+                                                    <select
+                                                        value={item.incide_iof ? '1' : '0'}
+                                                        onChange={(event) => updateItem(index, 'incide_iof', event.target.value === '1')}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    >
+                                                        <option value="1">Sim</option>
+                                                        <option value="0">Nao</option>
+                                                    </select>
+                                                    <FieldError message={errors[`itens.${index}.incide_iof`]} />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-sm font-semibold text-slate-700">Aliquota de IOF (%)</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="100"
+                                                        step="0.01"
+                                                        value={item.aliquota_iof}
+                                                        onChange={(event) => updateItem(index, 'aliquota_iof', event.target.value)}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    />
+                                                    <FieldError message={errors[`itens.${index}.aliquota_iof`]} />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-sm font-semibold text-slate-700">Permite override do IOF</label>
+                                                    <select
+                                                        value={item.permite_override_iof ? '1' : '0'}
+                                                        onChange={(event) => updateItem(index, 'permite_override_iof', event.target.value === '1')}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    >
+                                                        <option value="1">Sim</option>
+                                                        <option value="0">Nao</option>
+                                                    </select>
+                                                    <FieldError message={errors[`itens.${index}.permite_override_iof`]} />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-sm font-semibold text-slate-700">Destacar IOF</label>
+                                                    <select
+                                                        value={item.destacar_iof ? '1' : '0'}
+                                                        onChange={(event) => updateItem(index, 'destacar_iof', event.target.value === '1')}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    >
+                                                        <option value="1">Sim</option>
+                                                        <option value="0">Nao</option>
+                                                    </select>
+                                                    <FieldError message={errors[`itens.${index}.destacar_iof`]} />
+                                                </div>
+
+                                                <div className="xl:col-span-2">
+                                                    <label className="text-sm font-semibold text-slate-700">Regra de base do IOF</label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.regra_base_iof}
+                                                        onChange={(event) => updateItem(index, 'regra_base_iof', event.target.value)}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    />
+                                                    <FieldError message={errors[`itens.${index}.regra_base_iof`]} />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-sm font-semibold text-slate-700">Ha corretagem</label>
+                                                    <select
+                                                        value={item.ha_corretagem ? '1' : '0'}
+                                                        onChange={(event) => updateItem(index, 'ha_corretagem', event.target.value === '1')}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    >
+                                                        <option value="1">Sim</option>
+                                                        <option value="0">Nao</option>
+                                                    </select>
+                                                    <FieldError message={errors[`itens.${index}.ha_corretagem`]} />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-sm font-semibold text-slate-700">Gera NFS-e</label>
+                                                    <select
+                                                        value={item.gera_nfse ? '1' : '0'}
+                                                        onChange={(event) => updateItem(index, 'gera_nfse', event.target.value === '1')}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    >
+                                                        <option value="1">Sim</option>
+                                                        <option value="0">Nao</option>
+                                                    </select>
+                                                    <FieldError message={errors[`itens.${index}.gera_nfse`]} />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-sm font-semibold text-slate-700">Item lista servico</label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.item_lista_servico}
+                                                        onChange={(event) => updateItem(index, 'item_lista_servico', event.target.value)}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    />
+                                                    <FieldError message={errors[`itens.${index}.item_lista_servico`]} />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-sm font-semibold text-slate-700">Codigo servico NFS-e</label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.codigo_servico_nfse}
+                                                        onChange={(event) => updateItem(index, 'codigo_servico_nfse', event.target.value)}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    />
+                                                    <FieldError message={errors[`itens.${index}.codigo_servico_nfse`]} />
+                                                </div>
+
+                                                <div className="xl:col-span-2">
+                                                    <label className="text-sm font-semibold text-slate-700">Municipio de incidencia do ISS</label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.municipio_iss}
+                                                        onChange={(event) => updateItem(index, 'municipio_iss', event.target.value)}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    />
+                                                    <FieldError message={errors[`itens.${index}.municipio_iss`]} />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-sm font-semibold text-slate-700">UF ISS</label>
+                                                    <input
+                                                        type="text"
+                                                        maxLength={2}
+                                                        value={item.uf_iss}
+                                                        onChange={(event) => updateItem(index, 'uf_iss', event.target.value.toUpperCase())}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm uppercase text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    />
+                                                    <FieldError message={errors[`itens.${index}.uf_iss`]} />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-sm font-semibold text-slate-700">Aliquota de ISS (%)</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="100"
+                                                        step="0.01"
+                                                        value={item.aliquota_iss}
+                                                        onChange={(event) => updateItem(index, 'aliquota_iss', event.target.value)}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    />
+                                                    <FieldError message={errors[`itens.${index}.aliquota_iss`]} />
+                                                </div>
+
+                                                <div className="xl:col-span-2">
+                                                    <label className="text-sm font-semibold text-slate-700">Prestador da NFS-e</label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.prestador_nfse}
+                                                        onChange={(event) => updateItem(index, 'prestador_nfse', event.target.value)}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    />
+                                                    <FieldError message={errors[`itens.${index}.prestador_nfse`]} />
+                                                </div>
+
+                                                <div className="xl:col-span-2">
+                                                    <label className="text-sm font-semibold text-slate-700">Tomador da NFS-e</label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.tomador_nfse}
+                                                        onChange={(event) => updateItem(index, 'tomador_nfse', event.target.value)}
+                                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                    />
+                                                    <FieldError message={errors[`itens.${index}.tomador_nfse`]} />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-sm font-semibold text-slate-700">CFOP opcional</label>
                                                     <input
                                                         type="text"
                                                         value={item.cfop}
@@ -932,7 +1240,7 @@ export default function Form({
                                                 </div>
 
                                                 <div>
-                                                    <label className="text-sm font-semibold text-slate-700">NCM</label>
+                                                    <label className="text-sm font-semibold text-slate-700">NCM opcional</label>
                                                     <input
                                                         type="text"
                                                         value={item.ncm}

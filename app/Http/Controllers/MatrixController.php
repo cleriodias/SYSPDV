@@ -27,7 +27,8 @@ class MatrixController extends Controller
             ->with('aplicacao:tb28_id,tb28_nome')
             ->withCount(['units', 'users'])
             ->orderBy('nome')
-            ->get();
+            ->get()
+            ->map(fn (Matriz $matriz) => $this->formatMatrixApplication($matriz));
 
         return Inertia::render('Matrizes/Index', [
             'matrizes' => $matrizes,
@@ -39,9 +40,7 @@ class MatrixController extends Controller
         $this->ensureBoss();
 
         return Inertia::render('Matrizes/Create', [
-            'applications' => Aplicacao::query()
-                ->orderBy('tb28_id')
-                ->get(['tb28_id', 'tb28_nome']),
+            'applications' => $this->formattedApplications(),
             'planSettings' => BillingPlanSettings::current(),
         ]);
     }
@@ -63,9 +62,7 @@ class MatrixController extends Controller
             ]);
 
         return Inertia::render('Matrizes/Edit', [
-            'applications' => Aplicacao::query()
-                ->orderBy('tb28_id')
-                ->get(['tb28_id', 'tb28_nome']),
+            'applications' => $this->formattedApplications(),
             'matriz' => $matriz,
             'matrixUnit' => $matrixUnit,
             'masterUser' => $masterUser ? [
@@ -395,5 +392,36 @@ class MatrixController extends Controller
         }
 
         abort(500, 'Nao foi possivel gerar um codigo de acesso unico.');
+    }
+
+    private function formattedApplications()
+    {
+        return Aplicacao::query()
+            ->orderBy('tb28_id')
+            ->get(['tb28_id', 'tb28_nome'])
+            ->map(fn (Aplicacao $application) => [
+                'tb28_id' => (int) $application->tb28_id,
+                'tb28_nome' => $this->applicationDisplayName($application->tb28_id, $application->tb28_nome),
+            ]);
+    }
+
+    private function formatMatrixApplication(Matriz $matriz): Matriz
+    {
+        if ($matriz->relationLoaded('aplicacao') && $matriz->aplicacao) {
+            $matriz->aplicacao->tb28_nome = $this->applicationDisplayName(
+                (int) $matriz->aplicacao->tb28_id,
+                $matriz->aplicacao->tb28_nome
+            );
+        }
+
+        return $matriz;
+    }
+
+    private function applicationDisplayName(int $applicationId, ?string $defaultName): string
+    {
+        return match ($applicationId) {
+            Aplicacao::NFE => 'NFe Corretora de Seguros',
+            default => (string) $defaultName,
+        };
     }
 }

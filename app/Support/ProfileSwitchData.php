@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Aplicacao;
+use App\Models\Matriz;
 use App\Models\Unidade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -19,6 +21,10 @@ class ProfileSwitchData
         4 => 'LANCHONETE',
         5 => 'FUNCIONARIO',
         6 => 'CLIENTE',
+    ];
+
+    private const APPLICATION_ROLE_EXCLUSIONS = [
+        Aplicacao::NFE => [2, 4],
     ];
 
     private const ROLE_HIERARCHY = [
@@ -113,6 +119,10 @@ class ProfileSwitchData
             return false;
         }
 
+        if (! self::isRoleAllowedForApplication($role, self::resolveApplicationIdForMatrixId((int) ($unit->matriz_id ?? 0)))) {
+            return false;
+        }
+
         $isBossUnit = self::isBossOnlyUnit($unit);
         $isBossRole = self::isBossRole($role);
 
@@ -132,6 +142,7 @@ class ProfileSwitchData
         $user = $request->user();
         $originalRole = self::originalRole($user);
         $currentRole = (int) ($user?->funcao ?? -1);
+        $applicationId = self::resolveCurrentApplicationId($request, $user);
         $currentUnitId = self::resolveCurrentActiveUnitId($request);
         $currentMatrixUnitId = self::resolveCurrentMatrixUnitId($request, $user);
         $initialSelectedUnitId = $currentUnitId > 0 ? $currentUnitId : $currentMatrixUnitId;
@@ -156,7 +167,7 @@ class ProfileSwitchData
             ->sort(fn (array $left, array $right) => self::compareUnits($left, $right))
             ->values();
 
-        $roles = collect(self::ROLE_OPTIONS)
+        $roles = collect(self::availableRoleOptions($applicationId))
             ->filter(fn (string $label, int $value) => self::canUseRole($originalRole, $value))
             ->map(fn (string $label, int $value) => [
                 'value' => $value,
@@ -180,6 +191,15 @@ class ProfileSwitchData
             'originalRoleLabel' => self::roleLabel($originalRole),
             'initialRole' => null,
         ];
+    }
+
+    private static function availableRoleOptions(?int $applicationId): array
+    {
+        return array_filter(
+            self::ROLE_OPTIONS,
+            fn (int $role) => self::isRoleAllowedForApplication($role, $applicationId),
+            ARRAY_FILTER_USE_KEY
+        );
     }
 
     private static function compareUnits(array $left, array $right): int
@@ -209,6 +229,21 @@ class ProfileSwitchData
     private static function resolveCurrentActiveUnitId(Request $request): int
     {
         return (int) ($request->session()->get('active_unit.id') ?? 0);
+    }
+
+    private static function resolveCurrentApplicationId(Request $request, $user): int
+    {
+        $sessionUnitId = self::resolveCurrentActiveUnitId($request);
+
+        if ($sessionUnitId > 0) {
+            $applicationId = self::resolveApplicationIdForUnitId($sessionUnitId);
+
+            if ($applicationId > 0) {
+                return $applicationId;
+            }
+        }
+
+        return self::resolveApplicationIdForMatrixId(self::resolveUserMatrixId($user));
     }
 
     private static function resolveUserMatrixId($user): int
@@ -284,6 +319,35 @@ class ProfileSwitchData
             ->whereRaw('LOWER(TRIM(tb2_tipo)) = ?', ['matriz'])
             ->orderBy('tb2_id')
             ->value('tb2_id') ?? 0);
+    }
+
+    private static function resolveApplicationIdForUnitId(int $unitId): int
+    {
+        if ($unitId <= 0) {
+            return 0;
+        }
+
+        $matrixId = (int) (Unidade::query()
+            ->where('tb2_id', $unitId)
+            ->value('matriz_id') ?? 0);
+
+        return self::resolveApplicationIdForMatrixId($matrixId);
+    }
+
+    private static function resolveApplicationIdForMatrixId(int $matrixId): int
+    {
+        if ($matrixId <= 0) {
+            return 0;
+        }
+
+        return (int) (Matriz::query()
+            ->where('id', $matrixId)
+            ->value('tb28_id') ?? 0);
+    }
+
+    private static function isRoleAllowedForApplication(int $role, ?int $applicationId): bool
+    {
+        return ! in_array($role, self::APPLICATION_ROLE_EXCLUSIONS[$applicationId] ?? [], true);
     }
 
     private static function groupUnitsByMatrix(Collection $units): Collection

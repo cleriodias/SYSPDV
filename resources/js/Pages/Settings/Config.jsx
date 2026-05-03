@@ -106,7 +106,7 @@ export default function Config({ auth }) {
             tone: 'Error',
         },
         {
-            label: 'NFe',
+            label: 'NFe - Corretora de Seguros',
             icon: 'bi-file-earmark-text',
             href: route('settings.nfe'),
             tone: 'Error',

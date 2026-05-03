@@ -330,8 +330,24 @@ class NfeLaunchController extends Controller
             'itens.*.modalidade' => ['nullable', 'string', 'max:120'],
             'itens.*.tipo_contratacao' => ['required', 'string', 'max:80'],
             'itens.*.periodicidade' => ['required', 'string', 'max:40'],
+            'itens.*.natureza_receita' => ['nullable', 'string', 'max:120'],
+            'itens.*.ramo_fiscal' => ['nullable', 'string', 'max:120'],
+            'itens.*.incide_iof' => ['nullable', 'boolean'],
+            'itens.*.aliquota_iof' => ['nullable', 'numeric', 'gte:0', 'lte:100'],
+            'itens.*.permite_override_iof' => ['nullable', 'boolean'],
+            'itens.*.regra_base_iof' => ['nullable', 'string', 'max:160'],
+            'itens.*.destacar_iof' => ['nullable', 'boolean'],
+            'itens.*.ha_corretagem' => ['nullable', 'boolean'],
+            'itens.*.gera_nfse' => ['nullable', 'boolean'],
+            'itens.*.item_lista_servico' => ['nullable', 'string', 'max:20'],
+            'itens.*.codigo_servico_nfse' => ['nullable', 'string', 'max:30'],
+            'itens.*.municipio_iss' => ['nullable', 'string', 'max:120'],
+            'itens.*.uf_iss' => ['nullable', 'string', 'size:2'],
+            'itens.*.aliquota_iss' => ['nullable', 'numeric', 'gte:0', 'lte:100'],
+            'itens.*.prestador_nfse' => ['nullable', 'string', 'max:160'],
+            'itens.*.tomador_nfse' => ['nullable', 'string', 'max:160'],
             'itens.*.ncm' => ['nullable', 'string', 'max:8'],
-            'itens.*.cfop' => ['required', 'string', 'max:4'],
+            'itens.*.cfop' => ['nullable', 'string', 'max:4'],
             'itens.*.unidade' => ['required', 'string', 'max:10'],
             'itens.*.quantidade' => ['required', 'numeric', 'gt:0'],
             'itens.*.valor_unitario' => ['required', 'numeric', 'gte:0'],
@@ -452,6 +468,22 @@ class NfeLaunchController extends Controller
                 'tb30_modalidade',
                 'tb30_tipo_contratacao',
                 'tb30_periodicidade',
+                'tb30_natureza_receita',
+                'tb30_ramo_fiscal',
+                'tb30_incide_iof',
+                'tb30_aliquota_iof',
+                'tb30_permite_override_iof',
+                'tb30_regra_base_iof',
+                'tb30_destacar_iof',
+                'tb30_ha_corretagem',
+                'tb30_gera_nfse',
+                'tb30_item_lista_servico',
+                'tb30_codigo_servico_nfse',
+                'tb30_municipio_iss',
+                'tb30_uf_iss',
+                'tb30_aliquota_iss',
+                'tb30_prestador_nfse',
+                'tb30_tomador_nfse',
                 'tb30_cfop',
                 'tb30_ncm',
                 'tb30_unidade_padrao',
@@ -486,6 +518,22 @@ class NfeLaunchController extends Controller
             'modalidade' => trim((string) ($item['modalidade'] ?? ($product?->tb30_modalidade ?? ''))),
             'tipo_contratacao' => trim((string) ($item['tipo_contratacao'] ?? ($product?->tb30_tipo_contratacao ?? ''))),
             'periodicidade' => trim((string) ($item['periodicidade'] ?? ($product?->tb30_periodicidade ?? ''))),
+            'natureza_receita' => trim((string) ($item['natureza_receita'] ?? ($product?->tb30_natureza_receita ?? 'premio de seguro'))),
+            'ramo_fiscal' => trim((string) ($item['ramo_fiscal'] ?? ($product?->tb30_ramo_fiscal ?? 'seguro de danos'))),
+            'incide_iof' => $this->normalizeBoolean($item['incide_iof'] ?? ($product?->tb30_incide_iof ?? true)),
+            'aliquota_iof' => $this->normalizeOptionalDecimal($item['aliquota_iof'] ?? ($product?->tb30_aliquota_iof ?? 0)),
+            'permite_override_iof' => $this->normalizeBoolean($item['permite_override_iof'] ?? ($product?->tb30_permite_override_iof ?? true)),
+            'regra_base_iof' => trim((string) ($item['regra_base_iof'] ?? ($product?->tb30_regra_base_iof ?? 'premio'))),
+            'destacar_iof' => $this->normalizeBoolean($item['destacar_iof'] ?? ($product?->tb30_destacar_iof ?? true)),
+            'ha_corretagem' => $this->normalizeBoolean($item['ha_corretagem'] ?? ($product?->tb30_ha_corretagem ?? false)),
+            'gera_nfse' => $this->normalizeBoolean($item['gera_nfse'] ?? ($product?->tb30_gera_nfse ?? false)),
+            'item_lista_servico' => $this->normalizeOptionalString($item['item_lista_servico'] ?? ($product?->tb30_item_lista_servico ?? null)),
+            'codigo_servico_nfse' => $this->normalizeOptionalString($item['codigo_servico_nfse'] ?? ($product?->tb30_codigo_servico_nfse ?? null)),
+            'municipio_iss' => $this->normalizeOptionalString($item['municipio_iss'] ?? ($product?->tb30_municipio_iss ?? null)),
+            'uf_iss' => $this->normalizeOptionalUpperString($item['uf_iss'] ?? ($product?->tb30_uf_iss ?? null)),
+            'aliquota_iss' => $this->normalizeOptionalDecimal($item['aliquota_iss'] ?? ($product?->tb30_aliquota_iss ?? 0)),
+            'prestador_nfse' => $this->normalizeOptionalString($item['prestador_nfse'] ?? ($product?->tb30_prestador_nfse ?? null)),
+            'tomador_nfse' => $this->normalizeOptionalString($item['tomador_nfse'] ?? ($product?->tb30_tomador_nfse ?? null)),
             'ncm' => preg_replace('/\D+/', '', (string) ($item['ncm'] ?? ($product?->tb30_ncm ?? ''))),
             'cfop' => preg_replace('/\D+/', '', (string) ($item['cfop'] ?? ($product?->tb30_cfop ?? ''))),
             'unidade' => strtoupper(trim((string) ($item['unidade'] ?? ($product?->tb30_unidade_padrao ?? 'UN')))),
@@ -603,10 +651,61 @@ class NfeLaunchController extends Controller
                 ];
             }
 
-            if (trim((string) ($item['cfop'] ?? '')) === '') {
+            if (trim((string) ($item['natureza_receita'] ?? '')) === '') {
                 $pendencias[] = [
                     'level' => 'critical',
-                    'message' => 'O item ' . ($index + 1) . ' esta sem CFOP.',
+                    'message' => 'O item ' . ($index + 1) . ' esta sem natureza da receita.',
+                ];
+            }
+
+            if ((bool) ($item['incide_iof'] ?? false) && ($item['aliquota_iof'] === null || (float) $item['aliquota_iof'] <= 0)) {
+                $pendencias[] = [
+                    'level' => 'critical',
+                    'message' => 'O item ' . ($index + 1) . ' esta sem aliquota de IOF.',
+                ];
+            }
+
+            if ((bool) ($item['incide_iof'] ?? false) && trim((string) ($item['regra_base_iof'] ?? '')) === '') {
+                $pendencias[] = [
+                    'level' => 'critical',
+                    'message' => 'O item ' . ($index + 1) . ' esta sem regra de base do IOF.',
+                ];
+            }
+
+            if ((bool) ($item['gera_nfse'] ?? false)) {
+                if (trim((string) ($item['item_lista_servico'] ?? '')) === '') {
+                    $pendencias[] = [
+                        'level' => 'critical',
+                        'message' => 'O item ' . ($index + 1) . ' esta sem item da lista de servico da NFS-e.',
+                    ];
+                }
+
+                if (trim((string) ($item['municipio_iss'] ?? '')) === '' || trim((string) ($item['uf_iss'] ?? '')) === '') {
+                    $pendencias[] = [
+                        'level' => 'critical',
+                        'message' => 'O item ' . ($index + 1) . ' esta sem municipio/UF de incidencia do ISS.',
+                    ];
+                }
+
+                if ($item['aliquota_iss'] === null || (float) $item['aliquota_iss'] <= 0) {
+                    $pendencias[] = [
+                        'level' => 'critical',
+                        'message' => 'O item ' . ($index + 1) . ' esta sem aliquota de ISS.',
+                    ];
+                }
+
+                if (trim((string) ($item['prestador_nfse'] ?? '')) === '' || trim((string) ($item['tomador_nfse'] ?? '')) === '') {
+                    $pendencias[] = [
+                        'level' => 'critical',
+                        'message' => 'O item ' . ($index + 1) . ' esta sem prestador ou tomador da NFS-e.',
+                    ];
+                }
+            }
+
+            if ((bool) ($item['ha_corretagem'] ?? false) && ! (bool) ($item['gera_nfse'] ?? false)) {
+                $pendencias[] = [
+                    'level' => 'warning',
+                    'message' => 'O item ' . ($index + 1) . ' possui corretagem sem NFS-e habilitada. Confirme a regra operacional.',
                 ];
             }
         }
@@ -711,6 +810,22 @@ class NfeLaunchController extends Controller
                     'modalidade' => (string) ($item['modalidade'] ?? ''),
                     'tipo_contratacao' => (string) ($item['tipo_contratacao'] ?? 'individual'),
                     'periodicidade' => (string) ($item['periodicidade'] ?? 'mensal'),
+                    'natureza_receita' => (string) ($item['natureza_receita'] ?? 'premio de seguro'),
+                    'ramo_fiscal' => (string) ($item['ramo_fiscal'] ?? 'seguro de danos'),
+                    'incide_iof' => (bool) ($item['incide_iof'] ?? true),
+                    'aliquota_iof' => $item['aliquota_iof'] !== null ? (string) $item['aliquota_iof'] : '',
+                    'permite_override_iof' => (bool) ($item['permite_override_iof'] ?? true),
+                    'regra_base_iof' => (string) ($item['regra_base_iof'] ?? 'premio'),
+                    'destacar_iof' => (bool) ($item['destacar_iof'] ?? true),
+                    'ha_corretagem' => (bool) ($item['ha_corretagem'] ?? false),
+                    'gera_nfse' => (bool) ($item['gera_nfse'] ?? false),
+                    'item_lista_servico' => (string) ($item['item_lista_servico'] ?? ''),
+                    'codigo_servico_nfse' => (string) ($item['codigo_servico_nfse'] ?? ''),
+                    'municipio_iss' => (string) ($item['municipio_iss'] ?? ''),
+                    'uf_iss' => (string) ($item['uf_iss'] ?? ''),
+                    'aliquota_iss' => $item['aliquota_iss'] !== null ? (string) $item['aliquota_iss'] : '',
+                    'prestador_nfse' => (string) ($item['prestador_nfse'] ?? ''),
+                    'tomador_nfse' => (string) ($item['tomador_nfse'] ?? ''),
                     'ncm' => (string) ($item['ncm'] ?? ''),
                     'cfop' => (string) ($item['cfop'] ?? ''),
                     'unidade' => (string) ($item['unidade'] ?? 'UN'),
@@ -779,6 +894,22 @@ class NfeLaunchController extends Controller
                 'modalidade' => '',
                 'tipo_contratacao' => 'individual',
                 'periodicidade' => 'mensal',
+                'natureza_receita' => 'premio de seguro',
+                'ramo_fiscal' => 'seguro de danos',
+                'incide_iof' => true,
+                'aliquota_iof' => '7.38',
+                'permite_override_iof' => true,
+                'regra_base_iof' => 'premio',
+                'destacar_iof' => true,
+                'ha_corretagem' => false,
+                'gera_nfse' => false,
+                'item_lista_servico' => '10.01',
+                'codigo_servico_nfse' => '',
+                'municipio_iss' => '',
+                'uf_iss' => '',
+                'aliquota_iss' => '0',
+                'prestador_nfse' => '',
+                'tomador_nfse' => '',
                 'ncm' => '',
                 'cfop' => '',
                 'unidade' => 'UN',
@@ -831,6 +962,22 @@ class NfeLaunchController extends Controller
                 'tb30_modalidade',
                 'tb30_tipo_contratacao',
                 'tb30_periodicidade',
+                'tb30_natureza_receita',
+                'tb30_ramo_fiscal',
+                'tb30_incide_iof',
+                'tb30_aliquota_iof',
+                'tb30_permite_override_iof',
+                'tb30_regra_base_iof',
+                'tb30_destacar_iof',
+                'tb30_ha_corretagem',
+                'tb30_gera_nfse',
+                'tb30_item_lista_servico',
+                'tb30_codigo_servico_nfse',
+                'tb30_municipio_iss',
+                'tb30_uf_iss',
+                'tb30_aliquota_iss',
+                'tb30_prestador_nfse',
+                'tb30_tomador_nfse',
                 'tb30_cfop',
                 'tb30_ncm',
                 'tb30_unidade_padrao',
@@ -845,6 +992,22 @@ class NfeLaunchController extends Controller
                 'modality' => (string) ($product->tb30_modalidade ?? ''),
                 'contractType' => (string) $product->tb30_tipo_contratacao,
                 'periodicity' => (string) $product->tb30_periodicidade,
+                'naturezaReceita' => (string) ($product->tb30_natureza_receita ?? 'premio de seguro'),
+                'ramoFiscal' => (string) ($product->tb30_ramo_fiscal ?? 'seguro de danos'),
+                'incideIof' => (bool) $product->tb30_incide_iof,
+                'aliquotaIof' => (float) ($product->tb30_aliquota_iof ?? 0),
+                'permiteOverrideIof' => (bool) $product->tb30_permite_override_iof,
+                'regraBaseIof' => (string) ($product->tb30_regra_base_iof ?? 'premio'),
+                'destacarIof' => (bool) $product->tb30_destacar_iof,
+                'haCorretagem' => (bool) $product->tb30_ha_corretagem,
+                'geraNfse' => (bool) $product->tb30_gera_nfse,
+                'itemListaServico' => (string) ($product->tb30_item_lista_servico ?? ''),
+                'codigoServicoNfse' => (string) ($product->tb30_codigo_servico_nfse ?? ''),
+                'municipioIss' => (string) ($product->tb30_municipio_iss ?? ''),
+                'ufIss' => (string) ($product->tb30_uf_iss ?? ''),
+                'aliquotaIss' => (float) ($product->tb30_aliquota_iss ?? 0),
+                'prestadorNfse' => (string) ($product->tb30_prestador_nfse ?? ''),
+                'tomadorNfse' => (string) ($product->tb30_tomador_nfse ?? ''),
                 'cfop' => (string) $product->tb30_cfop,
                 'ncm' => (string) ($product->tb30_ncm ?? ''),
                 'unit' => (string) $product->tb30_unidade_padrao,
@@ -926,5 +1089,37 @@ class NfeLaunchController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    private function normalizeBoolean(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        return in_array($value, [1, '1', 'true', 'on', 'yes'], true);
+    }
+
+    private function normalizeOptionalDecimal(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return round((float) $value, 2);
+    }
+
+    private function normalizeOptionalString(mixed $value): ?string
+    {
+        $normalized = trim((string) $value);
+
+        return $normalized === '' ? null : $normalized;
+    }
+
+    private function normalizeOptionalUpperString(mixed $value): ?string
+    {
+        $normalized = strtoupper(trim((string) $value));
+
+        return $normalized === '' ? null : $normalized;
     }
 }

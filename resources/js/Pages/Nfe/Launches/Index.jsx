@@ -73,14 +73,14 @@ export default function Index({
             user={auth.user}
             header={(
                 <div className="flex flex-col gap-1">
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Lancamentos NFe</h2>
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Lancamentos NFe - Corretora de Seguros</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-300">
-                        Estruture os dados operacionais antes da geracao da nota fiscal.
+                        Estruture os dados operacionais da NFe - Corretora de Seguros antes da geracao da nota fiscal.
                     </p>
                 </div>
             )}
         >
-            <Head title="Lancamentos NFe" />
+            <Head title="Lancamentos NFe - Corretora de Seguros" />
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
@@ -90,7 +90,7 @@ export default function Index({
                         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                             <div className="space-y-3">
                                 <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-100">
-                                    Aplicacao NFe
+                                    NFe - Corretora de Seguros
                                 </span>
                                 <div className="space-y-2">
                                     <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -208,7 +208,7 @@ export default function Index({
                         <div className="border-b border-slate-100 px-6 py-4">
                             <h3 className="text-lg font-semibold text-slate-900">Fila de lancamentos</h3>
                             <p className="mt-1 text-sm text-slate-500">
-                                Cada registro fica isolado por unidade e pronto para evoluir ao fluxo fiscal da aplicacao NFe.
+                                Cada registro fica isolado por unidade e pronto para evoluir ao fluxo fiscal da NFe - Corretora de Seguros.
                             </p>
                         </div>
 

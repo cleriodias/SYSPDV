@@ -89,14 +89,14 @@ export default function Dashboard({
             user={auth.user}
             header={(
                 <div className="flex flex-col gap-1">
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Dashboard NFe</h2>
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Dashboard NFe - Corretora de Seguros</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-300">
-                        Entrada da aplicacao NFe com configuracao fiscal, catalogo de seguros e lancamentos.
+                        Entrada da aplicacao NFe - Corretora de Seguros com configuracao fiscal, catalogo de seguros e lancamentos.
                     </p>
                 </div>
             )}
         >
-            <Head title="Dashboard NFe" />
+            <Head title="Dashboard NFe - Corretora de Seguros" />
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
@@ -106,7 +106,7 @@ export default function Dashboard({
                         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
                             <div className="space-y-4">
                                 <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-100">
-                                    Aplicacao NFe
+                                    NFe - Corretora de Seguros
                                 </span>
                                 <div className="space-y-2">
                                     <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -136,7 +136,7 @@ export default function Dashboard({
                                         href={route('settings.nfe', { unit_id: selectedUnitId })}
                                         className="mt-5 inline-flex items-center rounded-full border border-white/25 bg-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/25"
                                     >
-                                        Abrir monitor NFe
+                                        Abrir monitor da corretora
                                     </Link>
                                 ) : null}
                             </div>

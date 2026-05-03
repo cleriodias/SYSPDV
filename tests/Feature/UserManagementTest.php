@@ -248,6 +248,47 @@ class UserManagementTest extends TestCase
         );
     }
 
+    public function test_switch_screen_hides_sub_manager_and_lanchonete_for_nfe_application(): void
+    {
+        $matrix = $this->makeMatrix('Matriz NFe', Aplicacao::NFE);
+        $matrixUnit = $this->makeUnit('Loja NFe', $matrix, 'matriz');
+        $branchUnit = $this->makeUnit('Filial NFe', $matrix, 'filial');
+
+        $user = User::factory()->create([
+            'name' => 'Master NFe',
+            'email' => 'master.nfe@example.com',
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $matrixUnit->tb2_id,
+            'matriz_id' => $matrix->id,
+        ]);
+        $user->units()->sync([$matrixUnit->tb2_id, $branchUnit->tb2_id]);
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession([
+                'active_unit' => [
+                    'id' => $matrixUnit->tb2_id,
+                    'name' => $matrixUnit->tb2_nome,
+                    'address' => $matrixUnit->tb2_endereco,
+                    'cnpj' => $matrixUnit->tb2_cnpj,
+                ],
+                'active_role' => 1,
+            ])
+            ->get(route('reports.switch-unit'));
+
+        $response->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Reports/SwitchUnit')
+            ->where('roles', [
+                ['value' => 0, 'label' => 'MASTER', 'bossOnly' => false, 'active' => false],
+                ['value' => 1, 'label' => 'GERENTE', 'bossOnly' => false, 'active' => true],
+                ['value' => 3, 'label' => 'CAIXA', 'bossOnly' => false, 'active' => false],
+                ['value' => 5, 'label' => 'FUNCIONARIO', 'bossOnly' => false, 'active' => false],
+                ['value' => 6, 'label' => 'CLIENTE', 'bossOnly' => false, 'active' => false],
+            ])
+        );
+    }
+
     public function test_switch_update_rejects_role_above_original_and_unit_from_other_matrix(): void
     {
         $matrixA = $this->makeMatrix('Matriz Segura A');
@@ -279,6 +320,39 @@ class UserManagementTest extends TestCase
             'funcao' => 1,
             'funcao_original' => 1,
             'matriz_id' => $matrixA->id,
+        ]);
+    }
+
+    public function test_switch_update_rejects_sub_manager_role_for_nfe_application(): void
+    {
+        $matrix = $this->makeMatrix('Matriz NFe Restrita', Aplicacao::NFE);
+        $matrixUnit = $this->makeUnit('Loja NFe Restrita', $matrix, 'matriz');
+        $branchUnit = $this->makeUnit('Filial NFe Restrita', $matrix, 'filial');
+
+        $user = User::factory()->create([
+            'name' => 'Master NFe Restrita',
+            'email' => 'master.nfe.restrita@example.com',
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $matrixUnit->tb2_id,
+            'matriz_id' => $matrix->id,
+        ]);
+        $user->units()->sync([$matrixUnit->tb2_id, $branchUnit->tb2_id]);
+
+        $response = $this
+            ->actingAs($user)
+            ->post(route('reports.switch-unit.update'), [
+                'unit_id' => $branchUnit->tb2_id,
+                'role' => 2,
+            ]);
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $matrixUnit->tb2_id,
+            'matriz_id' => $matrix->id,
         ]);
     }
 
@@ -404,12 +478,12 @@ class UserManagementTest extends TestCase
         $updateResponse->assertForbidden();
     }
 
-    private function makeMatrix(string $name): Matriz
+    private function makeMatrix(string $name, int $applicationId = Aplicacao::PADARIA_NFE): Matriz
     {
         return Matriz::create([
             'nome' => $name,
             'slug' => Str::slug($name . '-' . fake()->unique()->numerify('###')),
-            'tb28_id' => Aplicacao::PADARIA_NFE,
+            'tb28_id' => $applicationId,
             'status' => 1,
             'pagamento_ativo' => true,
         ]);

@@ -233,14 +233,14 @@ export default function Nfe({
             user={auth.user}
             header={(
                 <div className="flex flex-col gap-1">
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">NFe</h2>
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">NFe - Corretora de Seguros</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-300">
-                        Acompanhe as ultimas notas preparadas por unidade.
+                        Acompanhe as ultimas notas preparadas pela aplicacao NFe - Corretora de Seguros por unidade.
                     </p>
                 </div>
             )}
         >
-            <Head title="NFe" />
+            <Head title="NFe - Corretora de Seguros" />
             <div className="py-8">
                 <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
                     <AlertMessage message={flash} />

@@ -65,7 +65,34 @@ class MatrixManagementTest extends TestCase
             ->where('matrizes', fn ($matrizes) => collect($matrizes)->contains(
                 fn ($item) => ($item['nome'] ?? null) === 'Empresa NFe'
                     && data_get($item, 'aplicacao.tb28_id') === Aplicacao::NFE
-                    && data_get($item, 'aplicacao.tb28_nome') === 'NFe'
+                    && data_get($item, 'aplicacao.tb28_nome') === 'NFe Corretora de Seguros'
+            ))
+        );
+    }
+
+    public function test_create_lists_nfe_application_with_expanded_name(): void
+    {
+        $boss = $this->makeBossUser();
+
+        Aplicacao::query()->upsert([
+            [
+                'tb28_id' => Aplicacao::NFE,
+                'tb28_nome' => 'NFe',
+                'tb28_slug' => 'nfe',
+                'tb28_rota_inicial' => 'nfe?unit_id={unit_id}',
+            ],
+        ], ['tb28_id'], ['tb28_nome', 'tb28_slug', 'tb28_rota_inicial']);
+
+        $response = $this
+            ->actingAs($boss)
+            ->withSession($this->withBossSession($boss))
+            ->get(route('matrizes.create'));
+
+        $response->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Matrizes/Create')
+            ->where('applications', fn ($applications) => collect($applications)->contains(
+                fn ($item) => ($item['tb28_id'] ?? null) === Aplicacao::NFE
+                    && ($item['tb28_nome'] ?? null) === 'NFe Corretora de Seguros'
             ))
         );
     }

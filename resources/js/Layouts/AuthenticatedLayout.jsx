@@ -308,7 +308,7 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
     const canAccessNfeLaunches = isNfeApplication && user && [7, 0, 1, 2].includes(effectiveRole);
     const canAccessNfeInsuranceProducts = isNfeApplication && user && [7, 0, 1, 2].includes(effectiveRole);
     const dashboardRouteName = isNfeApplication ? 'nfe' : 'dashboard';
-    const dashboardMenuLabel = isNfeApplication ? 'NFe' : activeUnitName;
+    const dashboardMenuLabel = isNfeApplication ? 'NFe - Corretora de Seguros' : activeUnitName;
     const unreadOnlineTotal = Number(onlineSummary?.unread_total ?? 0);
     const supportTicketCounters = useMemo(
         () => buildSupportTicketMenuCounters(supportTicketsMenu),
@@ -419,6 +419,18 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                         active={route().current('products.*') && productCatalogMode !== 'services'}
                     >
                         <MenuLabel icon="bi bi-box-seam" text="Produtos" />
+                    </NavLink>
+                ),
+            },
+            {
+                key: 'nfe_insurers',
+                visible: canAccessNfeInsuranceProducts,
+                node: (
+                    <NavLink
+                        href={route('nfe.insurers.index')}
+                        active={route().current('nfe.insurers.*')}
+                    >
+                        <MenuLabel icon="bi bi-building-shield" text="Seguradoras" />
                     </NavLink>
                 ),
             },
