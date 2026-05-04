@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Matriz;
 use App\Models\Unidade;
+use App\Support\BillingPlanSettings;
 use App\Support\ManagementScope;
+use App\Support\RecurringBillingService;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -38,22 +41,38 @@ class BillingStatusController extends Controller
     {
         abort_unless(ManagementScope::isBoss($request->user()), 403);
 
-        $matriz->forceFill([
-            'pagamento_ativo' => ! (bool) $matriz->pagamento_ativo,
-        ])->save();
+        $planSettings = BillingPlanSettings::current();
+        $markedAsPaid = app(RecurringBillingService::class)->toggleMatrixPayment(
+            $matriz,
+            Carbon::today(),
+            (float) ($planSettings['matrix_monthly_price'] ?? 250)
+        );
 
-        return back()->with('success', 'Status de pagamento da matriz atualizado.');
+        return back()->with(
+            'success',
+            $markedAsPaid
+                ? 'Cobrancas mensais da matriz marcadas como pagas.'
+                : 'Cobranca mensal atual da matriz reaberta.'
+        );
     }
 
     public function toggleUnitPayment(Request $request, Unidade $unit): RedirectResponse
     {
         abort_unless(ManagementScope::isBoss($request->user()), 403);
 
-        $unit->forceFill([
-            'pagamento_ativo' => ! (bool) $unit->pagamento_ativo,
-        ])->save();
+        $planSettings = BillingPlanSettings::current();
+        $markedAsPaid = app(RecurringBillingService::class)->toggleUnitPayment(
+            $unit,
+            Carbon::today(),
+            (float) ($planSettings['branch_monthly_price'] ?? 180)
+        );
 
-        return back()->with('success', 'Status de pagamento da unidade atualizado.');
+        return back()->with(
+            'success',
+            $markedAsPaid
+                ? 'Cobrancas mensais da unidade marcadas como pagas.'
+                : 'Cobranca mensal atual da unidade reaberta.'
+        );
     }
 
     public function toggleUnitStatus(Request $request, Unidade $unit): RedirectResponse

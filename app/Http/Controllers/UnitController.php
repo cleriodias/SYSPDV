@@ -6,6 +6,7 @@ use App\Models\ConfiguracaoFiscal;
 use App\Models\Unidade;
 use App\Support\BillingPlanSettings;
 use App\Support\ManagementScope;
+use App\Support\RecurringBillingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
@@ -116,6 +117,12 @@ class UnitController extends Controller
             'plano_mensal_valor' => $planSettings['branch_monthly_price'],
             'plano_contratado_em' => now(),
         ]);
+
+        app(RecurringBillingService::class)->syncUnit(
+            $unit->fresh(),
+            now()->startOfDay(),
+            (float) $planSettings['branch_monthly_price']
+        );
 
         return Redirect::route('units.show', ['unit' => $unit->tb2_id])
             ->with('success', 'Unidade cadastrada com sucesso!');

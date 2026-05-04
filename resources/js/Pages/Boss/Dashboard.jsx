@@ -1,5 +1,6 @@
 import AlertMessage from '@/Components/Alert/AlertMessage';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatBrazilShortDate } from '@/Utils/date';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 
 const formatCurrency = (value) =>
@@ -7,6 +8,22 @@ const formatCurrency = (value) =>
         style: 'currency',
         currency: 'BRL',
     });
+
+const PAYMENT_STATUS_STYLES = {
+    pago: 'bg-emerald-100 text-emerald-700',
+    atrasado: 'bg-rose-100 text-rose-700',
+    a_vencer: 'bg-sky-100 text-sky-700',
+    vence_hoje: 'bg-amber-100 text-amber-700',
+    pendente: 'bg-slate-200 text-slate-700',
+};
+
+const getPaymentButtonStyles = (statusKey) =>
+    statusKey === 'pago'
+        ? 'bg-slate-600 hover:bg-slate-700'
+        : 'bg-emerald-600 hover:bg-emerald-700';
+
+const getPaymentActionLabel = (statusKey) =>
+    statusKey === 'pago' ? 'Reabrir mes' : 'Marcar pago';
 
 export default function BossDashboard({ planSettings, summary, matrizes, filters }) {
     const { flash } = usePage().props;
@@ -85,20 +102,26 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                 <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
                     <AlertMessage message={flash} />
 
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
                         <div className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
-                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-700">Matrizes</p>
-                            <p className="mt-3 text-3xl font-extrabold text-slate-900">{summary?.matrices_count ?? 0}</p>
-                            <p className="mt-2 text-sm text-slate-500">
-                                {formatCurrency(summary?.matrix_monthly_total)} por mes
+                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-700">
+                                Matrizes - <span className="text-slate-900">{summary?.matrices_count ?? 0}</span>
                             </p>
-                        </div>
-
-                        <div className="rounded-3xl border border-orange-100 bg-white p-6 shadow-sm">
-                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-orange-700">Filiais</p>
-                            <p className="mt-3 text-3xl font-extrabold text-slate-900">{summary?.branches_count ?? 0}</p>
+                            <p className="mt-4 text-3xl font-extrabold text-slate-900">
+                                {formatCurrency(summary?.matrix_monthly_total)}
+                            </p>
                             <p className="mt-2 text-sm text-slate-500">
-                                {formatCurrency(summary?.branch_monthly_total)} por mes
+                                por mes
+                            </p>
+
+                            <p className="mt-5 text-xs font-bold uppercase tracking-[0.24em] text-orange-700">
+                                Filiais - <span className="text-slate-900">{summary?.branches_count ?? 0}</span>
+                            </p>
+                            <p className="mt-4 text-3xl font-extrabold text-slate-900">
+                                {formatCurrency(summary?.branch_monthly_total)}
+                            </p>
+                            <p className="mt-2 text-sm text-slate-500">
+                                por mes
                             </p>
                         </div>
 
@@ -107,7 +130,32 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                             <p className="mt-3 text-3xl font-extrabold text-slate-900">
                                 {formatCurrency(summary?.grand_monthly_total)}
                             </p>
-                            <p className="mt-2 text-sm text-slate-500">receita mensal recorrente</p>
+                            <p className="mt-2 text-sm text-slate-500">
+                                receita mensal recorrente
+                            </p>
+                            <p className="mt-1 text-xs font-semibold text-slate-400">
+                                {summary?.pending_billing_count ?? 0} cobranca(s) aberta(s) no mes atual
+                            </p>
+                        </div>
+
+                        <div className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
+                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-700">Pago</p>
+                            <p className="mt-3 text-3xl font-extrabold text-slate-900">
+                                {summary?.paid_billing_count ?? 0}
+                            </p>
+                            <p className="mt-2 text-sm text-slate-500">
+                                {formatCurrency(summary?.paid_billing_amount)} no mes atual
+                            </p>
+                        </div>
+
+                        <div className="rounded-3xl border border-rose-100 bg-white p-6 shadow-sm">
+                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-rose-700">Atrasado</p>
+                            <p className="mt-3 text-3xl font-extrabold text-slate-900">
+                                {summary?.overdue_billing_count ?? 0}
+                            </p>
+                            <p className="mt-2 text-sm text-slate-500">
+                                {formatCurrency(summary?.overdue_billing_amount)} em atraso
+                            </p>
                         </div>
 
                         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -255,6 +303,9 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                                             <p className="mt-1 text-xs text-slate-500">
                                                 CNPJ: {matriz.cnpj || '--'} | Contratada em: {matriz.matrix_contracted_at || '--'}
                                             </p>
+                                            <p className="mt-1 text-xs text-slate-500">
+                                                Vencimento atual: {formatBrazilShortDate(matriz.payment_due_at)} | Em aberto: {matriz.payment_pending_count}
+                                            </p>
                                         </div>
 
                                         <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
@@ -296,12 +347,18 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                                             {Number(matriz.status) === 1 ? 'Matriz ativa' : 'Matriz inativa'}
                                         </span>
                                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                            matriz.payment_status
-                                                ? 'bg-emerald-100 text-emerald-700'
-                                                : 'bg-rose-100 text-rose-700'
+                                            PAYMENT_STATUS_STYLES[matriz.payment_status_key] ?? PAYMENT_STATUS_STYLES.pendente
                                         }`}>
-                                            {matriz.payment_status ? 'Pagamento pago' : 'Pagamento nao pago'}
+                                            {matriz.payment_status_label}
                                         </span>
+                                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                            Cobranca atual {formatCurrency(matriz.payment_amount)}
+                                        </span>
+                                        {matriz.payment_paid_at && (
+                                            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                                Pago em {formatBrazilShortDate(matriz.payment_paid_at)}
+                                            </span>
+                                        )}
                                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
                                             matriz.matrix_login_enabled
                                                 ? 'bg-sky-100 text-sky-700'
@@ -313,12 +370,10 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                                             type="button"
                                             onClick={() => toggleMatrixPayment(matriz.id)}
                                             className={`rounded-2xl px-4 py-2 text-xs font-semibold text-white transition ${
-                                                matriz.payment_status
-                                                    ? 'bg-emerald-600 hover:bg-emerald-700'
-                                                    : 'bg-rose-600 hover:bg-rose-700'
+                                                getPaymentButtonStyles(matriz.payment_status_key)
                                             }`}
                                         >
-                                            {matriz.payment_status ? 'Pago' : 'Nao Pago'}
+                                            {getPaymentActionLabel(matriz.payment_status_key)}
                                         </button>
                                         <button
                                             type="button"
@@ -379,12 +434,21 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                                                             </td>
                                                             <td className="px-3 py-2">
                                                                 <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                                                                    branch.payment_status
-                                                                        ? 'bg-emerald-100 text-emerald-700'
-                                                                        : 'bg-rose-100 text-rose-700'
+                                                                    PAYMENT_STATUS_STYLES[branch.payment_status_key] ?? PAYMENT_STATUS_STYLES.pendente
                                                                 }`}>
-                                                                    {branch.payment_status ? 'Pago' : 'Nao pago'}
+                                                                    {branch.payment_status_label}
                                                                 </span>
+                                                                <p className="mt-1 text-[11px] text-slate-500">
+                                                                    Vence em {formatBrazilShortDate(branch.payment_due_at)}
+                                                                </p>
+                                                                <p className="mt-1 text-[11px] text-slate-500">
+                                                                    Em aberto: {branch.payment_pending_count}
+                                                                </p>
+                                                                {branch.payment_paid_at && (
+                                                                    <p className="mt-1 text-[11px] text-slate-500">
+                                                                        Pago em {formatBrazilShortDate(branch.payment_paid_at)}
+                                                                    </p>
+                                                                )}
                                                             </td>
                                                             <td className="px-3 py-2">
                                                                 <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
@@ -412,12 +476,10 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                                                                         type="button"
                                                                         onClick={() => toggleUnitPayment(branch.id)}
                                                                         className={`rounded-xl px-3 py-1.5 text-[11px] font-semibold text-white transition ${
-                                                                            branch.payment_status
-                                                                                ? 'bg-emerald-600 hover:bg-emerald-700'
-                                                                                : 'bg-rose-600 hover:bg-rose-700'
+                                                                            getPaymentButtonStyles(branch.payment_status_key)
                                                                         }`}
                                                                     >
-                                                                        {branch.payment_status ? 'Pago' : 'Nao Pago'}
+                                                                        {getPaymentActionLabel(branch.payment_status_key)}
                                                                     </button>
                                                                     <button
                                                                         type="button"

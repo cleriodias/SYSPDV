@@ -8,6 +8,7 @@ use App\Models\Unidade;
 use App\Models\User;
 use App\Support\BillingPlanSettings;
 use App\Support\ManagementScope;
+use App\Support\RecurringBillingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -94,9 +95,10 @@ class MatrixController extends Controller
         ]);
 
         $createdAccessCode = null;
+        $createdMatrixId = null;
         $planSettings = BillingPlanSettings::current();
 
-        DB::transaction(function () use ($data, $planSettings, &$createdAccessCode) {
+        DB::transaction(function () use ($data, $planSettings, &$createdAccessCode, &$createdMatrixId) {
             $matriz = Matriz::create([
                 'nome' => $data['matriz_nome'],
                 'slug' => $this->generateUniqueSlug($data['matriz_nome']),
@@ -106,6 +108,7 @@ class MatrixController extends Controller
                 'plano_mensal_valor' => $planSettings['matrix_monthly_price'],
                 'plano_contratado_em' => now(),
             ]);
+            $createdMatrixId = (int) $matriz->id;
 
             $unit = Unidade::create([
                 'matriz_id' => $matriz->id,
@@ -141,6 +144,18 @@ class MatrixController extends Controller
             $user->units()->sync([$unit->tb2_id]);
             $createdAccessCode = $accessCode;
         });
+
+        $createdMatrix = $createdMatrixId
+            ? Matriz::query()->with('units')->find($createdMatrixId)
+            : null;
+
+        if ($createdMatrix instanceof Matriz) {
+            app(RecurringBillingService::class)->syncMatrix(
+                $createdMatrix,
+                now()->startOfDay(),
+                (float) $planSettings['matrix_monthly_price']
+            );
+        }
 
         return redirect()->route('matrizes.index')->with(
             'success',
@@ -246,6 +261,12 @@ class MatrixController extends Controller
             }
         });
 
+        app(RecurringBillingService::class)->syncMatrix(
+            $matriz->fresh(['units']),
+            now()->startOfDay(),
+            (float) $data['plano_mensal_valor']
+        );
+
         return redirect()->route('matrizes.index')->with('success', 'Dados da matriz atualizados com sucesso.');
     }
 
@@ -264,6 +285,12 @@ class MatrixController extends Controller
         $unit->update([
             'plano_mensal_valor' => round((float) $data['plano_mensal_valor'], 2),
         ]);
+
+        app(RecurringBillingService::class)->syncUnit(
+            $unit->fresh(),
+            now()->startOfDay(),
+            round((float) $data['plano_mensal_valor'], 2)
+        );
 
         return redirect()
             ->route('matrizes.edit', $matriz)
