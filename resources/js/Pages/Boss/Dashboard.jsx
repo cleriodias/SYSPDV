@@ -1,7 +1,7 @@
 import AlertMessage from '@/Components/Alert/AlertMessage';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatBrazilShortDate } from '@/Utils/date';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 
 const formatCurrency = (value) =>
     Number(value ?? 0).toLocaleString('pt-BR', {
@@ -27,20 +27,6 @@ const getPaymentActionLabel = (statusKey) =>
 
 export default function BossDashboard({ planSettings, summary, matrizes, filters }) {
     const { flash } = usePage().props;
-    const { data, setData, put, processing, errors } = useForm({
-        matrix_monthly_price: String(planSettings?.matrix_monthly_price ?? 250),
-        branch_monthly_price: String(planSettings?.branch_monthly_price ?? 180),
-        hosting_monthly_price: String(planSettings?.hosting_monthly_price ?? 70),
-        purchase_matrix_price: String(planSettings?.purchase_matrix_price ?? 10000),
-        purchase_branch_price: String(planSettings?.purchase_branch_price ?? 5000),
-        purchase_installments: String(planSettings?.purchase_installments ?? 15),
-    });
-
-    const submit = (event) => {
-        event.preventDefault();
-        put(route('settings.billing-plans.update'));
-    };
-
     const showInactive = Boolean(filters?.show_inactive);
 
     const reloadDashboard = (nextShowInactive) => {
@@ -103,176 +89,66 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                     <AlertMessage message={flash} />
 
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-                        <div className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
-                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-700">
+                        <div className="min-h-[164px] rounded-3xl border border-emerald-100 bg-white px-6 py-5 shadow-sm">
+                            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-emerald-700">
                                 Matrizes - <span className="text-slate-900">{summary?.matrices_count ?? 0}</span>
                             </p>
-                            <p className="mt-4 text-3xl font-extrabold text-slate-900">
+                            <p className="mt-2 text-[21px] font-extrabold leading-none text-slate-900">
                                 {formatCurrency(summary?.matrix_monthly_total)}
                             </p>
-                            <p className="mt-2 text-sm text-slate-500">
-                                por mes
-                            </p>
 
-                            <p className="mt-5 text-xs font-bold uppercase tracking-[0.24em] text-orange-700">
+
+                            <p className="mt-7 text-[11px] font-bold uppercase tracking-[0.24em] text-orange-700">
                                 Filiais - <span className="text-slate-900">{summary?.branches_count ?? 0}</span>
                             </p>
-                            <p className="mt-4 text-3xl font-extrabold text-slate-900">
+                            <p className="mt-2 text-[21px] font-extrabold leading-none text-slate-900">
                                 {formatCurrency(summary?.branch_monthly_total)}
                             </p>
-                            <p className="mt-2 text-sm text-slate-500">
-                                por mes
-                            </p>
+
                         </div>
 
-                        <div className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm">
-                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-sky-700">Faturamento</p>
-                            <p className="mt-3 text-3xl font-extrabold text-slate-900">
+                        <div className="min-h-[164px] rounded-3xl border border-sky-100 bg-white px-6 py-5 shadow-sm">
+                            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-sky-700">
+                                Receita - <span className="text-slate-900">{summary?.pending_billing_count ?? 0}</span>
+                            </p>
+                            <p className="mt-2 text-[21px] font-extrabold leading-none text-slate-900">
                                 {formatCurrency(summary?.grand_monthly_total)}
                             </p>
-                            <p className="mt-2 text-sm text-slate-500">
-                                receita mensal recorrente
-                            </p>
-                            <p className="mt-1 text-xs font-semibold text-slate-400">
-                                {summary?.pending_billing_count ?? 0} cobranca(s) aberta(s) no mes atual
-                            </p>
+                            <div className="mt-2 border-slate-200 pl-0">
+                                <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-emerald-700">
+                                    Pago - <span className="text-slate-900">{summary?.paid_billing_count ?? 0}</span>
+                                </p>
+                                <p className="mt-1 text-[14px] font-semibold leading-none text-slate-500">
+                                    {formatCurrency(summary?.paid_billing_amount)}
+                                </p>
+                            </div>
+                            <div className="mt-3 border-slate-200 pl-0">
+                                <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-rose-700">
+                                    Atrasado - <span className="text-slate-900">{summary?.overdue_billing_count ?? 0}</span>
+                                </p>
+                                <p className="mt-1 text-[14px] font-semibold leading-none text-slate-500">
+                                    {formatCurrency(summary?.overdue_billing_amount)}
+                                </p>
+                            </div>
                         </div>
 
-                        <div className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
-                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-700">Pago</p>
-                            <p className="mt-3 text-3xl font-extrabold text-slate-900">
-                                {summary?.paid_billing_count ?? 0}
-                            </p>
-                            <p className="mt-2 text-sm text-slate-500">
-                                {formatCurrency(summary?.paid_billing_amount)} no mes atual
-                            </p>
-                        </div>
-
-                        <div className="rounded-3xl border border-rose-100 bg-white p-6 shadow-sm">
-                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-rose-700">Atrasado</p>
-                            <p className="mt-3 text-3xl font-extrabold text-slate-900">
-                                {summary?.overdue_billing_count ?? 0}
-                            </p>
-                            <p className="mt-2 text-sm text-slate-500">
-                                {formatCurrency(summary?.overdue_billing_amount)} em atraso
-                            </p>
-                        </div>
-
-                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-700">Plano matriz atual</p>
-                            <p className="mt-3 text-3xl font-extrabold text-slate-900">
+                        <div className="min-h-[164px] rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+                            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-700">Plano matriz</p>
+                            <p className="mt-2 text-[21px] font-extrabold leading-none text-slate-900">
                                 {formatCurrency(planSettings?.matrix_monthly_price)}
                             </p>
-                            <p className="mt-2 text-sm text-slate-500">aplicado em novas matrizes</p>
-                        </div>
-
-                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-700">Plano filial atual</p>
-                            <p className="mt-3 text-3xl font-extrabold text-slate-900">
+                            <div className="mt-4 border-slate-200 pl-0">
+                                <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-700">Plano filial</p>
+                                <p className="mt-2 text-[21px] font-extrabold leading-none text-slate-900">
                                 {formatCurrency(planSettings?.branch_monthly_price)}
-                            </p>
-                            <p className="mt-2 text-sm text-slate-500">aplicado em novas filiais</p>
+                                </p>
+                            </div>
                         </div>
+
+                        <div className="min-h-[164px] rounded-3xl border border-rose-100 bg-white px-6 py-5 shadow-sm" />
+                        <div className="min-h-[164px] rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm" />
+                        <div className="min-h-[164px] rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm" />
                     </div>
-
-                    <form onSubmit={submit} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <div>
-                            <h3 className="text-lg font-semibold text-slate-900">Planos atuais do sistema</h3>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Os novos valores entram apenas para futuras contratacoes.
-                            </p>
-                        </div>
-
-                        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_0.8fr_0.9fr_auto] xl:items-end">
-                            <div>
-                                <label className="text-sm font-medium text-slate-700">Mensalidade Matriz</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={data.matrix_monthly_price}
-                                    onChange={(event) => setData('matrix_monthly_price', event.target.value)}
-                                    className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                                />
-                                {errors.matrix_monthly_price && <p className="mt-1 text-xs text-red-600">{errors.matrix_monthly_price}</p>}
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium text-slate-700">Mensalidade Filial</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={data.branch_monthly_price}
-                                    onChange={(event) => setData('branch_monthly_price', event.target.value)}
-                                    className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                                />
-                                {errors.branch_monthly_price && <p className="mt-1 text-xs text-red-600">{errors.branch_monthly_price}</p>}
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium text-slate-700">Compra Matriz</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={data.purchase_matrix_price}
-                                    onChange={(event) => setData('purchase_matrix_price', event.target.value)}
-                                    className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                                />
-                                {errors.purchase_matrix_price && <p className="mt-1 text-xs text-red-600">{errors.purchase_matrix_price}</p>}
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium text-slate-700">Compra Filial</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={data.purchase_branch_price}
-                                    onChange={(event) => setData('purchase_branch_price', event.target.value)}
-                                    className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                                />
-                                {errors.purchase_branch_price && <p className="mt-1 text-xs text-red-600">{errors.purchase_branch_price}</p>}
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium text-slate-700">Parcelamento</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    value={data.purchase_installments}
-                                    onChange={(event) => setData('purchase_installments', event.target.value)}
-                                    className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                                />
-                                {errors.purchase_installments && <p className="mt-1 text-xs text-red-600">{errors.purchase_installments}</p>}
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium text-slate-700">Hospedagem mensal</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={data.hosting_monthly_price}
-                                    onChange={(event) => setData('hosting_monthly_price', event.target.value)}
-                                    className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                                />
-                                {errors.hosting_monthly_price && <p className="mt-1 text-xs text-red-600">{errors.hosting_monthly_price}</p>}
-                            </div>
-
-                            <div className="flex self-end xl:justify-start">
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="w-full rounded-2xl bg-emerald-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-70 xl:mt-0 xl:w-auto"
-                                >
-                                    {processing ? 'Salvando...' : 'Salvar planos'}
-                                </button>
-                            </div>
-                        </div>
-                    </form>
 
                     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

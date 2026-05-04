@@ -33,6 +33,7 @@ class MatrixController extends Controller
 
         return Inertia::render('Matrizes/Index', [
             'matrizes' => $matrizes,
+            'planSettings' => BillingPlanSettings::current(),
         ]);
     }
 
