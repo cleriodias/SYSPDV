@@ -38,6 +38,7 @@ const SECTIONS = [
             { label: 'Vendas Periodo', icon: 'bi-calendar-range', href: routeTo('reports.sales.period') },
             { label: 'Relatorio Detalhado', icon: 'bi-card-checklist', href: routeTo('reports.sales.detailed') },
             { label: 'Relatorio Lanchonete', icon: 'bi-cup-hot', href: routeTo('reports.lanchonete') },
+            { label: 'PDR CACHE', icon: 'bi-lightning-charge', href: routeTo('reports.pdr-cache') },
             { label: 'Comandas em Aberto', icon: 'bi-journal-bookmark', href: routeTo('reports.comandas-aberto') },
             { label: 'Relatorio Vales', icon: 'bi-ticket-perforated', href: routeTo('reports.vale') },
             { label: 'Relatorio Refeicao', icon: 'bi-cup-straw', href: routeTo('reports.refeicao') },

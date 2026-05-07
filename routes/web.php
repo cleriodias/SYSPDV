@@ -275,6 +275,7 @@ Route::post('/nfe/produtos-seguro', [NfeInsuranceProductController::class, 'stor
     Route::patch('/products/{product}/fiscal-queue', [ProductController::class, 'updateFiscalQueueItem'])->name('products.fiscal-queue.update');
     Route::get('/products/production-stock', [ProductStockController::class, 'index'])->name('products.production-stock');
     Route::post('/products/production-stock', [ProductStockController::class, 'store'])->name('products.production-stock.store');
+    Route::get('/products/quick-lookup', [ProductController::class, 'quickLookup'])->name('products.quick-lookup');
     Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
     Route::get('/products/favorites', [ProductController::class, 'favorites'])->name('products.favorites');
     Route::post('/products/{product}/favorite', [ProductController::class, 'toggleFavorite'])->name('products.favorite');
@@ -294,6 +295,7 @@ Route::post('/nfe/produtos-seguro', [NfeInsuranceProductController::class, 'stor
     Route::get('/reports/sales-period', [SalesReportController::class, 'period'])->name('reports.sales.period');
     Route::get('/reports/sales-detailed', [SalesReportController::class, 'detailed'])->name('reports.sales.detailed');
     Route::get('/reports/lanchonete', [SalesReportController::class, 'lanchonete'])->name('reports.lanchonete');
+    Route::get('/reports/pdr-cache', [SalesReportController::class, 'pdrCache'])->name('reports.pdr-cache');
     Route::get('/reports/comandas-em-aberto', [SalesReportController::class, 'comandasEmAberto'])->name('reports.comandas-aberto');
     Route::get('/reports/vale', [SalesReportController::class, 'vale'])->name('reports.vale');
     Route::get('/reports/refeicao', [SalesReportController::class, 'refeicao'])->name('reports.refeicao');

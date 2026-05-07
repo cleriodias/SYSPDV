@@ -302,7 +302,67 @@ const parseWeightedBarcode = (value) => {
     };
 };
 
-export default function Dashboard({ profileSwitch = null }) {
+const resolveDirectProductLookup = (value) => {
+    const term = String(value ?? '').trim();
+
+    if (!numericRegex.test(term)) {
+        return null;
+    }
+
+    const weightedBarcodeData = parseWeightedBarcode(term);
+
+    if (weightedBarcodeData) {
+        return {
+            query: String(weightedBarcodeData.productId),
+            cacheKey: `id:${weightedBarcodeData.productId}`,
+            weightedBarcodeData,
+        };
+    }
+
+    if (term.length > 4) {
+        return {
+            query: term,
+            cacheKey: `barcode:${term}`,
+            weightedBarcodeData: null,
+        };
+    }
+
+    const productId = Number.parseInt(term, 10);
+
+    if (!Number.isFinite(productId) || productId <= 0) {
+        return null;
+    }
+
+    return {
+        query: String(productId),
+        cacheKey: `id:${productId}`,
+        weightedBarcodeData: null,
+    };
+};
+
+const cacheDirectProductLookup = (cache, product) => {
+    if (!cache || !product) {
+        return;
+    }
+
+    const productId = Number(product.produto_id ?? product.tb1_id);
+    const internalProductId = Number(product.tb1_id);
+    const productBarcode = String(product.tb1_codbar ?? '').trim();
+
+    if (Number.isFinite(productId) && productId > 0) {
+        cache.set(`id:${productId}`, product);
+    }
+
+    if (Number.isFinite(internalProductId) && internalProductId > 0) {
+        cache.set(`id:${internalProductId}`, product);
+    }
+
+    if (productBarcode !== '') {
+        cache.set(`barcode:${productBarcode}`, product);
+    }
+};
+
+export default function Dashboard({ profileSwitch = null, quickLookupProducts = [] }) {
     const pageProps = usePage().props;
     const { auth } = pageProps;
     const effectiveRole = Number(auth?.user?.funcao ?? -1);
@@ -321,6 +381,7 @@ export default function Dashboard({ profileSwitch = null }) {
     const [searchTrigger, setSearchTrigger] = useState(0);
     const [lastManualSearch, setLastManualSearch] = useState(false);
     const lastTriggerConsumed = useRef(0);
+    const directProductLookupCache = useRef(new Map());
 
     const [items, setItems] = useState([]);
     const [addingItem, setAddingItem] = useState(false);
@@ -355,6 +416,16 @@ export default function Dashboard({ profileSwitch = null }) {
     const lastAutoOpenComandasKey = useRef('');
     const quantityHoldTimeoutRef = useRef(null);
     const quantityHoldIntervalRef = useRef(null);
+
+    useEffect(() => {
+        if (!Array.isArray(quickLookupProducts) || quickLookupProducts.length === 0) {
+            return;
+        }
+
+        quickLookupProducts.forEach((product) => {
+            cacheDirectProductLookup(directProductLookupCache.current, product);
+        });
+    }, [quickLookupProducts]);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -974,51 +1045,47 @@ export default function Dashboard({ profileSwitch = null }) {
     };
 
     const fetchProductAndAdd = (lookupTerm) => {
-        const normalizedLookupTerm = String(lookupTerm ?? '').trim();
+        const lookupData = resolveDirectProductLookup(lookupTerm);
 
-        if (!normalizedLookupTerm) {
+        if (!lookupData) {
+            setSaleError('Informe um codigo de barras ou ID numerico.');
             return;
         }
 
-        const weightedBarcodeData = parseWeightedBarcode(normalizedLookupTerm);
-        const lookupIsBarcode = isBarcodeTerm(normalizedLookupTerm);
+        const { query, cacheKey, weightedBarcodeData } = lookupData;
+        const cachedProduct = directProductLookupCache.current.get(cacheKey);
+
+        if (cachedProduct) {
+            clearInputIdleTimeout();
+            addItemFromProduct(cachedProduct, {
+                preserveInput: true,
+                unitPrice: weightedBarcodeData?.unitPrice ?? null,
+                barcode: weightedBarcodeData?.barcode ?? null,
+                isWeighted: Boolean(weightedBarcodeData),
+            });
+            return;
+        }
+
         setAddingItem(true);
         setSaleError('');
 
-        fetch(
-            route('products.search', {
-                q: weightedBarcodeData ? weightedBarcodeData.productId : normalizedLookupTerm,
-            }),
-            {
+        fetch(route('products.quick-lookup', { q: query }), {
             headers: {
                 Accept: 'application/json',
             },
-            },
-        )
+        })
             .then((response) => {
-                if (!response.ok) {
-                    throw new Error('Produto nao encontrado.');
-                }
-
-                return response.json();
-            })
-            .then((data) => {
-                const product = data.find((item) => {
-                    if (weightedBarcodeData) {
-                        return Number(item.produto_id ?? item.tb1_id) === weightedBarcodeData.productId;
+                return response.json().then((data) => {
+                    if (!response.ok) {
+                        throw new Error(data?.message || 'Produto nao encontrado.');
                     }
 
-                    if (lookupIsBarcode) {
-                        return String(item.tb1_codbar ?? '').trim() === normalizedLookupTerm;
-                    }
-
-                    return Number(item.produto_id ?? item.tb1_id) === Number(normalizedLookupTerm);
+                    return data;
                 });
-
-                if (!product) {
-                    throw new Error('Produto nao encontrado.');
-                }
-
+            })
+            .then((product) => {
+                cacheDirectProductLookup(directProductLookupCache.current, product);
+                clearInputIdleTimeout();
                 addItemFromProduct(product, {
                     preserveInput: true,
                     unitPrice: weightedBarcodeData?.unitPrice ?? null,

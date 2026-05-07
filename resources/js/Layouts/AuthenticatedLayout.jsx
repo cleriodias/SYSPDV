@@ -68,6 +68,7 @@ const DEFAULT_MENU_KEYS = [
     'reports_sales_period',
     'reports_sales_detailed',
     'reports_lanchonete',
+    'reports_pdr_cache',
     'reports_comandas_aberto',
     'reports_vale',
     'reports_refeicao',
@@ -103,6 +104,7 @@ const MENU_ORDER_PRIORITY = [
     'boletos',
     'reports_sales_today',
     'reports_lanchonete',
+    'reports_pdr_cache',
     'reports_sales_period',
     'reports_descarte_consolidado',
     'reports_sales_detailed',
@@ -603,6 +605,15 @@ export default function AuthenticatedLayout({ header, headerClassName = '', chil
                 node: (
                     <Dropdown.Link href={route('reports.lanchonete')}>
                         <MenuLabel icon="bi bi-cup-hot" text="Relatório Lanchonete" />
+                    </Dropdown.Link>
+                ),
+            },
+            {
+                key: 'reports_pdr_cache',
+                visible: !isNfeApplication && canSeeReports && hasMenuAccess('reports_pdr_cache'),
+                node: (
+                    <Dropdown.Link href={route('reports.pdr-cache')}>
+                        <MenuLabel icon="bi bi-lightning-charge" text="PDR CACHE" />
                     </Dropdown.Link>
                 ),
             },

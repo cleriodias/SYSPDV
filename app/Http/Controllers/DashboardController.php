@@ -6,6 +6,7 @@ use App\Models\Matriz;
 use App\Models\Unidade;
 use App\Support\BillingPlanSettings;
 use App\Support\ManagementScope;
+use App\Support\ProductQuickLookupCache;
 use App\Support\ProfileSwitchData;
 use App\Support\RecurringBillingService;
 use Carbon\Carbon;
@@ -153,6 +154,7 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard', [
             'profileSwitch' => $profileSwitch,
+            'quickLookupProducts' => fn () => app(ProductQuickLookupCache::class)->forRequest($request),
         ]);
     }
 }
