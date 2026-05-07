@@ -96,15 +96,12 @@ export default function BossDashboard({ planSettings, summary, matrizes, filters
                             <p className="mt-2 text-[21px] font-extrabold leading-none text-slate-900">
                                 {formatCurrency(summary?.matrix_monthly_total)}
                             </p>
-
-
                             <p className="mt-7 text-[11px] font-bold uppercase tracking-[0.24em] text-orange-700">
                                 Filiais - <span className="text-slate-900">{summary?.branches_count ?? 0}</span>
                             </p>
                             <p className="mt-2 text-[21px] font-extrabold leading-none text-slate-900">
                                 {formatCurrency(summary?.branch_monthly_total)}
                             </p>
-
                         </div>
 
                         <div className="min-h-[164px] rounded-3xl border border-sky-100 bg-white px-6 py-5 shadow-sm">
