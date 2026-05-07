@@ -40,7 +40,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('dashboard'));
     }
 
     public function test_users_can_not_authenticate_with_invalid_numeric_password(): void
@@ -102,7 +102,7 @@ class AuthenticationTest extends TestCase
         $response = $this->actingAs($user)->post('/logout');
 
         $this->assertGuest();
-        $response->assertRedirect('/');
+        $response->assertRedirect(url('/'));
     }
 
     public function test_login_restores_funcao_from_funcao_original_before_building_session(): void
@@ -125,7 +125,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('dashboard'));
         $response->assertSessionHas('active_role', 0);
 
         $this->assertDatabaseHas('users', [
@@ -155,7 +155,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('dashboard'));
         $response->assertSessionHas('active_role', 7);
         $response->assertSessionMissing('active_unit');
 
@@ -186,7 +186,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('nfe', ['unit_id' => $unit->tb2_id], false));
+        $response->assertRedirect(route('nfe', ['unit_id' => $unit->tb2_id]));
         $response->assertSessionHas('active_unit.id', $unit->tb2_id);
         $response->assertSessionHas('active_role', 0);
     }
@@ -215,7 +215,7 @@ class AuthenticationTest extends TestCase
                 ],
                 'active_role' => 0,
             ])
-            ->get(route('nfe', ['unit_id' => $unit->tb2_id], false));
+            ->get(route('nfe', ['unit_id' => $unit->tb2_id]));
 
         $response->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Nfe/Dashboard')
@@ -250,7 +250,7 @@ class AuthenticationTest extends TestCase
                 ],
                 'active_role' => 2,
             ])
-            ->get(route('nfe', ['unit_id' => $unit->tb2_id], false));
+            ->get(route('nfe', ['unit_id' => $unit->tb2_id]));
 
         $response->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Nfe/Dashboard')
@@ -280,7 +280,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('padaria', absolute: false));
+        $response->assertRedirect(route('padaria'));
         $response->assertSessionHas('active_unit.id', $unit->tb2_id);
         $response->assertSessionHas('active_role', 0);
     }

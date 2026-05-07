@@ -325,7 +325,7 @@ class ControlePagamentoTest extends TestCase
             'unit_id' => $unit->tb2_id,
         ]);
 
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('dashboard'));
 
         $systemUser = User::query()->where('email', 'sistema.chat@pec.local')->first();
 

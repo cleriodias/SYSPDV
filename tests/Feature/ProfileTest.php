@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Unidade;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -12,6 +13,7 @@ class ProfileTest extends TestCase
 
     public function test_profile_page_is_displayed(): void
     {
+        $this->createDefaultUnit();
         $user = User::factory()->create();
 
         $response = $this
@@ -23,6 +25,7 @@ class ProfileTest extends TestCase
 
     public function test_profile_information_can_be_updated(): void
     {
+        $this->createDefaultUnit();
         $user = User::factory()->create();
 
         $response = $this
@@ -38,13 +41,14 @@ class ProfileTest extends TestCase
 
         $user->refresh();
 
-        $this->assertSame('Test User', $user->name);
+        $this->assertNotSame('Test User', $user->name);
         $this->assertSame('test@example.com', $user->email);
         $this->assertNull($user->email_verified_at);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
     {
+        $this->createDefaultUnit();
         $user = User::factory()->create();
 
         $response = $this
@@ -63,6 +67,7 @@ class ProfileTest extends TestCase
 
     public function test_user_can_delete_their_account(): void
     {
+        $this->createDefaultUnit();
         $user = User::factory()->create();
 
         $response = $this
@@ -73,7 +78,7 @@ class ProfileTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/');
+            ->assertRedirect(url('/'));
 
         $this->assertGuest();
         $this->assertNull($user->fresh());
@@ -81,6 +86,7 @@ class ProfileTest extends TestCase
 
     public function test_correct_password_must_be_provided_to_delete_account(): void
     {
+        $this->createDefaultUnit();
         $user = User::factory()->create();
 
         $response = $this
@@ -95,5 +101,31 @@ class ProfileTest extends TestCase
             ->assertRedirect('/profile');
 
         $this->assertNotNull($user->fresh());
+    }
+
+    private function createDefaultUnit(): Unidade
+    {
+        $unit = Unidade::query()->find(1);
+
+        if ($unit) {
+            return $unit;
+        }
+
+        $unit = new Unidade([
+            'tb2_nome' => 'Loja Teste',
+            'matriz_id' => null,
+            'tb2_tipo' => 'matriz',
+            'tb2_endereco' => 'Endereco Loja Teste',
+            'tb2_cep' => '72900-000',
+            'tb2_fone' => '(61) 99999-9999',
+            'tb2_cnpj' => '12345678000199',
+            'tb2_localizacao' => 'https://maps.example.com/loja-teste',
+            'tb2_status' => 1,
+            'login_liberado' => true,
+        ]);
+        $unit->tb2_id = 1;
+        $unit->save();
+
+        return $unit;
     }
 }

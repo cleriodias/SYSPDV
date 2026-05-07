@@ -59,7 +59,7 @@ class AuthenticatedSessionController extends Controller
             $request->session()->forget('active_unit');
             $request->session()->put('active_role', $funcaoOriginal);
 
-            return redirect()->intended(route('dashboard', absolute: false));
+            return redirect()->intended(route('dashboard'));
         }
 
         if (in_array((int) $funcaoOriginal, [5, 6], true)) {
@@ -141,7 +141,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect()->to(url('/'));
     }
 
     private function resolveLoginRedirectPath(Unidade $selectedUnit): string
@@ -158,8 +158,7 @@ class AuthenticatedSessionController extends Controller
 
         return route(
             $routeName,
-            array_merge($this->resolveLoginRedirectParameters($routeName, $selectedUnit), $queryParameters),
-            false
+            array_merge($this->resolveLoginRedirectParameters($routeName, $selectedUnit), $queryParameters)
         );
     }
 
