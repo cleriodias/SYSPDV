@@ -292,6 +292,35 @@ class ProductManagementTest extends TestCase
         }
     }
 
+    public function test_store_returns_json_payload_for_dashboard_quick_create(): void
+    {
+        ['matrix' => $matrix, 'units' => $units, 'user' => $user] = $this->createProductContext();
+
+        $response = $this->actingAs($user)
+            ->withSession($this->activeUnitSession($units[0]))
+            ->postJson(route('products.store'), $this->productPayload([
+                'tb1_nome' => 'Produto Json Dashboard',
+                'tb1_codbar' => '7891234567890',
+                'sem_codigo_barras' => false,
+            ]));
+
+        $product = Produto::query()
+            ->where('matriz_id', $matrix->id)
+            ->latest('tb1_id')
+            ->first();
+
+        $response->assertCreated()
+            ->assertJson([
+                'message' => 'Produto cadastrado com sucesso!',
+                'product' => [
+                    'tb1_id' => $product->tb1_id,
+                    'produto_id' => $product->produto_id,
+                    'tb1_nome' => $product->tb1_nome,
+                    'tb1_codbar' => $product->tb1_codbar,
+                ],
+            ]);
+    }
+
     public function test_update_syncs_dashboard_quick_lookup_cache_with_new_product_data(): void
     {
         ['matrix' => $matrix, 'units' => $units, 'user' => $user] = $this->createProductContext();

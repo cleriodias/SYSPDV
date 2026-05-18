@@ -247,6 +247,13 @@ class ProductController extends Controller
         $product = Produto::create($data);
         $quickLookupCache->syncProductForMatrix($product);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Produto cadastrado com sucesso!',
+                'product' => $quickLookupCache->productPayload($product),
+            ], 201);
+        }
+
         return Redirect::route('products.show', ['product' => $product->tb1_id])
             ->with('success', 'Produto cadastrado com sucesso!');
     }

@@ -94,6 +94,34 @@ const DEFAULT_FISCAL_CONSUMER_FORM = {
     city_code: '',
     state: '',
 };
+const DASHBOARD_PRODUCT_TYPE_OPTIONS = [
+    { value: 0, label: 'Industria' },
+    { value: 1, label: 'Balanca' },
+    { value: 2, label: 'Servico' },
+    { value: 3, label: 'Producao' },
+];
+const DASHBOARD_PRODUCT_STATUS_OPTIONS = [
+    { value: 1, label: 'Ativo' },
+    { value: 0, label: 'Inativo' },
+];
+const dashboardProductFieldClass =
+    'mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-200';
+const dashboardFiscalFieldClass =
+    'mt-1 w-full rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-gray-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200';
+const DEFAULT_QUICK_CREATE_PRODUCT_FORM = {
+    produto_id: '',
+    tb1_nome: '',
+    tb1_vlr_custo: '',
+    tb1_vlr_venda: '',
+    tb1_codbar: '',
+    sem_codigo_barras: false,
+    tb1_tipo: 0,
+    tb1_status: 1,
+    tb1_ncm: '',
+    tb1_cfop: '',
+    tb1_csosn: '',
+    tb1_cst: '',
+};
 
 const sanitizeDocumentDigits = (value) => String(value ?? '').replace(/\D/g, '');
 
@@ -302,6 +330,40 @@ const parseWeightedBarcode = (value) => {
     };
 };
 
+const buildQuickCreateProductForm = (lookupTerm) => {
+    const normalizedLookupTerm = String(lookupTerm ?? '').trim();
+    const weightedBarcodeData = parseWeightedBarcode(normalizedLookupTerm);
+
+    if (weightedBarcodeData) {
+        return {
+            ...DEFAULT_QUICK_CREATE_PRODUCT_FORM,
+            produto_id: String(weightedBarcodeData.productId),
+            sem_codigo_barras: true,
+            tb1_tipo: 1,
+        };
+    }
+
+    if (numericRegex.test(normalizedLookupTerm) && normalizedLookupTerm.length > 4) {
+        return {
+            ...DEFAULT_QUICK_CREATE_PRODUCT_FORM,
+            tb1_codbar: normalizedLookupTerm,
+        };
+    }
+
+    if (numericRegex.test(normalizedLookupTerm)) {
+        return {
+            ...DEFAULT_QUICK_CREATE_PRODUCT_FORM,
+            produto_id: normalizedLookupTerm,
+            sem_codigo_barras: true,
+            tb1_tipo: 1,
+        };
+    }
+
+    return {
+        ...DEFAULT_QUICK_CREATE_PRODUCT_FORM,
+    };
+};
+
 const resolveDirectProductLookup = (value) => {
     const term = String(value ?? '').trim();
 
@@ -391,9 +453,16 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
     const [showReceipt, setShowReceipt] = useState(false);
     const [transmittingFiscal, setTransmittingFiscal] = useState(false);
     const [showConsumerFiscalModal, setShowConsumerFiscalModal] = useState(false);
+    const [showQuickCreateProductModal, setShowQuickCreateProductModal] = useState(false);
     const [consumerFiscalLoading, setConsumerFiscalLoading] = useState(false);
     const [consumerFiscalErrors, setConsumerFiscalErrors] = useState({});
     const [consumerFiscalForm, setConsumerFiscalForm] = useState(DEFAULT_FISCAL_CONSUMER_FORM);
+    const [quickCreateProductLoading, setQuickCreateProductLoading] = useState(false);
+    const [quickCreateProductErrors, setQuickCreateProductErrors] = useState({});
+    const [quickCreateProductLookupTerm, setQuickCreateProductLookupTerm] = useState('');
+    const [quickCreateProductForm, setQuickCreateProductForm] = useState(
+        DEFAULT_QUICK_CREATE_PRODUCT_FORM,
+    );
     const [cashInputVisible, setCashInputVisible] = useState(false);
     const [cashValue, setCashValue] = useState('');
     const [cashCardType, setCashCardType] = useState('');
@@ -1031,6 +1100,105 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         setItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
     };
 
+    const resetQuickCreateProductModal = useCallback(() => {
+        setShowQuickCreateProductModal(false);
+        setQuickCreateProductLoading(false);
+        setQuickCreateProductErrors({});
+        setQuickCreateProductLookupTerm('');
+        setQuickCreateProductForm(DEFAULT_QUICK_CREATE_PRODUCT_FORM);
+    }, []);
+
+    const closeQuickCreateProductModal = useCallback(() => {
+        if (quickCreateProductLoading) {
+            return;
+        }
+
+        resetQuickCreateProductModal();
+        requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
+    }, [quickCreateProductLoading, resetQuickCreateProductModal]);
+
+    const openQuickCreateProductModal = useCallback((lookupTerm) => {
+        const normalizedLookupTerm = String(lookupTerm ?? '').trim();
+
+        setQuickCreateProductErrors({});
+        setQuickCreateProductLookupTerm(normalizedLookupTerm);
+        setQuickCreateProductForm(buildQuickCreateProductForm(normalizedLookupTerm));
+        setShowQuickCreateProductModal(true);
+    }, []);
+
+    const handleQuickCreateProductFieldChange = useCallback((field, value) => {
+        setQuickCreateProductForm((current) => {
+            const next = {
+                ...current,
+                [field]: value,
+            };
+
+            if (field === 'tb1_nome') {
+                next.tb1_nome = String(value ?? '').toLocaleUpperCase('pt-BR');
+            }
+
+            if (field === 'tb1_tipo') {
+                const nextType = Number(value);
+
+                next.tb1_tipo = nextType;
+
+                if (nextType === 1) {
+                    next.sem_codigo_barras = true;
+                    next.tb1_codbar = '';
+
+                    if (String(next.produto_id ?? '').trim() === '') {
+                        const weightedBarcodeData = parseWeightedBarcode(quickCreateProductLookupTerm);
+
+                        if (weightedBarcodeData) {
+                            next.produto_id = String(weightedBarcodeData.productId);
+                        } else if (
+                            numericRegex.test(quickCreateProductLookupTerm) &&
+                            quickCreateProductLookupTerm.length <= 4
+                        ) {
+                            next.produto_id = quickCreateProductLookupTerm;
+                        }
+                    }
+                } else if (
+                    numericRegex.test(quickCreateProductLookupTerm) &&
+                    quickCreateProductLookupTerm.length > 4 &&
+                    String(next.tb1_codbar ?? '').trim() === ''
+                ) {
+                    next.tb1_codbar = quickCreateProductLookupTerm;
+                }
+            }
+
+            if (field === 'sem_codigo_barras') {
+                const checked = Boolean(value);
+
+                next.sem_codigo_barras = checked;
+
+                if (checked) {
+                    next.tb1_codbar = '';
+                } else if (
+                    numericRegex.test(quickCreateProductLookupTerm) &&
+                    quickCreateProductLookupTerm.length > 4 &&
+                    String(next.tb1_codbar ?? '').trim() === ''
+                ) {
+                    next.tb1_codbar = quickCreateProductLookupTerm;
+                }
+            }
+
+            return next;
+        });
+
+        setQuickCreateProductErrors((current) => {
+            if (!current[field]) {
+                return current;
+            }
+
+            const next = { ...current };
+            delete next[field];
+            return next;
+        });
+    }, [quickCreateProductLookupTerm]);
+
     const fetchProductAndAdd = (lookupTerm) => {
         const lookupData = resolveDirectProductLookup(lookupTerm);
 
@@ -1081,7 +1249,13 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                 });
             })
             .catch((err) => {
-                setSaleError(err.message || 'Nao foi possivel adicionar o produto.');
+                const errorMessage = err.response?.data?.message || err.message || 'Nao foi possivel adicionar o produto.';
+
+                if (errorMessage === 'Produto nao encontrado na matriz ativa.') {
+                    openQuickCreateProductModal(lookupTerm);
+                }
+
+                setSaleError(errorMessage);
             })
             .finally(() => {
                 setAddingItem(false);
@@ -1091,6 +1265,9 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
     const trimmedText = texto.trim();
     const isNumericInput = numericRegex.test(trimmedText);
     const hasMinChars = trimmedText.length >= MIN_CHARACTERS;
+    const quickCreateIsBalanceProduct = Number(quickCreateProductForm.tb1_tipo) === 1;
+    const quickCreateWithoutBarcode =
+        quickCreateIsBalanceProduct || Boolean(quickCreateProductForm.sem_codigo_barras);
     const showSuggestions =
         !hideSuggestions &&
         trimmedText.length > 0 &&
@@ -1586,6 +1763,79 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         printWindow.addEventListener('afterprint', () => {
             printWindow.close();
         }, { once: true });
+    };
+
+    const handleSubmitQuickCreateProduct = async (event) => {
+        event.preventDefault();
+
+        if (quickCreateProductLoading) {
+            return;
+        }
+
+        setQuickCreateProductLoading(true);
+        setQuickCreateProductErrors({});
+        setSaleError('');
+
+        try {
+            const payload = {
+                _token: csrfTokenProp,
+                produto_id: quickCreateIsBalanceProduct
+                    ? String(quickCreateProductForm.produto_id ?? '').trim()
+                    : null,
+                tb1_nome: String(quickCreateProductForm.tb1_nome ?? '').trim(),
+                tb1_vlr_custo: quickCreateProductForm.tb1_vlr_custo,
+                tb1_vlr_venda: quickCreateProductForm.tb1_vlr_venda,
+                tb1_codbar: quickCreateWithoutBarcode
+                    ? ''
+                    : String(quickCreateProductForm.tb1_codbar ?? '').trim(),
+                sem_codigo_barras: quickCreateWithoutBarcode,
+                tb1_tipo: Number(quickCreateProductForm.tb1_tipo ?? 0),
+                tb1_status: Number(quickCreateProductForm.tb1_status ?? 1),
+                tb1_ncm: String(quickCreateProductForm.tb1_ncm ?? '').trim(),
+                tb1_cfop: String(quickCreateProductForm.tb1_cfop ?? '').trim(),
+                tb1_csosn: String(quickCreateProductForm.tb1_csosn ?? '').trim(),
+                tb1_cst: String(quickCreateProductForm.tb1_cst ?? '').trim(),
+                tb1_vr_credit: false,
+            };
+
+            const response = await axios.post(route('products.store'), payload, {
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
+
+            const createdProduct = response?.data?.product ?? null;
+            const currentLookupTerm = quickCreateProductLookupTerm;
+
+            if (createdProduct) {
+                cacheDirectProductLookup(directProductLookupCache.current, createdProduct);
+            }
+
+            resetQuickCreateProductModal();
+
+            if (currentLookupTerm) {
+                fetchProductAndAdd(currentLookupTerm);
+            } else {
+                requestAnimationFrame(() => {
+                    inputRef.current?.focus();
+                });
+            }
+        } catch (error) {
+            const backendErrors = error.response?.data?.errors ?? {};
+
+            if (backendErrors && typeof backendErrors === 'object') {
+                const normalizedErrors = {};
+
+                Object.entries(backendErrors).forEach(([key, messages]) => {
+                    normalizedErrors[key] = Array.isArray(messages) ? messages[0] : messages;
+                });
+
+                setQuickCreateProductErrors(normalizedErrors);
+            }
+
+            setSaleError(error.response?.data?.message || error.message || 'Nao foi possivel cadastrar o produto.');
+            setQuickCreateProductLoading(false);
+        }
     };
 
     const closeConsumerFiscalModal = () => {
@@ -2768,6 +3018,231 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                     </div>
                 </div>
             )}
+            <Modal show={showQuickCreateProductModal} onClose={closeQuickCreateProductModal} maxWidth="3xl" tone="light">
+                <form onSubmit={handleSubmitQuickCreateProduct}>
+                    <div className="border-b border-gray-200 px-6 py-4">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                            Produto nao encontrado
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-600">
+                            O codigo <span className="font-semibold text-gray-900">{quickCreateProductLookupTerm || '--'}</span> nao foi localizado na matriz ativa. Preencha os dados abaixo para cadastrar o produto.
+                        </p>
+                    </div>
+                    <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                            <label className="text-sm font-medium text-gray-700">Nome</label>
+                            <input
+                                type="text"
+                                value={quickCreateProductForm.tb1_nome}
+                                onChange={(event) => handleQuickCreateProductFieldChange('tb1_nome', event.target.value)}
+                                className={dashboardProductFieldClass}
+                                maxLength={45}
+                                required
+                            />
+                            {quickCreateProductErrors.tb1_nome && (
+                                <p className="mt-1 text-xs text-red-600">{quickCreateProductErrors.tb1_nome}</p>
+                            )}
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Valor de custo</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={quickCreateProductForm.tb1_vlr_custo}
+                                onChange={(event) => handleQuickCreateProductFieldChange('tb1_vlr_custo', event.target.value)}
+                                className={dashboardProductFieldClass}
+                                required
+                            />
+                            {quickCreateProductErrors.tb1_vlr_custo && (
+                                <p className="mt-1 text-xs text-red-600">{quickCreateProductErrors.tb1_vlr_custo}</p>
+                            )}
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Valor de venda</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={quickCreateProductForm.tb1_vlr_venda}
+                                onChange={(event) => handleQuickCreateProductFieldChange('tb1_vlr_venda', event.target.value)}
+                                className={dashboardProductFieldClass}
+                                required
+                            />
+                            {quickCreateProductErrors.tb1_vlr_venda && (
+                                <p className="mt-1 text-xs text-red-600">{quickCreateProductErrors.tb1_vlr_venda}</p>
+                            )}
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Tipo</label>
+                            <select
+                                value={quickCreateProductForm.tb1_tipo}
+                                onChange={(event) => handleQuickCreateProductFieldChange('tb1_tipo', Number(event.target.value))}
+                                className={dashboardProductFieldClass}
+                            >
+                                {DASHBOARD_PRODUCT_TYPE_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                            {quickCreateProductErrors.tb1_tipo && (
+                                <p className="mt-1 text-xs text-red-600">{quickCreateProductErrors.tb1_tipo}</p>
+                            )}
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Status</label>
+                            <select
+                                value={quickCreateProductForm.tb1_status}
+                                onChange={(event) => handleQuickCreateProductFieldChange('tb1_status', Number(event.target.value))}
+                                className={dashboardProductFieldClass}
+                            >
+                                {DASHBOARD_PRODUCT_STATUS_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                            {quickCreateProductErrors.tb1_status && (
+                                <p className="mt-1 text-xs text-red-600">{quickCreateProductErrors.tb1_status}</p>
+                            )}
+                        </div>
+                        {quickCreateIsBalanceProduct ? (
+                            <div className="sm:col-span-2">
+                                <label className="text-sm font-medium text-gray-700">Codigo do produto</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={quickCreateProductForm.produto_id}
+                                    onChange={(event) => handleQuickCreateProductFieldChange('produto_id', event.target.value)}
+                                    className={dashboardProductFieldClass}
+                                    required
+                                />
+                                <p className="mt-1 text-xs text-amber-700">
+                                    Produto de balanca usa o codigo do produto como referencia principal no caixa.
+                                </p>
+                                {quickCreateProductErrors.produto_id && (
+                                    <p className="mt-1 text-xs text-red-600">{quickCreateProductErrors.produto_id}</p>
+                                )}
+                            </div>
+                        ) : (
+                            <>
+                                <div className="sm:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+                                    <label className="flex items-start gap-3 text-sm text-gray-700">
+                                        <input
+                                            type="checkbox"
+                                            checked={Boolean(quickCreateProductForm.sem_codigo_barras)}
+                                            onChange={(event) => handleQuickCreateProductFieldChange('sem_codigo_barras', event.target.checked)}
+                                            className="mt-1 h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                                        />
+                                        <span>
+                                            <span className="block font-medium text-gray-800">
+                                                Produto sem codigo de barras proprio
+                                            </span>
+                                            <span className="mt-1 block text-xs text-gray-500">
+                                                Quando marcado, o sistema usa o proprio codigo interno do produto no campo de barras.
+                                            </span>
+                                        </span>
+                                    </label>
+                                </div>
+                                {!quickCreateWithoutBarcode && (
+                                    <div className="sm:col-span-2">
+                                        <label className="text-sm font-medium text-gray-700">Codigo de barras</label>
+                                        <input
+                                            type="text"
+                                            value={quickCreateProductForm.tb1_codbar}
+                                            onChange={(event) => handleQuickCreateProductFieldChange('tb1_codbar', event.target.value)}
+                                            className={dashboardProductFieldClass}
+                                            maxLength={64}
+                                            required
+                                        />
+                                        {quickCreateProductErrors.tb1_codbar && (
+                                            <p className="mt-1 text-xs text-red-600">{quickCreateProductErrors.tb1_codbar}</p>
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                    <div className="border-t border-gray-200 px-6 py-4">
+                        <h4 className="text-sm font-semibold text-gray-800">Dados fiscais</h4>
+                        <p className="mt-1 text-xs text-gray-500">
+                            Preencha os campos essenciais para deixar o produto pronto para emissao fiscal.
+                        </p>
+                    </div>
+                    <div className="grid gap-4 px-6 pb-5 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">NCM</label>
+                            <input
+                                type="text"
+                                maxLength={8}
+                                value={quickCreateProductForm.tb1_ncm}
+                                onChange={(event) => handleQuickCreateProductFieldChange('tb1_ncm', event.target.value)}
+                                className={dashboardFiscalFieldClass}
+                            />
+                            {quickCreateProductErrors.tb1_ncm && (
+                                <p className="mt-1 text-xs text-red-600">{quickCreateProductErrors.tb1_ncm}</p>
+                            )}
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">CFOP</label>
+                            <input
+                                type="text"
+                                maxLength={4}
+                                value={quickCreateProductForm.tb1_cfop}
+                                onChange={(event) => handleQuickCreateProductFieldChange('tb1_cfop', event.target.value)}
+                                className={dashboardFiscalFieldClass}
+                            />
+                            {quickCreateProductErrors.tb1_cfop && (
+                                <p className="mt-1 text-xs text-red-600">{quickCreateProductErrors.tb1_cfop}</p>
+                            )}
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">CSOSN</label>
+                            <input
+                                type="text"
+                                maxLength={4}
+                                value={quickCreateProductForm.tb1_csosn}
+                                onChange={(event) => handleQuickCreateProductFieldChange('tb1_csosn', event.target.value)}
+                                className={dashboardFiscalFieldClass}
+                            />
+                            {quickCreateProductErrors.tb1_csosn && (
+                                <p className="mt-1 text-xs text-red-600">{quickCreateProductErrors.tb1_csosn}</p>
+                            )}
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">CST</label>
+                            <input
+                                type="text"
+                                maxLength={3}
+                                value={quickCreateProductForm.tb1_cst}
+                                onChange={(event) => handleQuickCreateProductFieldChange('tb1_cst', event.target.value)}
+                                className={dashboardFiscalFieldClass}
+                            />
+                            {quickCreateProductErrors.tb1_cst && (
+                                <p className="mt-1 text-xs text-red-600">{quickCreateProductErrors.tb1_cst}</p>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+                        <button
+                            type="button"
+                            className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                            onClick={closeQuickCreateProductModal}
+                            disabled={quickCreateProductLoading}
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={quickCreateProductLoading}
+                        >
+                            {quickCreateProductLoading ? 'Cadastrando...' : 'Cadastrar produto'}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
             <Modal show={showConsumerFiscalModal} onClose={closeConsumerFiscalModal} maxWidth="2xl" tone="light">
                 <form onSubmit={handleSubmitConsumerFiscal}>
                     <div className="border-b border-gray-200 px-6 py-4">
