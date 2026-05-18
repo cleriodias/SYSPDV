@@ -346,15 +346,10 @@ const cacheDirectProductLookup = (cache, product) => {
     }
 
     const productId = Number(product.produto_id ?? product.tb1_id);
-    const internalProductId = Number(product.tb1_id);
     const productBarcode = String(product.tb1_codbar ?? '').trim();
 
     if (Number.isFinite(productId) && productId > 0) {
         cache.set(`id:${productId}`, product);
-    }
-
-    if (Number.isFinite(internalProductId) && internalProductId > 0) {
-        cache.set(`id:${internalProductId}`, product);
     }
 
     if (productBarcode !== '') {

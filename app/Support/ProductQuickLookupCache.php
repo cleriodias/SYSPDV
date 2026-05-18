@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Produto;
+use App\Models\Unidade;
 use App\Models\Venda;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -45,23 +46,30 @@ class ProductQuickLookupCache
             return;
         }
 
-        $key = $this->cacheKey($unitId);
-        $productPayload = $this->productPayload($product);
-        $currentProducts = Cache::get($key, []);
+        $this->storeProductForUnit($unitId, $product);
+    }
 
-        if (! is_array($currentProducts)) {
-            $currentProducts = [];
+    public function syncProductForMatrix(Produto $product): void
+    {
+        $matrixId = (int) ($product->matriz_id ?? 0);
+
+        if ($matrixId <= 0) {
+            return;
         }
 
-        $nextProducts = array_values(array_filter(
-            $currentProducts,
-            fn ($cachedProduct) => (int) ($cachedProduct['tb1_id'] ?? 0) !== (int) $product->tb1_id
-        ));
+        Unidade::query()
+            ->where('matriz_id', $matrixId)
+            ->pluck('tb2_id')
+            ->each(function ($unitId) use ($product): void {
+                $resolvedUnitId = (int) $unitId;
 
-        array_unshift($nextProducts, $productPayload);
-        $nextProducts = array_slice($nextProducts, 0, self::POPULAR_PRODUCTS_LIMIT);
+                if ((int) $product->tb1_status === 1) {
+                    $this->storeProductForUnit($resolvedUnitId, $product);
+                    return;
+                }
 
-        Cache::put($key, $nextProducts, now()->addMinutes(self::CACHE_TTL_MINUTES));
+                $this->removeProductForUnit($resolvedUnitId, $product);
+            });
     }
 
     public function productPayload(Produto $product): array
@@ -153,5 +161,56 @@ class ProductQuickLookupCache
     private function cacheKey(int $unitId): string
     {
         return sprintf('dashboard:quick-products:%s:unit:%d', self::CACHE_VERSION, $unitId);
+    }
+
+    private function storeProductForUnit(int $unitId, Produto $product): void
+    {
+        if ($unitId <= 0) {
+            return;
+        }
+
+        $key = $this->cacheKey($unitId);
+        $productPayload = $this->productPayload($product);
+        $currentProducts = Cache::get($key, []);
+
+        if (! is_array($currentProducts)) {
+            $currentProducts = [];
+        }
+
+        $nextProducts = array_values(array_filter(
+            $currentProducts,
+            fn ($cachedProduct) => (int) ($cachedProduct['tb1_id'] ?? 0) !== (int) $product->tb1_id
+        ));
+
+        array_unshift($nextProducts, $productPayload);
+        $nextProducts = array_slice($nextProducts, 0, self::POPULAR_PRODUCTS_LIMIT);
+
+        Cache::put($key, $nextProducts, now()->addMinutes(self::CACHE_TTL_MINUTES));
+    }
+
+    private function removeProductForUnit(int $unitId, Produto $product): void
+    {
+        if ($unitId <= 0) {
+            return;
+        }
+
+        $key = $this->cacheKey($unitId);
+        $currentProducts = Cache::get($key, []);
+
+        if (! is_array($currentProducts)) {
+            $currentProducts = [];
+        }
+
+        $nextProducts = array_values(array_filter(
+            $currentProducts,
+            fn ($cachedProduct) => (int) ($cachedProduct['tb1_id'] ?? 0) !== (int) $product->tb1_id
+        ));
+
+        if ($nextProducts === []) {
+            Cache::forget($key);
+            return;
+        }
+
+        Cache::put($key, $nextProducts, now()->addMinutes(self::CACHE_TTL_MINUTES));
     }
 }

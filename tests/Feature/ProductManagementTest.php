@@ -8,6 +8,7 @@ use App\Models\Produto;
 use App\Models\Unidade;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -246,5 +247,250 @@ class ProductManagementTest extends TestCase
             ->where('products.data.0.tb1_tipo', 2)
             ->where('products.data.0.tb1_nome', 'SERVICO DE ENTREGA')
         );
+    }
+
+    public function test_store_syncs_dashboard_quick_lookup_cache_for_all_units_of_matrix(): void
+    {
+        ['matrix' => $matrix, 'units' => $units, 'user' => $user] = $this->createProductContext();
+
+        foreach ($units as $unit) {
+            Cache::put($this->quickLookupCacheKey($unit->tb2_id), [
+                [
+                    'tb1_id' => 999,
+                    'produto_id' => 999,
+                    'tb1_nome' => 'CACHE ANTIGO',
+                    'tb1_codbar' => '999',
+                    'tb1_vlr_custo' => 1.0,
+                    'tb1_vlr_venda' => 2.0,
+                    'tb1_tipo' => 0,
+                    'tb1_qtd' => 0,
+                    'tb1_status' => 1,
+                    'tb1_vr_credit' => false,
+                ],
+            ], now()->addHour());
+        }
+
+        $response = $this->actingAs($user)
+            ->withSession($this->activeUnitSession($units[0]))
+            ->post(route('products.store'), $this->productPayload([
+                'tb1_nome' => 'Produto Cache Novo',
+            ]));
+
+        $product = Produto::query()
+            ->where('matriz_id', $matrix->id)
+            ->latest('tb1_id')
+            ->first();
+
+        $response->assertRedirect(route('products.show', ['product' => $product->tb1_id]));
+
+        foreach ($units as $unit) {
+            $cachedProducts = Cache::get($this->quickLookupCacheKey($unit->tb2_id), []);
+
+            $this->assertSame($product->tb1_id, $cachedProducts[0]['tb1_id'] ?? null);
+            $this->assertSame($product->produto_id, $cachedProducts[0]['produto_id'] ?? null);
+            $this->assertSame($product->tb1_nome, $cachedProducts[0]['tb1_nome'] ?? null);
+        }
+    }
+
+    public function test_update_syncs_dashboard_quick_lookup_cache_with_new_product_data(): void
+    {
+        ['matrix' => $matrix, 'units' => $units, 'user' => $user] = $this->createProductContext();
+
+        $product = Produto::create([
+            'matriz_id' => $matrix->id,
+            'produto_id' => 41,
+            'tb1_nome' => 'PRODUTO ANTIGO',
+            'tb1_vlr_custo' => 5,
+            'tb1_vlr_venda' => 7,
+            'tb1_codbar' => '41',
+            'tb1_tipo' => 0,
+            'tb1_status' => 1,
+            'tb1_vr_credit' => false,
+        ]);
+
+        foreach ($units as $unit) {
+            Cache::put($this->quickLookupCacheKey($unit->tb2_id), [
+                [
+                    'tb1_id' => $product->tb1_id,
+                    'produto_id' => $product->produto_id,
+                    'tb1_nome' => 'PRODUTO DESATUALIZADO',
+                    'tb1_codbar' => '41',
+                    'tb1_vlr_custo' => 1.0,
+                    'tb1_vlr_venda' => 2.0,
+                    'tb1_tipo' => 0,
+                    'tb1_qtd' => 0,
+                    'tb1_status' => 1,
+                    'tb1_vr_credit' => false,
+                ],
+            ], now()->addHour());
+        }
+
+        $response = $this->actingAs($user)
+            ->withSession($this->activeUnitSession($units[0]))
+            ->put(route('products.update', ['product' => $product->tb1_id]), $this->productPayload([
+                'tb1_nome' => 'Produto Atualizado',
+                'tb1_vlr_custo' => 8,
+                'tb1_vlr_venda' => 11,
+            ]));
+
+        $product->refresh();
+
+        $response->assertRedirect(route('products.show', ['product' => $product->tb1_id]));
+
+        foreach ($units as $unit) {
+            $cachedProducts = Cache::get($this->quickLookupCacheKey($unit->tb2_id), []);
+
+            $this->assertSame($product->tb1_id, $cachedProducts[0]['tb1_id'] ?? null);
+            $this->assertSame($product->tb1_nome, $cachedProducts[0]['tb1_nome'] ?? null);
+            $this->assertSame($product->tb1_vlr_custo, $cachedProducts[0]['tb1_vlr_custo'] ?? null);
+            $this->assertSame($product->tb1_vlr_venda, $cachedProducts[0]['tb1_vlr_venda'] ?? null);
+        }
+    }
+
+    public function test_update_removes_inactive_product_from_dashboard_quick_lookup_cache(): void
+    {
+        ['matrix' => $matrix, 'units' => $units, 'user' => $user] = $this->createProductContext();
+
+        $product = Produto::create([
+            'matriz_id' => $matrix->id,
+            'produto_id' => 55,
+            'tb1_nome' => 'PRODUTO ATIVO',
+            'tb1_vlr_custo' => 4,
+            'tb1_vlr_venda' => 6,
+            'tb1_codbar' => '55',
+            'tb1_tipo' => 0,
+            'tb1_status' => 1,
+            'tb1_vr_credit' => false,
+        ]);
+
+        foreach ($units as $unit) {
+            Cache::put($this->quickLookupCacheKey($unit->tb2_id), [
+                [
+                    'tb1_id' => $product->tb1_id,
+                    'produto_id' => $product->produto_id,
+                    'tb1_nome' => $product->tb1_nome,
+                    'tb1_codbar' => $product->tb1_codbar,
+                    'tb1_vlr_custo' => $product->tb1_vlr_custo,
+                    'tb1_vlr_venda' => $product->tb1_vlr_venda,
+                    'tb1_tipo' => $product->tb1_tipo,
+                    'tb1_qtd' => 0,
+                    'tb1_status' => 1,
+                    'tb1_vr_credit' => false,
+                ],
+                [
+                    'tb1_id' => 888,
+                    'produto_id' => 888,
+                    'tb1_nome' => 'PRODUTO RESERVA',
+                    'tb1_codbar' => '888',
+                    'tb1_vlr_custo' => 2.0,
+                    'tb1_vlr_venda' => 3.0,
+                    'tb1_tipo' => 0,
+                    'tb1_qtd' => 0,
+                    'tb1_status' => 1,
+                    'tb1_vr_credit' => false,
+                ],
+            ], now()->addHour());
+        }
+
+        $response = $this->actingAs($user)
+            ->withSession($this->activeUnitSession($units[0]))
+            ->put(route('products.update', ['product' => $product->tb1_id]), $this->productPayload([
+                'tb1_nome' => $product->tb1_nome,
+                'tb1_vlr_custo' => $product->tb1_vlr_custo,
+                'tb1_vlr_venda' => $product->tb1_vlr_venda,
+                'tb1_status' => 0,
+                'tb1_codbar' => $product->tb1_codbar,
+                'sem_codigo_barras' => false,
+            ]));
+
+        $response->assertRedirect(route('products.show', ['product' => $product->tb1_id]));
+
+        foreach ($units as $unit) {
+            $cachedProducts = Cache::get($this->quickLookupCacheKey($unit->tb2_id), []);
+
+            $this->assertCount(1, $cachedProducts);
+            $this->assertSame(888, $cachedProducts[0]['tb1_id'] ?? null);
+        }
+    }
+
+    private function createProductContext(): array
+    {
+        $matrix = Matriz::create([
+            'nome' => 'Matriz Cache Produtos',
+            'slug' => Str::slug('Matriz Cache Produtos-' . fake()->unique()->numerify('###')),
+            'status' => 1,
+            'pagamento_ativo' => true,
+        ]);
+
+        $unitA = Unidade::create([
+            'tb2_nome' => 'Loja Cache A',
+            'matriz_id' => $matrix->id,
+            'tb2_tipo' => 'matriz',
+            'tb2_endereco' => 'Endereco Loja Cache A',
+            'tb2_cep' => '72900-000',
+            'tb2_fone' => '(61) 99999-9999',
+            'tb2_cnpj' => '12345678000111',
+            'tb2_localizacao' => 'https://maps.example.com/loja-cache-a',
+            'tb2_status' => 1,
+            'login_liberado' => true,
+        ]);
+
+        $unitB = Unidade::create([
+            'tb2_nome' => 'Loja Cache B',
+            'matriz_id' => $matrix->id,
+            'tb2_tipo' => 'filial',
+            'tb2_endereco' => 'Endereco Loja Cache B',
+            'tb2_cep' => '72900-001',
+            'tb2_fone' => '(61) 98888-8888',
+            'tb2_cnpj' => '12345678000112',
+            'tb2_localizacao' => 'https://maps.example.com/loja-cache-b',
+            'tb2_status' => 1,
+            'login_liberado' => true,
+        ]);
+
+        $user = User::factory()->create([
+            'funcao' => 0,
+            'funcao_original' => 0,
+            'tb2_id' => $unitA->tb2_id,
+            'matriz_id' => $matrix->id,
+        ]);
+        $user->units()->sync([$unitA->tb2_id, $unitB->tb2_id]);
+
+        return [
+            'matrix' => $matrix,
+            'units' => [$unitA, $unitB],
+            'user' => $user,
+        ];
+    }
+
+    private function activeUnitSession(Unidade $unit): array
+    {
+        return [
+            'active_unit' => [
+                'id' => $unit->tb2_id,
+                'name' => $unit->tb2_nome,
+                'address' => $unit->tb2_endereco,
+                'cnpj' => $unit->tb2_cnpj,
+            ],
+        ];
+    }
+
+    private function productPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'tb1_nome' => 'Produto Base',
+            'tb1_vlr_custo' => 5,
+            'tb1_vlr_venda' => 8,
+            'tb1_codbar' => '',
+            'tb1_tipo' => 0,
+            'tb1_status' => 1,
+            'tb1_vr_credit' => false,
+            'sem_codigo_barras' => true,
+        ], $overrides);
+    }
+
+    private function quickLookupCacheKey(int $unitId): string
+    {
+        return sprintf('dashboard:quick-products:v1:unit:%d', $unitId);
     }
 }

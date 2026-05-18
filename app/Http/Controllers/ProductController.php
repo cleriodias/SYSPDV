@@ -231,7 +231,7 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, ProductQuickLookupCache $quickLookupCache)
     {
         $matrixId = $this->resolveMatrixId($request);
         $data = $this->validateProduct($request);
@@ -245,6 +245,7 @@ class ProductController extends Controller
         $data = $this->prepareProductData($data);
 
         $product = Produto::create($data);
+        $quickLookupCache->syncProductForMatrix($product);
 
         return Redirect::route('products.show', ['product' => $product->tb1_id])
             ->with('success', 'Produto cadastrado com sucesso!');
@@ -260,7 +261,7 @@ class ProductController extends Controller
         ));
     }
 
-    public function update(Request $request, Produto $product)
+    public function update(Request $request, Produto $product, ProductQuickLookupCache $quickLookupCache)
     {
         $this->ensureProductAccess($product, $request);
 
@@ -269,6 +270,8 @@ class ProductController extends Controller
         $data = $this->prepareProductData($data, $product);
 
         $product->update($data);
+        $product->refresh();
+        $quickLookupCache->syncProductForMatrix($product);
 
         return Redirect::route('products.show', ['product' => $product->tb1_id])
             ->with('success', 'Produto atualizado com sucesso!');
