@@ -1352,6 +1352,31 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         };
     }, [resetDashboardInput, shouldBlockDashboardShortcut]);
 
+    useEffect(() => {
+        if (typeof window === 'undefined' || !showReceipt || !receiptData) {
+            return undefined;
+        }
+
+        const handleReceiptShortcut = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                handleCloseReceipt();
+                return;
+            }
+
+            if (event.key === 'F9') {
+                event.preventDefault();
+                handlePrintReceipt();
+            }
+        };
+
+        window.addEventListener('keydown', handleReceiptShortcut);
+
+        return () => {
+            window.removeEventListener('keydown', handleReceiptShortcut);
+        };
+    }, [handleCloseReceipt, handlePrintReceipt, receiptData, showReceipt]);
+
     const handleInputChange = (event) => {
         const nextValue = event.target.value;
         setTexto(nextValue);
