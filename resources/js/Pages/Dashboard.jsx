@@ -1334,7 +1334,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
     };
 
     const handleKeyDown = (event) => {
-        if (event.code === 'NumpadDecimal') {
+        if (event.key === 'F12') {
             event.preventDefault();
             resetDashboardInput();
             return;
