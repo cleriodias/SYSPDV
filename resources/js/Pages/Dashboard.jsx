@@ -1268,6 +1268,12 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
     const quickCreateIsBalanceProduct = Number(quickCreateProductForm.tb1_tipo) === 1;
     const quickCreateWithoutBarcode =
         quickCreateIsBalanceProduct || Boolean(quickCreateProductForm.sem_codigo_barras);
+    const shouldBlockDashboardShortcut =
+        showReceipt ||
+        showConsumerFiscalModal ||
+        showQuickCreateProductModal ||
+        valePickerVisible ||
+        showFaturarWarning;
     const showSuggestions =
         !hideSuggestions &&
         trimmedText.length > 0 &&
@@ -1325,6 +1331,27 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         };
     }, [clearInputIdleTimeout]);
 
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const handleDashboardShortcut = (event) => {
+            if (event.key !== 'F8' || shouldBlockDashboardShortcut) {
+                return;
+            }
+
+            event.preventDefault();
+            resetDashboardInput();
+        };
+
+        window.addEventListener('keydown', handleDashboardShortcut);
+
+        return () => {
+            window.removeEventListener('keydown', handleDashboardShortcut);
+        };
+    }, [resetDashboardInput, shouldBlockDashboardShortcut]);
+
     const handleInputChange = (event) => {
         const nextValue = event.target.value;
         setTexto(nextValue);
@@ -1334,12 +1361,6 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
     };
 
     const handleKeyDown = (event) => {
-        if (event.key === 'F8') {
-            event.preventDefault();
-            resetDashboardInput();
-            return;
-        }
-
         if (event.key !== 'Enter' || saleLoading || addingItem) {
             return;
         }
