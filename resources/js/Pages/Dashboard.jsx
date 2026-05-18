@@ -926,7 +926,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
 
     const addItemFromProduct = (
         product,
-        { preserveInput = false, unitPrice = null, barcode = null, isWeighted = false } = {},
+        { unitPrice = null, barcode = null, isWeighted = false } = {},
     ) => {
         if (!product) {
             return;
@@ -974,15 +974,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
 
         setSuggestions([]);
         setSaleError('');
-        if (preserveInput) {
-            setHideSuggestions(true);
-        } else {
-            setTexto('');
-            setHideSuggestions(false);
-        }
-        requestAnimationFrame(() => {
-            inputRef.current?.focus();
-        });
+        resetDashboardInput();
     };
     const handleSelect = (product) => {
         addItemFromProduct(product);
@@ -1117,6 +1109,16 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         }
     }, []);
 
+    const resetDashboardInput = useCallback(() => {
+        clearInputIdleTimeout();
+        setTexto('');
+        setLastManualSearch(false);
+        setHideSuggestions(false);
+        requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
+    }, [clearInputIdleTimeout]);
+
     const scheduleInputReset = useCallback(
         (value) => {
             clearInputIdleTimeout();
@@ -1139,15 +1141,10 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                 if (!inputRef.current) {
                     return;
                 }
-                setTexto('');
-                setLastManualSearch(false);
-                setHideSuggestions(false);
-                requestAnimationFrame(() => {
-                    inputRef.current?.focus();
-                });
+                resetDashboardInput();
             }, 2000);
         },
-        [clearInputIdleTimeout],
+        [clearInputIdleTimeout, resetDashboardInput],
     );
 
     useEffect(() => {
@@ -1165,6 +1162,12 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
     };
 
     const handleKeyDown = (event) => {
+        if (event.code === 'NumpadDecimal') {
+            event.preventDefault();
+            resetDashboardInput();
+            return;
+        }
+
         if (event.key !== 'Enter' || saleLoading || addingItem) {
             return;
         }
