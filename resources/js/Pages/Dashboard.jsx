@@ -1334,7 +1334,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
     };
 
     const handleKeyDown = (event) => {
-        if (event.key === 'F12') {
+        if (event.key === 'F8') {
             event.preventDefault();
             resetDashboardInput();
             return;
