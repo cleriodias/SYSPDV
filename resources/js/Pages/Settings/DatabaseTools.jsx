@@ -240,11 +240,11 @@ export default function DatabaseTools({
 
                                                 return (
                                                     <div key={migration.name} className="flex flex-col gap-2 rounded-lg border border-white bg-white p-3 text-xs shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
-                                                        <div className="min-w-0">
-                                                            <p className="truncate font-semibold text-gray-700 dark:text-gray-100">
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="break-all font-semibold text-gray-700 dark:text-gray-100">
                                                                 {migration.label ?? migration.name}
                                                             </p>
-                                                            <p className="truncate text-gray-500 dark:text-gray-300">
+                                                            <p className="break-all text-gray-500 dark:text-gray-300">
                                                                 {migration.name}
                                                             </p>
                                                         </div>
@@ -320,11 +320,11 @@ export default function DatabaseTools({
 
                                             return (
                                                 <div key={seeder.name} className="flex flex-col gap-2 rounded-lg border border-white bg-white p-3 text-xs shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
-                                                    <div className="min-w-0">
-                                                        <p className="truncate font-semibold text-gray-700 dark:text-gray-100">
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="break-all font-semibold text-gray-700 dark:text-gray-100">
                                                             {seeder.label ?? seeder.name}
                                                         </p>
-                                                        <p className="truncate text-gray-500 dark:text-gray-300">
+                                                        <p className="break-all text-gray-500 dark:text-gray-300">
                                                             {seeder.name}
                                                         </p>
                                                     </div>
