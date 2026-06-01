@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ManagementScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -34,16 +35,16 @@ class DatabaseToolsController extends Controller
 
     private const SEEDER_STATUS_PATH = 'seeders-status.json';
 
-    private function ensureMaster($user): void
+    private function ensureBoss($user): void
     {
-        if (! $user || (int) $user->funcao !== 0) {
+        if (! ManagementScope::isBoss($user)) {
             abort(403);
         }
     }
 
     public function index(Request $request): Response
     {
-        $this->ensureMaster($request->user());
+        $this->ensureBoss($request->user());
 
         return Inertia::render('Settings/DatabaseTools', [
             'artisanOutput' => $request->session()->pull('artisan_output'),
@@ -57,7 +58,7 @@ class DatabaseToolsController extends Controller
 
     public function run(Request $request): RedirectResponse
     {
-        $this->ensureMaster($request->user());
+        $this->ensureBoss($request->user());
 
         $data = $request->validate([
             'action' => [

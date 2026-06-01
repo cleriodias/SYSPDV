@@ -43,6 +43,7 @@ const TONE_CLASS_MAP = {
 export default function Config({ auth }) {
     const role = Number(auth?.user?.funcao ?? -1);
     const isMaster = role === 0;
+    const isBoss = role === 7;
 
     const options = [
         {
@@ -125,14 +126,17 @@ export default function Config({ auth }) {
         },
     ];
 
+    if (isBoss) {
+        options.push({
+            label: 'Banco de dados',
+            icon: 'bi-database',
+            href: route('settings.database'),
+            tone: 'Error',
+        });
+    }
+
     if (isMaster) {
         options.push(
-            {
-                label: 'Banco de dados',
-                icon: 'bi-database',
-                href: route('settings.database'),
-                tone: 'Error',
-            },
             {
                 label: 'Fornecedores',
                 icon: 'bi-truck',
