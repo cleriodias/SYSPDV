@@ -7,6 +7,7 @@ use App\Models\Matriz;
 use App\Models\Produto;
 use App\Models\Unidade;
 use App\Models\User;
+use App\Support\ProductQuickLookupCache;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -442,6 +443,66 @@ class ProductManagementTest extends TestCase
         }
     }
 
+    public function test_dashboard_quick_lookup_cache_loads_all_active_products_from_matrix(): void
+    {
+        ['matrix' => $matrix, 'units' => $units] = $this->createProductContext();
+        $externalMatrix = Matriz::create([
+            'nome' => 'Matriz Cache Externa',
+            'slug' => Str::slug('Matriz Cache Externa-' . fake()->unique()->numerify('###')),
+            'status' => 1,
+            'pagamento_ativo' => true,
+        ]);
+
+        for ($index = 1; $index <= 305; $index++) {
+            Produto::create([
+                'matriz_id' => $matrix->id,
+                'produto_id' => $index,
+                'tb1_nome' => sprintf('Produto Cache %03d', $index),
+                'tb1_vlr_custo' => 1,
+                'tb1_vlr_venda' => 2,
+                'tb1_codbar' => sprintf('700000%06d', $index),
+                'tb1_tipo' => 0,
+                'tb1_status' => 1,
+                'tb1_vr_credit' => false,
+            ]);
+        }
+
+        Produto::create([
+            'matriz_id' => $matrix->id,
+            'produto_id' => 999,
+            'tb1_nome' => 'Produto Cache Inativo',
+            'tb1_vlr_custo' => 1,
+            'tb1_vlr_venda' => 2,
+            'tb1_codbar' => '700000999999',
+            'tb1_tipo' => 0,
+            'tb1_status' => 0,
+            'tb1_vr_credit' => false,
+        ]);
+
+        Produto::create([
+            'matriz_id' => $externalMatrix->id,
+            'produto_id' => 1,
+            'tb1_nome' => 'Produto Cache Outra Matriz',
+            'tb1_vlr_custo' => 1,
+            'tb1_vlr_venda' => 2,
+            'tb1_codbar' => '800000000001',
+            'tb1_tipo' => 0,
+            'tb1_status' => 1,
+            'tb1_vr_credit' => false,
+        ]);
+
+        $quickLookupCache = app(ProductQuickLookupCache::class);
+        $cachedProducts = $quickLookupCache->forUnit($units[0]->tb2_id);
+        $cachedProductNames = array_column($cachedProducts, 'tb1_nome');
+
+        $this->assertNull($quickLookupCache->limit());
+        $this->assertCount(305, $cachedProducts);
+        $this->assertContains('Produto Cache 001', $cachedProductNames);
+        $this->assertContains('Produto Cache 305', $cachedProductNames);
+        $this->assertNotContains('Produto Cache Inativo', $cachedProductNames);
+        $this->assertNotContains('Produto Cache Outra Matriz', $cachedProductNames);
+    }
+
     private function createProductContext(): array
     {
         $matrix = Matriz::create([
@@ -520,6 +581,6 @@ class ProductManagementTest extends TestCase
 
     private function quickLookupCacheKey(int $unitId): string
     {
-        return sprintf('dashboard:quick-products:v1:unit:%d', $unitId);
+        return sprintf('dashboard:quick-products:v2:unit:%d', $unitId);
     }
 }

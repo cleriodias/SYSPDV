@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Produto;
 use App\Models\Unidade;
+use App\Models\Matriz;
 use App\Models\User;
 use App\Models\Venda;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class SaleRefeicaoRulesTest extends TestCase
@@ -105,7 +107,7 @@ class SaleRefeicaoRulesTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonPath('sale.total', 20.0)
+            ->assertJsonPath('sale.total', 20)
             ->assertJsonPath('sale.tipo_pago', 'refeicao')
             ->assertJsonPath('sale.vale_user_name', 'Clerio');
     }
@@ -114,11 +116,15 @@ class SaleRefeicaoRulesTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-04-06 12:00:00'));
 
-        $unit = $this->makeUnit('Loja Centro');
-        $otherUnit = $this->makeUnit('Loja Sul');
+        $matrix = $this->makeMatrix('Matriz Vale');
+        $otherMatrix = $this->makeMatrix('Matriz Externa');
+        $unit = $this->makeUnit('Loja Centro', $matrix);
+        $otherUnit = $this->makeUnit('Loja Sul', $matrix);
+        $externalUnit = $this->makeUnit('Loja Externa', $otherMatrix);
         $cashier = $this->makeUser('Caixa', 3, $unit);
         $employee = $this->makeUser('Clerio', 3, $unit, 200);
-        $otherEmployee = $this->makeUser('Clerio Externo', 3, $otherUnit, 200);
+        $otherEmployee = $this->makeUser('Clerio Sul', 3, $otherUnit, 200);
+        $externalEmployee = $this->makeUser('Clerio Externo', 3, $externalUnit, 200);
         $product = $this->makeProduct('Prato Feito', 6.00, true);
 
         Venda::create([
@@ -154,15 +160,29 @@ class SaleRefeicaoRulesTest extends TestCase
                 'refeicao_daily_used' => 6.0,
                 'refeicao_daily_remaining' => 6.0,
             ])
-            ->assertJsonMissing([
+            ->assertJsonFragment([
                 'name' => $otherEmployee->name,
+            ])
+            ->assertJsonMissing([
+                'name' => $externalEmployee->name,
             ]);
     }
 
-    private function makeUnit(string $name): Unidade
+    private function makeMatrix(string $name): Matriz
+    {
+        return Matriz::create([
+            'nome' => $name,
+            'slug' => Str::slug($name . '-' . fake()->unique()->numerify('###')),
+            'status' => 1,
+            'pagamento_ativo' => true,
+        ]);
+    }
+
+    private function makeUnit(string $name, ?Matriz $matrix = null): Unidade
     {
         return Unidade::create([
             'tb2_nome' => $name,
+            'matriz_id' => $matrix?->id,
             'tb2_endereco' => 'Endereco ' . $name,
             'tb2_cep' => '72900-000',
             'tb2_fone' => '(61) 99999-9999',
@@ -179,6 +199,7 @@ class SaleRefeicaoRulesTest extends TestCase
             'funcao' => $role,
             'funcao_original' => $role,
             'tb2_id' => $unit->tb2_id,
+            'matriz_id' => $unit->matriz_id,
             'vr_cred' => $vrCred,
         ]);
 

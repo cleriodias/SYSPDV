@@ -1331,27 +1331,6 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         };
     }, [clearInputIdleTimeout]);
 
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            return undefined;
-        }
-
-        const handleDashboardShortcut = (event) => {
-            if (event.key !== 'F8' || shouldBlockDashboardShortcut) {
-                return;
-            }
-
-            event.preventDefault();
-            resetDashboardInput();
-        };
-
-        window.addEventListener('keydown', handleDashboardShortcut);
-
-        return () => {
-            window.removeEventListener('keydown', handleDashboardShortcut);
-        };
-    }, [resetDashboardInput, shouldBlockDashboardShortcut]);
-
     const handleInputChange = (event) => {
         const nextValue = event.target.value;
         setTexto(nextValue);
@@ -1623,6 +1602,37 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         closeFaturarWarning();
         proceedWithPayment(type);
     };
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const paymentShortcutMap = {
+            F2: 'dinheiro',
+            F4: 'cartao_credito',
+            F8: 'cartao_debito',
+            F9: 'pix',
+            F10: 'vale',
+        };
+
+        const handleDashboardShortcut = (event) => {
+            const paymentType = paymentShortcutMap[event.key];
+
+            if (!paymentType || shouldBlockDashboardShortcut || event.repeat) {
+                return;
+            }
+
+            event.preventDefault();
+            proceedWithPayment(paymentType);
+        };
+
+        window.addEventListener('keydown', handleDashboardShortcut);
+
+        return () => {
+            window.removeEventListener('keydown', handleDashboardShortcut);
+        };
+    }, [proceedWithPayment, shouldBlockDashboardShortcut]);
 
     const handleLoadComandaItems = (codigo) => {
         if (isCashier && hasPendingComandas && !pendingComandas.includes(codigo)) {
@@ -2076,7 +2086,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                 return;
             }
 
-            if (event.key === 'F9') {
+            if (event.key === 'Enter' && !showConsumerFiscalModal) {
                 event.preventDefault();
                 handlePrintReceipt();
             }
@@ -2087,7 +2097,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         return () => {
             window.removeEventListener('keydown', handleReceiptShortcut);
         };
-    }, [handleCloseReceipt, handlePrintReceipt, receiptData, showReceipt]);
+    }, [handleCloseReceipt, handlePrintReceipt, receiptData, showConsumerFiscalModal, showReceipt]);
 
     const handleSaveCart = () => {
         if (items.length === 0) {

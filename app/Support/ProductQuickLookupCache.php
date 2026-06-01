@@ -4,19 +4,14 @@ namespace App\Support;
 
 use App\Models\Produto;
 use App\Models\Unidade;
-use App\Models\Venda;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 class ProductQuickLookupCache
 {
-    private const CACHE_VERSION = 'v1';
+    private const CACHE_VERSION = 'v2';
 
     private const CACHE_TTL_MINUTES = 480;
-
-    private const POPULAR_PRODUCTS_LIMIT = 300;
-
-    private const POPULAR_PRODUCTS_DAYS = 30;
 
     public function forRequest(Request $request): array
     {
@@ -88,9 +83,9 @@ class ProductQuickLookupCache
         ];
     }
 
-    public function limit(): int
+    public function limit(): ?int
     {
-        return self::POPULAR_PRODUCTS_LIMIT;
+        return null;
     }
 
     public function ttlHours(): int
@@ -100,28 +95,19 @@ class ProductQuickLookupCache
 
     private function buildForUnit(int $unitId): array
     {
-        $topProductIds = Venda::query()
-            ->select('tb1_id')
-            ->selectRaw('SUM(quantidade) as sold_quantity')
-            ->where('id_unidade', $unitId)
-            ->where('status', 1)
-            ->where('data_hora', '>=', now()->subDays(self::POPULAR_PRODUCTS_DAYS))
-            ->groupBy('tb1_id')
-            ->orderByDesc('sold_quantity')
-            ->limit(self::POPULAR_PRODUCTS_LIMIT)
-            ->pluck('tb1_id')
-            ->map(fn ($productId) => (int) $productId)
-            ->values();
+        $matrixId = (int) (Unidade::query()
+            ->where('tb2_id', $unitId)
+            ->value('matriz_id') ?? 0);
 
-        if ($topProductIds->isEmpty()) {
+        if ($matrixId <= 0) {
             return [];
         }
 
-        $order = array_flip($topProductIds->all());
-
         return Produto::query()
-            ->whereIn('tb1_id', $topProductIds->all())
+            ->forMatrix($matrixId)
             ->where('tb1_status', 1)
+            ->orderBy('tb1_nome')
+            ->orderBy('produto_id')
             ->get([
                 'tb1_id',
                 'produto_id',
@@ -134,7 +120,6 @@ class ProductQuickLookupCache
                 'tb1_status',
                 'tb1_vr_credit',
             ])
-            ->sortBy(fn (Produto $product) => $order[(int) $product->tb1_id] ?? PHP_INT_MAX)
             ->values()
             ->map(fn (Produto $product) => $this->productPayload($product))
             ->all();
@@ -183,7 +168,6 @@ class ProductQuickLookupCache
         ));
 
         array_unshift($nextProducts, $productPayload);
-        $nextProducts = array_slice($nextProducts, 0, self::POPULAR_PRODUCTS_LIMIT);
 
         Cache::put($key, $nextProducts, now()->addMinutes(self::CACHE_TTL_MINUTES));
     }
