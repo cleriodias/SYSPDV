@@ -38,6 +38,8 @@ const ACTION_LABELS = {
     migrate: 'migrate',
     seed: 'seeder',
     'migrate-seed': 'migrate + seeder',
+    'seed-single': 'seeder individual',
+    'migrate-single': 'migration individual',
 };
 
 const formatDateTime = (value) => {
@@ -51,6 +53,7 @@ const formatDateTime = (value) => {
 export default function DatabaseTools({
     auth,
     artisanOutput,
+    artisanErrorDetail,
     lastAction,
     environment,
     migrationStatus,
@@ -58,8 +61,10 @@ export default function DatabaseTools({
 }) {
     const { flash } = usePage().props;
     const [pendingAction, setPendingAction] = useState(null);
+    const [showMigrations, setShowMigrations] = useState(false);
+    const [showSeeders, setShowSeeders] = useState(false);
 
-    const handleAction = (action) => {
+    const handleAction = (action, payload = {}) => {
         if (pendingAction) {
             return;
         }
@@ -70,7 +75,7 @@ export default function DatabaseTools({
 
         router.post(
             route('settings.database.run'),
-            { action: action.key },
+            { action: action.key, ...payload },
             {
                 preserveScroll: true,
                 onStart: () => setPendingAction(action.key),
@@ -81,6 +86,10 @@ export default function DatabaseTools({
 
     const lastActionLabel = lastAction ? ACTION_LABELS[lastAction] ?? lastAction : null;
     const pendingMigrations = migrationStatus?.pending ?? [];
+    const pendingMigrationFiles = migrationStatus?.pending_files ?? pendingMigrations.map((name) => ({
+        name,
+        label: name,
+    }));
     const pendingCount = migrationStatus?.pending_count ?? 0;
     const migrationsTotal = migrationStatus?.total ?? 0;
     const migrationsRan = migrationStatus?.ran ?? 0;
@@ -91,6 +100,7 @@ export default function DatabaseTools({
     const seederPending = Boolean(seederStatus?.pending);
     const seederReason = seederStatus?.pending_reason;
     const seederLastRun = seederStatus?.last_run_at;
+    const seeders = seederStatus?.files ?? [];
 
     const migrationsBadgeClasses =
         pendingCount > 0
@@ -115,6 +125,32 @@ export default function DatabaseTools({
         return 'Sem pendencias detectadas.';
     };
 
+    const handleRunMigration = (migration) => {
+        handleAction(
+            {
+                key: `migrate-single:${migration.name}`,
+                confirm: `Executar somente ${migration.label ?? migration.name}? Isso pode alterar o banco.`,
+            },
+            {
+                action: 'migrate-single',
+                migration: migration.name,
+            },
+        );
+    };
+
+    const handleRunSeeder = (seeder) => {
+        handleAction(
+            {
+                key: `seed-single:${seeder.name}`,
+                confirm: `Executar somente ${seeder.label ?? seeder.name}? Isso pode alterar o banco.`,
+            },
+            {
+                action: 'seed-single',
+                seeder: seeder.name,
+            },
+        );
+    };
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -133,6 +169,14 @@ export default function DatabaseTools({
             <div className="py-8">
                 <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 lg:px-8">
                     <AlertMessage message={flash} />
+                    {artisanErrorDetail && (
+                        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-900/20 dark:text-red-200">
+                            <p className="font-semibold">Erro tecnico</p>
+                            <pre className="mt-2 whitespace-pre-wrap break-words text-xs">
+                                {artisanErrorDetail}
+                            </pre>
+                        </div>
+                    )}
 
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-900/20 dark:text-amber-200">
                         <p className="font-semibold">Atencao</p>
@@ -154,6 +198,14 @@ export default function DatabaseTools({
                                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">
                                         Total: {migrationsTotal} | Executadas: {migrationsRan}
                                     </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowMigrations((current) => !current)}
+                                        className="mt-1 inline-flex items-center gap-2 text-xs font-semibold text-blue-700 transition hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+                                    >
+                                        Migrations pendentes: {pendingCount}
+                                        <i className={`bi ${showMigrations ? 'bi-chevron-up' : 'bi-chevron-down'}`} aria-hidden="true"></i>
+                                    </button>
                                 </div>
                                 <span
                                     className={`rounded-full px-3 py-1 text-xs font-semibold ${migrationsBadgeClasses}`}
@@ -167,7 +219,7 @@ export default function DatabaseTools({
                                     {migrationsError}
                                 </p>
                             ) : pendingCount > 0 ? (
-                                <div className="mt-3">
+                                <div className="mt-3 space-y-3">
                                     <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
                                         Pendentes
                                     </p>
@@ -181,6 +233,35 @@ export default function DatabaseTools({
                                             <li>+{pendingRest} outras</li>
                                         )}
                                     </ul>
+                                    {showMigrations && (
+                                        <div className="space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/60">
+                                            {pendingMigrationFiles.map((migration) => {
+                                                const isMigrationBusy = pendingAction === `migrate-single:${migration.name}`;
+
+                                                return (
+                                                    <div key={migration.name} className="flex flex-col gap-2 rounded-lg border border-white bg-white p-3 text-xs shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
+                                                        <div className="min-w-0">
+                                                            <p className="truncate font-semibold text-gray-700 dark:text-gray-100">
+                                                                {migration.label ?? migration.name}
+                                                            </p>
+                                                            <p className="truncate text-gray-500 dark:text-gray-300">
+                                                                {migration.name}
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRunMigration(migration)}
+                                                            disabled={Boolean(pendingAction)}
+                                                            className={`inline-flex items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 font-semibold text-indigo-800 transition hover:border-indigo-300 disabled:cursor-not-allowed disabled:opacity-60 dark:border-indigo-500/40 dark:bg-indigo-900/20 dark:text-indigo-200 ${isMigrationBusy ? 'opacity-70' : ''}`}
+                                                        >
+                                                            <i className="bi bi-play-fill" aria-hidden="true"></i>
+                                                            {isMigrationBusy ? 'Executando...' : 'Executar'}
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <p className="mt-3 text-xs text-gray-500 dark:text-gray-300">
@@ -195,9 +276,14 @@ export default function DatabaseTools({
                                     <h3 className="text-sm font-semibold uppercase text-gray-600 dark:text-gray-300">
                                         Status dos seeders
                                     </h3>
-                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSeeders((current) => !current)}
+                                        className="mt-1 inline-flex items-center gap-2 text-xs font-semibold text-blue-700 transition hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+                                    >
                                         Seeders encontrados: {seedersTotal}
-                                    </p>
+                                        <i className={`bi ${showSeeders ? 'bi-chevron-up' : 'bi-chevron-down'}`} aria-hidden="true"></i>
+                                    </button>
                                 </div>
                                 <span
                                     className={`rounded-full px-3 py-1 text-xs font-semibold ${seederBadgeClasses}`}
@@ -222,6 +308,41 @@ export default function DatabaseTools({
                                 Pendencias de seeders consideram apenas execucoes registradas
                                 aqui.
                             </p>
+                            {showSeeders && (
+                                <div className="mt-4 space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/60">
+                                    {seeders.length === 0 ? (
+                                        <p className="text-xs text-gray-500 dark:text-gray-300">
+                                            Nenhum arquivo de seeder encontrado.
+                                        </p>
+                                    ) : (
+                                        seeders.map((seeder) => {
+                                            const isSeederBusy = pendingAction === `seed-single:${seeder.name}`;
+
+                                            return (
+                                                <div key={seeder.name} className="flex flex-col gap-2 rounded-lg border border-white bg-white p-3 text-xs shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div className="min-w-0">
+                                                        <p className="truncate font-semibold text-gray-700 dark:text-gray-100">
+                                                            {seeder.label ?? seeder.name}
+                                                        </p>
+                                                        <p className="truncate text-gray-500 dark:text-gray-300">
+                                                            {seeder.name}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRunSeeder(seeder)}
+                                                        disabled={Boolean(pendingAction)}
+                                                        className={`inline-flex items-center justify-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 font-semibold text-emerald-800 transition hover:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/40 dark:bg-emerald-900/20 dark:text-emerald-200 ${isSeederBusy ? 'opacity-70' : ''}`}
+                                                    >
+                                                        <i className="bi bi-play-fill" aria-hidden="true"></i>
+                                                        {isSeederBusy ? 'Executando...' : 'Executar'}
+                                                    </button>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 

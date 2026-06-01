@@ -27,6 +27,11 @@ class DatabaseToolsController extends Controller
             ['db:seed', ['--force' => true]],
         ],
     ];
+
+    private const SINGLE_SEED_ACTION = 'seed-single';
+
+    private const SINGLE_MIGRATION_ACTION = 'migrate-single';
+
     private const SEEDER_STATUS_PATH = 'seeders-status.json';
 
     private function ensureMaster($user): void
@@ -42,6 +47,7 @@ class DatabaseToolsController extends Controller
 
         return Inertia::render('Settings/DatabaseTools', [
             'artisanOutput' => $request->session()->pull('artisan_output'),
+            'artisanErrorDetail' => $request->session()->pull('artisan_error_detail'),
             'lastAction' => $request->session()->pull('artisan_action'),
             'environment' => app()->environment(),
             'migrationStatus' => $this->resolveMigrationStatus(),
@@ -54,16 +60,29 @@ class DatabaseToolsController extends Controller
         $this->ensureMaster($request->user());
 
         $data = $request->validate([
-            'action' => ['required', 'string', Rule::in(array_keys(self::ACTIONS))],
+            'action' => [
+                'required',
+                'string',
+                Rule::in(array_merge(array_keys(self::ACTIONS), [
+                    self::SINGLE_SEED_ACTION,
+                    self::SINGLE_MIGRATION_ACTION,
+                ])),
+            ],
+            'seeder' => ['required_if:action,' . self::SINGLE_SEED_ACTION, 'nullable', 'string'],
+            'migration' => ['required_if:action,' . self::SINGLE_MIGRATION_ACTION, 'nullable', 'string'],
         ]);
 
         $action = $data['action'];
-        $commands = self::ACTIONS[$action] ?? [];
+        $selectedSeeder = $data['seeder'] ?? null;
+        $selectedMigration = $data['migration'] ?? null;
+        $commands = [];
         $outputBlocks = [];
         $hasFailure = false;
         $commandResults = [];
 
         try {
+            $commands = $this->commandsForAction($action, $selectedSeeder, $selectedMigration);
+
             foreach ($commands as [$command, $params]) {
                 $exitCode = Artisan::call($command, $params);
                 $rawOutput = trim(Artisan::output());
@@ -77,13 +96,15 @@ class DatabaseToolsController extends Controller
                 $commandResults[$command] = $exitCode;
             }
 
-            if (($commandResults['db:seed'] ?? null) === 0) {
+            if (($commandResults['db:seed'] ?? null) === 0 && $action !== self::SINGLE_SEED_ACTION) {
                 $this->writeSeederState($this->listSeederFiles());
             }
 
             $logContext = [
                 'user_id' => $request->user()?->id,
                 'action' => $action,
+                'seeder' => $selectedSeeder,
+                'migration' => $selectedMigration,
             ];
 
             if ($hasFailure) {
@@ -104,17 +125,84 @@ class DatabaseToolsController extends Controller
                 ->with('artisan_output', implode("\n\n", $outputBlocks))
                 ->with('artisan_action', $action);
         } catch (Throwable $e) {
+            $errorDetail = $e->getMessage();
+            $outputBlocks[] = implode("\n", array_filter([
+                'Erro:',
+                $errorDetail,
+                'Arquivo: ' . $e->getFile() . ':' . $e->getLine(),
+                $selectedSeeder ? 'Seeder: ' . $selectedSeeder : null,
+                $selectedMigration ? 'Migration: ' . $selectedMigration : null,
+            ]));
+
             Log::error('Database tools failed', [
                 'user_id' => $request->user()?->id,
                 'action' => $action,
+                'seeder' => $selectedSeeder,
+                'migration' => $selectedMigration,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             return back()
                 ->with('error', 'Falha ao executar o comando. Consulte o log.')
+                ->with('artisan_error_detail', $errorDetail)
                 ->with('artisan_output', implode("\n\n", $outputBlocks))
                 ->with('artisan_action', $action);
         }
+    }
+
+    private function commandsForAction(string $action, ?string $seederName, ?string $migrationName): array
+    {
+        if ($action === self::SINGLE_SEED_ACTION) {
+            $seeder = $this->resolveSeederByName((string) $seederName);
+
+            return [
+                ['db:seed', [
+                    '--class' => $seeder['class'],
+                    '--force' => true,
+                ]],
+            ];
+        }
+
+        if ($action === self::SINGLE_MIGRATION_ACTION) {
+            $migration = $this->resolveMigrationByName((string) $migrationName);
+
+            return [
+                ['migrate', [
+                    '--path' => $migration['relative_path'],
+                    '--force' => true,
+                ]],
+            ];
+        }
+
+        return self::ACTIONS[$action] ?? [];
+    }
+
+    private function resolveSeederByName(string $seederName): array
+    {
+        $normalized = basename($seederName);
+
+        foreach ($this->listSeederFiles() as $seeder) {
+            if ($seeder['name'] === $normalized) {
+                return $seeder;
+            }
+        }
+
+        abort(422, 'Seeder nao encontrado.');
+    }
+
+    private function resolveMigrationByName(string $migrationName): array
+    {
+        $normalized = basename($migrationName, '.php');
+
+        foreach ($this->listMigrationFiles() as $migration) {
+            if ($migration['name'] === $normalized || $migration['file'] === $migrationName) {
+                return $migration;
+            }
+        }
+
+        abort(422, 'Migration nao encontrada.');
     }
 
     private function resolveMigrationStatus(): array
@@ -127,11 +215,17 @@ class DatabaseToolsController extends Controller
 
             $pending = array_values(array_diff(array_keys($files), $ran));
             sort($pending);
+            $pendingLookup = array_flip($pending);
+            $pendingFiles = array_values(array_filter(
+                $this->listMigrationFiles(),
+                fn (array $migration) => array_key_exists($migration['name'], $pendingLookup)
+            ));
 
             return [
                 'total' => count($files),
                 'ran' => count($ran),
                 'pending' => $pending,
+                'pending_files' => $pendingFiles,
                 'pending_count' => count($pending),
                 'error' => null,
             ];
@@ -144,6 +238,7 @@ class DatabaseToolsController extends Controller
                 'total' => 0,
                 'ran' => 0,
                 'pending' => [],
+                'pending_files' => [],
                 'pending_count' => 0,
                 'error' => 'Nao foi possivel ler o status das migrations.',
             ];
@@ -158,6 +253,7 @@ class DatabaseToolsController extends Controller
         if ($count === 0) {
             return [
                 'total' => 0,
+                'files' => [],
                 'pending' => false,
                 'pending_reason' => 'none',
                 'last_run_at' => null,
@@ -182,6 +278,7 @@ class DatabaseToolsController extends Controller
 
         return [
             'total' => $count,
+            'files' => $files,
             'pending' => $pending,
             'pending_reason' => $pendingReason,
             'last_run_at' => $lastRunAt,
@@ -205,6 +302,37 @@ class DatabaseToolsController extends Controller
 
             $files[] = [
                 'name' => $file->getFilename(),
+                'class' => 'Database\\Seeders\\' . $file->getFilenameWithoutExtension(),
+                'label' => $file->getFilenameWithoutExtension(),
+                'mtime' => $file->getMTime(),
+            ];
+        }
+
+        usort($files, fn (array $a, array $b) => strcmp($a['name'], $b['name']));
+
+        return $files;
+    }
+
+    private function listMigrationFiles(): array
+    {
+        $migrationsPath = database_path('migrations');
+
+        if (! File::isDirectory($migrationsPath)) {
+            return [];
+        }
+
+        $files = [];
+
+        foreach (File::files($migrationsPath) as $file) {
+            if ($file->getExtension() !== 'php') {
+                continue;
+            }
+
+            $files[] = [
+                'name' => $file->getFilenameWithoutExtension(),
+                'file' => $file->getFilename(),
+                'label' => $file->getFilenameWithoutExtension(),
+                'relative_path' => 'database/migrations/' . $file->getFilename(),
                 'mtime' => $file->getMTime(),
             ];
         }
