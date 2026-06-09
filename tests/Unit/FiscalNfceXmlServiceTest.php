@@ -392,6 +392,29 @@ class FiscalNfceXmlServiceTest extends TestCase
         $this->assertStringContainsString('<vPag>4.00</vPag>', $mixedXml);
         $this->assertStringContainsString('<card><tpIntegra>2</tpIntegra></card>', $mixedXml);
 
+        $mixedPixDocument = new DOMDocument('1.0', 'UTF-8');
+        $mixedPixInfNfe = $mixedPixDocument->createElement('infNFe');
+        $mixedPixDocument->appendChild($mixedPixInfNfe);
+
+        $mixedPixPayment = new VendaPagamento([
+            'tipo_pagamento' => 'dinheiro_pix',
+            'valor_total' => 10.0,
+            'valor_pago' => 6.0,
+            'troco' => 0,
+            'dois_pgto' => 4.0,
+        ]);
+
+        $appendPayment->invoke($service, $mixedPixDocument, $mixedPixInfNfe, $mixedPixPayment, 10.0);
+
+        $mixedPixXml = $mixedPixDocument->saveXML();
+
+        $this->assertNotFalse($mixedPixXml);
+        $this->assertStringContainsString('<tPag>01</tPag>', $mixedPixXml);
+        $this->assertStringContainsString('<vPag>6.00</vPag>', $mixedPixXml);
+        $this->assertStringContainsString('<tPag>17</tPag>', $mixedPixXml);
+        $this->assertStringContainsString('<vPag>4.00</vPag>', $mixedPixXml);
+        $this->assertStringContainsString('<card><tpIntegra>2</tpIntegra></card>', $mixedPixXml);
+
         $valeDocument = new DOMDocument('1.0', 'UTF-8');
         $valeInfNfe = $valeDocument->createElement('infNFe');
         $valeDocument->appendChild($valeInfNfe);

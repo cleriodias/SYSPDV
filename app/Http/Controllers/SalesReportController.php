@@ -2930,7 +2930,7 @@ class SalesReportController extends Controller
         return match ((string) $paymentType) {
             'pix' => 'pix',
             'cartao_credito', 'cartao_debito', 'maquina' => 'maquina',
-            'dinheiro_cartao_credito', 'dinheiro_cartao_debito' => 'dinheiro',
+            'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix' => 'dinheiro',
             default => (string) $paymentType,
         };
     }
@@ -2939,7 +2939,7 @@ class SalesReportController extends Controller
     {
         return match ((string) $paymentType) {
             'cartao_credito', 'cartao_debito', 'maquina', 'pix' => 'maquina',
-            'dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito' => 'dinheiro',
+            'dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix' => 'dinheiro',
             'vale', 'refeicao', 'faturar' => (string) $paymentType,
             default => null,
         };
@@ -3183,7 +3183,7 @@ class SalesReportController extends Controller
     {
         return "
             CASE
-                WHEN {$paymentAlias}.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito')
+                WHEN {$paymentAlias}.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix')
                     THEN GREATEST({$paymentAlias}.valor_total - COALESCE({$paymentAlias}.dois_pgto, 0), 0)
                 ELSE 0
             END
@@ -3196,7 +3196,7 @@ class SalesReportController extends Controller
             CASE
                 WHEN {$paymentAlias}.tipo_pagamento IN ('cartao_credito', 'cartao_debito', 'maquina', 'pix')
                     THEN GREATEST({$paymentAlias}.valor_total, 0)
-                WHEN {$paymentAlias}.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito')
+                WHEN {$paymentAlias}.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix')
                     THEN GREATEST(COALESCE({$paymentAlias}.dois_pgto, 0), 0)
                 ELSE 0
             END
@@ -3349,7 +3349,7 @@ class SalesReportController extends Controller
 
         $cashExpression = "
             CASE
-                WHEN pagamentos.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito')
+                WHEN pagamentos.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix')
                     THEN GREATEST(pagamentos.valor_total - COALESCE(pagamentos.dois_pgto, 0), 0)
                 ELSE 0
             END
@@ -3359,7 +3359,7 @@ class SalesReportController extends Controller
             CASE
                 WHEN pagamentos.tipo_pagamento IN ('cartao_credito', 'cartao_debito', 'maquina', 'pix')
                     THEN GREATEST(pagamentos.valor_total, 0)
-                WHEN pagamentos.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito')
+                WHEN pagamentos.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix')
                     THEN GREATEST(COALESCE(pagamentos.dois_pgto, 0), 0)
                 ELSE 0
             END

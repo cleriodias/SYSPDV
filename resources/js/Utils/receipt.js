@@ -7,6 +7,7 @@ export const RECEIPT_PAYMENT_LABELS = {
     cartao_debito: 'Cartao debito',
     dinheiro_cartao_credito: 'Dinheiro + Cartao credito',
     dinheiro_cartao_debito: 'Dinheiro + Cartao debito',
+    dinheiro_pix: 'Dinheiro + PiX',
     maquina: 'Maquina',
     vale: 'Vale',
     refeicao: 'Refeicao',

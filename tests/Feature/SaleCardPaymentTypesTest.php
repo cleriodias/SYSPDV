@@ -142,6 +142,49 @@ class SaleCardPaymentTypesTest extends TestCase
         ]);
     }
 
+    public function test_cash_sale_with_pix_complement_stores_selected_pix_subtype_on_payment(): void
+    {
+        $unit = $this->makeUnit('Loja Centro');
+        $cashier = $this->makeUser('Caixa', 3, $unit);
+        $product = $this->makeProduct('Suco natural', 12.00);
+
+        $response = $this
+            ->actingAs($cashier)
+            ->withSession($this->activeSessionPayload($unit, 3))
+            ->postJson(route('sales.store'), [
+                'tipo_pago' => 'dinheiro',
+                'valor_pago' => 5.00,
+                'card_type' => 'pix',
+                'items' => [
+                    [
+                        'product_id' => $product->tb1_id,
+                        'quantity' => 1,
+                    ],
+                ],
+            ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('sale.tipo_pago', 'dinheiro_pix')
+            ->assertJsonPath('sale.payment.tipo_pagamento', 'dinheiro_pix')
+            ->assertJsonPath('sale.payment.valor_pago', 5)
+            ->assertJsonPath('sale.payment.dois_pgto', 7);
+
+        $this->assertDatabaseHas('tb4_vendas_pg', [
+            'tipo_pagamento' => 'dinheiro_pix',
+            'valor_total' => 12.00,
+            'valor_pago' => 5.00,
+            'dois_pgto' => 7.00,
+        ]);
+
+        $this->assertDatabaseHas('tb3_vendas', [
+            'tb1_id' => $product->tb1_id,
+            'tipo_pago' => 'dinheiro',
+            'status_pago' => 1,
+            'id_unidade' => $unit->tb2_id,
+        ]);
+    }
+
     public function test_cash_sale_with_card_complement_requires_card_type(): void
     {
         $unit = $this->makeUnit('Loja Centro');

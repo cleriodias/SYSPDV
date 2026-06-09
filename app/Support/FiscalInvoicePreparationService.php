@@ -704,6 +704,7 @@ class FiscalInvoicePreparationService
             'cartao_debito',
             'dinheiro_cartao_credito',
             'dinheiro_cartao_debito',
+            'dinheiro_pix',
             'maquina',
         ], true);
     }

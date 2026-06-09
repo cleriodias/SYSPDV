@@ -93,7 +93,7 @@ class SaleController extends Controller
             'vale_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'valor_pago' => ['nullable', 'numeric', 'min:0'],
             'vale_type' => ['nullable', 'string', Rule::in(['vale', 'refeicao'])],
-            'card_type' => ['nullable', 'string', Rule::in(['cartao_credito', 'cartao_debito'])],
+            'card_type' => ['nullable', 'string', Rule::in(['cartao_credito', 'cartao_debito', 'pix'])],
             'comanda_codigo' => ['nullable', 'integer', 'between:3000,3100'],
         ]);
 
@@ -455,9 +455,9 @@ class SaleController extends Controller
 
         $selectedCardType = isset($validated['card_type']) ? (string) $validated['card_type'] : null;
 
-        if ($requestedPaymentType === 'dinheiro' && $cardComplement > 0 && ! $this->isCardPaymentType($selectedCardType)) {
+        if ($requestedPaymentType === 'dinheiro' && $cardComplement > 0 && ! $this->isCashComplementPaymentType($selectedCardType)) {
             throw ValidationException::withMessages([
-                'card_type' => 'Selecione se o restante no cartao sera no credito ou no debito.',
+                'card_type' => 'Selecione se o restante sera no credito, debito ou PiX.',
             ]);
         }
 
@@ -1561,6 +1561,11 @@ class SaleController extends Controller
         return $this->isCardPaymentType($paymentType) || (string) $paymentType === 'pix';
     }
 
+    private function isCashComplementPaymentType(?string $paymentType): bool
+    {
+        return $this->isCardLikePaymentType($paymentType);
+    }
+
     private function resolveStoredPaymentType(
         string $requestedPaymentType,
         string $salePaymentType,
@@ -1568,9 +1573,11 @@ class SaleController extends Controller
         ?string $selectedCardType,
     ): string {
         if ($requestedPaymentType === 'dinheiro' && $cardComplement > 0) {
-            return $selectedCardType === 'cartao_debito'
-                ? 'dinheiro_cartao_debito'
-                : 'dinheiro_cartao_credito';
+            return match ($selectedCardType) {
+                'cartao_debito' => 'dinheiro_cartao_debito',
+                'pix' => 'dinheiro_pix',
+                default => 'dinheiro_cartao_credito',
+            };
         }
 
         if ($this->isCardPaymentType($requestedPaymentType) || $requestedPaymentType === 'pix') {

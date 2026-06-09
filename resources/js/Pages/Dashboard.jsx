@@ -22,6 +22,7 @@ const paymentLabels = {
     dinheiro: 'Dinheiro',
     dinheiro_cartao_credito: 'Dinheiro + Credito',
     dinheiro_cartao_debito: 'Dinheiro + Debito',
+    dinheiro_pix: 'Dinheiro + PiX',
     vale: 'Vale',
     faturar: 'Faturar',
     refeicao: 'Refeição',
@@ -36,6 +37,11 @@ const cardTypeOptions = [
         value: 'cartao_debito',
         label: paymentLabels.cartao_debito,
         classes: 'bg-sky-600 hover:bg-sky-700 focus:ring-sky-200 text-white',
+    },
+    {
+        value: 'pix',
+        label: paymentLabels.pix,
+        classes: 'bg-cyan-600 hover:bg-cyan-700 focus:ring-cyan-200 text-white',
     },
 ];
 const fiscalStatusLabels = {
@@ -1392,7 +1398,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         }
 
         if (cashCardComplement > 0 && !cashCardType) {
-            setSaleError('Selecione se o restante no cartao sera no credito ou no debito.');
+            setSaleError('Selecione se o restante sera no credito, debito ou PiX.');
             return;
         }
 
@@ -1555,7 +1561,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
             }
 
             if (cashCardComplement > 0 && !cashCardType) {
-                setSaleError('Selecione se o restante no cartao sera no credito ou no debito.');
+                setSaleError('Selecione se o restante sera no credito, debito ou PiX.');
                 return;
             }
 
@@ -2662,11 +2668,11 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                                     {cashCardComplement > 0 && (
                                                         <div className="mt-2 space-y-2">
                                                             <p className="text-xs text-amber-700 dark:text-amber-200">
-                                                                Restante no cartao: {formatCurrency(cashCardComplement)}
+                                                                Restante no segundo pagamento: {formatCurrency(cashCardComplement)}
                                                             </p>
                                                             <div>
                                                                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-                                                                    Tipo do restante no cartao
+                                                                    Tipo do segundo pagamento
                                                                 </p>
                                                                 <div className="mt-2 flex flex-wrap gap-2">
                                                                     {cardTypeOptions.map((option) => {

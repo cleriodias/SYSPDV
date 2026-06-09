@@ -192,6 +192,7 @@ class FiscalInvoicePreparationServiceTest extends TestCase
         $this->assertTrue($supportsMethod->invoke($service, 'cartao_debito'));
         $this->assertTrue($supportsMethod->invoke($service, 'dinheiro_cartao_credito'));
         $this->assertTrue($supportsMethod->invoke($service, 'dinheiro_cartao_debito'));
+        $this->assertTrue($supportsMethod->invoke($service, 'dinheiro_pix'));
         $this->assertTrue($supportsMethod->invoke($service, 'maquina'));
 
         $this->assertFalse($supportsMethod->invoke($service, 'vale'));
