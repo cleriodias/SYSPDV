@@ -27,7 +27,7 @@ const paymentLabels = {
     faturar: 'Faturar',
     refeicao: 'Refeição',
 };
-const cardTypeOptions = [
+const secondaryPaymentTypeOptions = [
     {
         value: 'cartao_credito',
         label: paymentLabels.cartao_credito,
@@ -59,7 +59,16 @@ const paymentOptions = [
         label: paymentLabels.dinheiro,
         classes: 'bg-green-600 hover:bg-green-700 focus:ring-green-200 text-white',
     },
-    ...cardTypeOptions,
+    {
+        value: 'cartao_credito',
+        label: paymentLabels.cartao_credito,
+        classes: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-200 text-white',
+    },
+    {
+        value: 'cartao_debito',
+        label: paymentLabels.cartao_debito,
+        classes: 'bg-sky-600 hover:bg-sky-700 focus:ring-sky-200 text-white',
+    },
     {
         value: 'pix',
         label: paymentLabels.pix,
@@ -2675,7 +2684,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                                                     Tipo do segundo pagamento
                                                                 </p>
                                                                 <div className="mt-2 flex flex-wrap gap-2">
-                                                                    {cardTypeOptions.map((option) => {
+                                                                    {secondaryPaymentTypeOptions.map((option) => {
                                                                         const isSelected = cashCardType === option.value;
 
                                                                         return (
