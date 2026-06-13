@@ -11,6 +11,7 @@ use App\Http\Controllers\DatabaseToolsController;
 use App\Http\Controllers\DiscardSettingsController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FiscalConfigurationController;
+use App\Http\Controllers\IfoodConfigurationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductDiscardController;
 use App\Http\Controllers\ProductStockController;
@@ -204,8 +205,12 @@ Route::post('/nfe/produtos-seguro', [NfeInsuranceProductController::class, 'stor
         ->name('settings.nfe');
     Route::get('/settings/fiscal', [FiscalConfigurationController::class, 'index'])
         ->name('settings.fiscal');
+    Route::get('/settings/ifood', [IfoodConfigurationController::class, 'index'])
+        ->name('settings.ifood');
     Route::post('/settings/fiscal', [FiscalConfigurationController::class, 'update'])
         ->name('settings.fiscal.update');
+    Route::put('/settings/ifood', [IfoodConfigurationController::class, 'update'])
+        ->name('settings.ifood.update');
     Route::post('/settings/fiscal/reprocess', [FiscalConfigurationController::class, 'reprocess'])
         ->name('settings.fiscal.reprocess');
     Route::post('/settings/fiscal/notas/{notaFiscal}/regenerate', [FiscalConfigurationController::class, 'regenerateInvoice'])

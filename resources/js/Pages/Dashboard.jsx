@@ -439,6 +439,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
     const { auth } = pageProps;
     const effectiveRole = Number(auth?.user?.funcao ?? -1);
     const csrfTokenProp = pageProps?.csrf_token ?? '';
+    const ifoodStatus = pageProps?.ifoodStatus ?? {};
     const activeUnitName = auth?.unit?.name ?? '';
     const activeUnitAddress = auth?.unit?.address ?? auth?.unit?.tb2_endereco ?? '';
     const activeUnitCnpj = auth?.unit?.cnpj ?? auth?.unit?.tb2_cnpj ?? '';
@@ -592,6 +593,10 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
     );
     const isMaster = effectiveRole === 0;
     const isCashier = effectiveRole === 3;
+    const canAccessIfoodSettings = Boolean(ifoodStatus?.can_access_settings);
+    const ifoodStatusClassName = ifoodStatus?.active
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-900/20 dark:text-emerald-100'
+        : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-900/30 dark:text-slate-200';
     const canLaunchSales = isCashier;
     const pendingComandas = useMemo(() => {
         const list = cashierRestrictions?.pending_comandas;
@@ -2188,6 +2193,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         { label: 'Unidades', icon: 'bi-building', href: route('units.index') },
         { label: 'Relatorios', icon: 'bi-clipboard-data', href: route('reports.index') },
         { label: 'Contra-cheque', icon: 'bi-receipt-cutoff', href: route('settings.contra-cheque') },
+        { label: 'iFood', icon: 'bi-phone', href: route('settings.ifood') },
         { label: 'AnyDesck', icon: 'bi-pc-display', href: route('settings.anydesck') },
     ];
 
@@ -2375,6 +2381,44 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                         </div>
                                     </div>
                                 )}
+                                {isCashier && ifoodStatus?.unit_id ? (
+                                    <div className={`rounded-2xl border px-4 py-4 text-sm shadow-sm ${ifoodStatusClassName}`}>
+                                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-semibold uppercase tracking-wide">
+                                                    iFood da unidade
+                                                </p>
+                                                <p className="text-base font-semibold">
+                                                    {ifoodStatus?.active
+                                                        ? 'Integracao habilitada para este caixa.'
+                                                        : 'Integracao ainda desativada para este caixa.'}
+                                                </p>
+                                                <p>
+                                                    Ambiente: <span className="font-semibold">{ifoodStatus?.environment_label ?? 'Homologacao'}</span>
+                                                </p>
+                                                <p>
+                                                    Loja iFood: <span className="font-semibold">{ifoodStatus?.store_name || 'Nao informada'}</span>
+                                                </p>
+                                                <p>
+                                                    Merchant ID: <span className="font-semibold">{ifoodStatus?.merchant_id || 'Nao informado'}</span>
+                                                </p>
+                                                <p>
+                                                    Ultima atualizacao: <span className="font-semibold">{ifoodStatus?.updated_at ?? '--'}</span>
+                                                </p>
+                                            </div>
+                                            {canAccessIfoodSettings && (
+                                                <div>
+                                                    <Link
+                                                        href={route('settings.ifood', { unit_id: ifoodStatus.unit_id })}
+                                                        className="inline-flex items-center rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-sky-700"
+                                                    >
+                                                        Ajustar configuracao
+                                                    </Link>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : null}
                                 {isCashier && cashierRestrictionsLoading && !cashierRestrictions && (
                                     <p className="text-xs text-gray-500 dark:text-gray-300">
                                         Verificando restricoes do caixa...

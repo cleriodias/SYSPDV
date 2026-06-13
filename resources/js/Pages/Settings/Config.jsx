@@ -107,6 +107,12 @@ export default function Config({ auth }) {
             tone: 'Error',
         },
         {
+            label: 'iFood Padaria',
+            icon: 'bi-phone',
+            href: route('settings.ifood'),
+            tone: 'Info',
+        },
+        {
             label: 'NFe - Corretora de Seguros',
             icon: 'bi-file-earmark-text',
             href: route('settings.nfe'),

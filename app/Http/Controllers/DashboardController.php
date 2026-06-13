@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\IfoodConfiguration;
 use App\Models\Matriz;
 use App\Models\Unidade;
 use App\Support\BillingPlanSettings;
@@ -11,8 +12,10 @@ use App\Support\ProfileSwitchData;
 use App\Support\RecurringBillingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class DashboardController extends Controller
 {
@@ -153,8 +156,75 @@ class DashboardController extends Controller
         }
 
         return Inertia::render('Dashboard', [
+            'ifoodStatus' => $this->resolveIfoodStatus($request),
             'profileSwitch' => $profileSwitch,
             'quickLookupProducts' => fn () => app(ProductQuickLookupCache::class)->forRequest($request),
         ]);
+    }
+
+    private function resolveIfoodStatus(Request $request): array
+    {
+        $user = $request->user();
+        $activeUnit = $request->session()->get('active_unit');
+        $activeUnitId = is_array($activeUnit)
+            ? (int) ($activeUnit['id'] ?? $activeUnit['tb2_id'] ?? 0)
+            : (is_object($activeUnit) ? (int) ($activeUnit->id ?? $activeUnit->tb2_id ?? 0) : 0);
+
+        if ($activeUnitId <= 0) {
+            $activeUnitId = (int) ($user?->tb2_id ?? 0);
+        }
+
+        if ($activeUnitId <= 0) {
+            return $this->defaultIfoodStatus();
+        }
+
+        if ($user) {
+            if (ManagementScope::isAdmin($user)) {
+                if (! ManagementScope::canManageUnit($user, $activeUnitId)) {
+                    return $this->defaultIfoodStatus();
+                }
+            } elseif (! ManagementScope::targetUserUnitIds($user)->contains($activeUnitId)) {
+                return $this->defaultIfoodStatus();
+            }
+        }
+
+        try {
+            if (! Schema::hasTable('tb33_ifood_configuracoes')) {
+                return $this->defaultIfoodStatus($activeUnitId);
+            }
+
+            $configuration = IfoodConfiguration::query()
+                ->where('tb2_id', $activeUnitId)
+                ->first();
+
+            return [
+                'unit_id' => $activeUnitId,
+                'configured' => $configuration instanceof IfoodConfiguration,
+                'active' => (bool) ($configuration?->tb33_ativo ?? false),
+                'environment' => (string) ($configuration?->tb33_ambiente ?? 'homologacao'),
+                'environment_label' => (string) (($configuration?->tb33_ambiente ?? 'homologacao') === 'producao' ? 'Producao' : 'Homologacao'),
+                'store_name' => (string) ($configuration?->tb33_nome_loja ?? ''),
+                'merchant_id' => (string) ($configuration?->tb33_merchant_id ?? ''),
+                'updated_at' => optional($configuration?->updated_at)->format('d/m/y H:i'),
+                'can_access_settings' => $user && ManagementScope::isAdmin($user) && ManagementScope::canManageUnit($user, $activeUnitId),
+            ];
+        } catch (Throwable) {
+            return $this->defaultIfoodStatus($activeUnitId);
+        }
+    }
+
+    private function defaultIfoodStatus(?int $unitId = null): array
+    {
+        return [
+            'unit_id' => $unitId,
+            'configured' => false,
+            'active' => false,
+            'environment' => 'homologacao',
+            'environment_label' => 'Homologacao',
+            'store_name' => '',
+            'merchant_id' => '',
+            'updated_at' => null,
+            'can_access_settings' => false,
+        ];
     }
 }

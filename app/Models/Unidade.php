@@ -66,4 +66,9 @@ class Unidade extends Model
     {
         return $this->hasOne(ConfiguracaoFiscal::class, 'tb2_id', 'tb2_id');
     }
+
+    public function ifoodConfiguration(): HasOne
+    {
+        return $this->hasOne(IfoodConfiguration::class, 'tb2_id', 'tb2_id');
+    }
 }

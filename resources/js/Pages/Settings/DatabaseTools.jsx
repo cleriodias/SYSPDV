@@ -39,7 +39,7 @@ const ACTION_LABELS = {
     seed: 'seeder',
     'migrate-seed': 'migrate + seeder',
     'seed-single': 'seeder individual',
-    'migrate-single': 'migration individual',
+    'migrate-single': 'migrate individual',
 };
 
 const formatDateTime = (value) => {
@@ -91,6 +91,7 @@ export default function DatabaseTools({
         label: name,
     }));
     const pendingCount = migrationStatus?.pending_count ?? 0;
+    const hasPendingMigrations = pendingCount > 0;
     const migrationsTotal = migrationStatus?.total ?? 0;
     const migrationsRan = migrationStatus?.ran ?? 0;
     const migrationsError = migrationStatus?.error;
@@ -198,14 +199,20 @@ export default function DatabaseTools({
                                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">
                                         Total: {migrationsTotal} | Executadas: {migrationsRan}
                                     </p>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowMigrations((current) => !current)}
-                                        className="mt-1 inline-flex items-center gap-2 text-xs font-semibold text-blue-700 transition hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
-                                    >
-                                        Migrations pendentes: {pendingCount}
-                                        <i className={`bi ${showMigrations ? 'bi-chevron-up' : 'bi-chevron-down'}`} aria-hidden="true"></i>
-                                    </button>
+                                    {hasPendingMigrations ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowMigrations((current) => !current)}
+                                            className="mt-1 inline-flex items-center gap-2 text-xs font-semibold text-blue-700 transition hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+                                        >
+                                            Migrations pendentes: {pendingCount}
+                                            <i className={`bi ${showMigrations ? 'bi-chevron-up' : 'bi-chevron-down'}`} aria-hidden="true"></i>
+                                        </button>
+                                    ) : (
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">
+                                            Migrations pendentes: {pendingCount}
+                                        </p>
+                                    )}
                                 </div>
                                 <span
                                     className={`rounded-full px-3 py-1 text-xs font-semibold ${migrationsBadgeClasses}`}
@@ -235,6 +242,9 @@ export default function DatabaseTools({
                                     </ul>
                                     {showMigrations && (
                                         <div className="space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/60">
+                                            <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                                                Executar individualmente
+                                            </p>
                                             {pendingMigrationFiles.map((migration) => {
                                                 const isMigrationBusy = pendingAction === `migrate-single:${migration.name}`;
 
