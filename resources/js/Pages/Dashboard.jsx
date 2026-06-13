@@ -19,13 +19,18 @@ const paymentLabels = {
     pix: 'PiX',
     cartao_credito: 'Credito',
     cartao_debito: 'Debito',
+    cartao: 'Cartao',
+    vale_alimentacao: 'Vale Alimentacao',
+    vale_refeicao: 'Vale Refeicao',
     dinheiro: 'Dinheiro',
     dinheiro_cartao_credito: 'Dinheiro + Credito',
     dinheiro_cartao_debito: 'Dinheiro + Debito',
     dinheiro_pix: 'Dinheiro + PiX',
+    dinheiro_vale_alimentacao: 'Dinheiro + Vale Alimentacao',
+    dinheiro_vale_refeicao: 'Dinheiro + Vale Refeicao',
     vale: 'Vale',
     faturar: 'Faturar',
-    refeicao: 'Refeição',
+    refeicao: 'Refeicao',
 };
 const secondaryPaymentTypeOptions = [
     {
@@ -42,6 +47,16 @@ const secondaryPaymentTypeOptions = [
         value: 'pix',
         label: paymentLabels.pix,
         classes: 'bg-cyan-600 hover:bg-cyan-700 focus:ring-cyan-200 text-white',
+    },
+    {
+        value: 'vale_alimentacao',
+        label: paymentLabels.vale_alimentacao,
+        classes: 'bg-amber-500 hover:bg-amber-600 focus:ring-amber-200 text-gray-900',
+    },
+    {
+        value: 'vale_refeicao',
+        label: paymentLabels.vale_refeicao,
+        classes: 'bg-yellow-400 hover:bg-yellow-500 focus:ring-yellow-200 text-gray-900',
     },
 ];
 const fiscalStatusLabels = {
@@ -60,19 +75,9 @@ const paymentOptions = [
         classes: 'bg-green-600 hover:bg-green-700 focus:ring-green-200 text-white',
     },
     {
-        value: 'cartao_credito',
-        label: paymentLabels.cartao_credito,
+        value: 'cartao',
+        label: paymentLabels.cartao,
         classes: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-200 text-white',
-    },
-    {
-        value: 'cartao_debito',
-        label: paymentLabels.cartao_debito,
-        classes: 'bg-sky-600 hover:bg-sky-700 focus:ring-sky-200 text-white',
-    },
-    {
-        value: 'pix',
-        label: paymentLabels.pix,
-        classes: 'bg-cyan-600 hover:bg-cyan-700 focus:ring-cyan-200 text-white',
     },
     {
         value: 'vale',
@@ -83,6 +88,38 @@ const paymentOptions = [
         value: 'faturar',
         label: paymentLabels.faturar,
         classes: 'bg-gray-900 hover:bg-gray-800 focus:ring-gray-200 text-white',
+    },
+];
+const cardPaymentOptions = [
+    {
+        value: 'cartao_credito',
+        label: paymentLabels.cartao_credito,
+        shortcut: 'F4',
+        classes: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-200 text-white',
+    },
+    {
+        value: 'cartao_debito',
+        label: paymentLabels.cartao_debito,
+        shortcut: 'F8',
+        classes: 'bg-sky-600 hover:bg-sky-700 focus:ring-sky-200 text-white',
+    },
+    {
+        value: 'pix',
+        label: paymentLabels.pix,
+        shortcut: 'F9',
+        classes: 'bg-cyan-600 hover:bg-cyan-700 focus:ring-cyan-200 text-white',
+    },
+    {
+        value: 'vale_alimentacao',
+        label: paymentLabels.vale_alimentacao,
+        shortcut: 'F11',
+        classes: 'bg-amber-500 hover:bg-amber-600 focus:ring-amber-200 text-gray-900',
+    },
+    {
+        value: 'vale_refeicao',
+        label: paymentLabels.vale_refeicao,
+        shortcut: 'F12',
+        classes: 'bg-yellow-400 hover:bg-yellow-500 focus:ring-yellow-200 text-gray-900',
     },
 ];
 const faturarWarningText = [
@@ -482,6 +519,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
     const [cashInputVisible, setCashInputVisible] = useState(false);
     const [cashValue, setCashValue] = useState('');
     const [cashCardType, setCashCardType] = useState('');
+    const [showCardPaymentModal, setShowCardPaymentModal] = useState(false);
     const [showFaturarWarning, setShowFaturarWarning] = useState(false);
     const cashInputRef = useRef(null);
     const [savedCarts, setSavedCarts] = useState([]);
@@ -1392,6 +1430,10 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         setSelectedValeType('vale');
     };
 
+    const closeCardPaymentModal = () => {
+        setShowCardPaymentModal(false);
+    };
+
     const handleCashValueChange = (event) => {
         setCashValue(event.target.value);
         setSaleError('');
@@ -1412,7 +1454,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         }
 
         if (cashCardComplement > 0 && !cashCardType) {
-            setSaleError('Selecione se o restante sera no credito, debito ou PiX.');
+            setSaleError('Selecione se o restante sera no credito, debito, PiX, Vale Alimentacao ou Vale Refeicao.');
             return;
         }
 
@@ -1543,7 +1585,14 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
             return;
         }
 
+        if (type === 'cartao') {
+            setSaleError('');
+            setShowCardPaymentModal(true);
+            return;
+        }
+
         if (type === 'vale') {
+            closeCardPaymentModal();
             setCashInputVisible(false);
             setCashValue('');
             setCashCardType('');
@@ -1556,6 +1605,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         }
 
         if (type === 'dinheiro') {
+            closeCardPaymentModal();
             resetValePicker();
             setSaleError('');
             if (!cashInputVisible) {
@@ -1575,7 +1625,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
             }
 
             if (cashCardComplement > 0 && !cashCardType) {
-                setSaleError('Selecione se o restante sera no credito, debito ou PiX.');
+                setSaleError('Selecione se o restante sera no credito, debito, PiX, Vale Alimentacao ou Vale Refeicao.');
                 return;
             }
 
@@ -1586,6 +1636,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
             return;
         }
 
+        closeCardPaymentModal();
         resetValePicker();
         setCashInputVisible(false);
         setShowChangeCard(false);
@@ -1634,6 +1685,8 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
             F8: 'cartao_debito',
             F9: 'pix',
             F10: 'vale',
+            F11: 'vale_alimentacao',
+            F12: 'vale_refeicao',
         };
 
         const handleDashboardShortcut = (event) => {
@@ -2381,44 +2434,6 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                         </div>
                                     </div>
                                 )}
-                                {isCashier && ifoodStatus?.unit_id ? (
-                                    <div className={`rounded-2xl border px-4 py-4 text-sm shadow-sm ${ifoodStatusClassName}`}>
-                                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                                            <div className="space-y-1">
-                                                <p className="text-xs font-semibold uppercase tracking-wide">
-                                                    iFood da unidade
-                                                </p>
-                                                <p className="text-base font-semibold">
-                                                    {ifoodStatus?.active
-                                                        ? 'Integracao habilitada para este caixa.'
-                                                        : 'Integracao ainda desativada para este caixa.'}
-                                                </p>
-                                                <p>
-                                                    Ambiente: <span className="font-semibold">{ifoodStatus?.environment_label ?? 'Homologacao'}</span>
-                                                </p>
-                                                <p>
-                                                    Loja iFood: <span className="font-semibold">{ifoodStatus?.store_name || 'Nao informada'}</span>
-                                                </p>
-                                                <p>
-                                                    Merchant ID: <span className="font-semibold">{ifoodStatus?.merchant_id || 'Nao informado'}</span>
-                                                </p>
-                                                <p>
-                                                    Ultima atualizacao: <span className="font-semibold">{ifoodStatus?.updated_at ?? '--'}</span>
-                                                </p>
-                                            </div>
-                                            {canAccessIfoodSettings && (
-                                                <div>
-                                                    <Link
-                                                        href={route('settings.ifood', { unit_id: ifoodStatus.unit_id })}
-                                                        className="inline-flex items-center rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-sky-700"
-                                                    >
-                                                        Ajustar configuracao
-                                                    </Link>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : null}
                                 {isCashier && cashierRestrictionsLoading && !cashierRestrictions && (
                                     <p className="text-xs text-gray-500 dark:text-gray-300">
                                         Verificando restricoes do caixa...
@@ -2607,7 +2622,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                         </div>
                                     )}
 
-                                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
+                                    <div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
                                         {paymentOptions.slice(0, 2).map((option) => (
                                             <button
                                                 type="button"
@@ -2738,6 +2753,9 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                                                                 onClick={() => {
                                                                                     setCashCardType(option.value);
                                                                                     setSaleError('');
+                                                                                    requestAnimationFrame(() => {
+                                                                                        cashInputRef.current?.focus();
+                                                                                    });
                                                                                 }}
                                                                                 className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
                                                                                     isSelected
@@ -2778,7 +2796,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-100">
-                                                    Selecionar colaborador para vale
+                                                    Selecionar colaborador para vale interno
                                                 </h3>
                                                 <p className="text-sm text-amber-700 dark:text-amber-100">
                                                     Total atual: {formatCurrency(totalAmount)}
@@ -2826,13 +2844,13 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                                     disabled={!canUseRefeicao}
                                                     className="h-4 w-4 text-amber-600 focus:ring-amber-500"
                                                 />
-                                                Refeição
+                                                Refeicao
                                             </label>
                                         </div>
                                         <p className="mt-2 text-xs text-amber-800 dark:text-amber-100">
                                             {selectedValeType === 'refeicao'
                                                 ? 'O saldo de Refeicao do colaborador sera utilizado; saldo insuficiente impede a venda.'
-                                                : 'Utilize esta opção para lançar o valor no vale tradicional do colaborador.'}
+                                                : 'Utilize esta opcao para lancar o valor no Vale interno do colaborador.'}
                                         </p>
                                         {!canUseRefeicao && (
                                             <p className="mt-1 text-xs text-amber-700 dark:text-amber-200">
@@ -2908,11 +2926,116 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                         </div>
                                     </div>
                                 )}
+                                {isCashier && ifoodStatus?.unit_id ? (
+                                    <div className={`rounded-2xl border px-4 py-4 text-sm shadow-sm ${ifoodStatusClassName}`}>
+                                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-semibold uppercase tracking-wide">
+                                                    iFood da unidade
+                                                </p>
+                                                <p className="text-base font-semibold">
+                                                    {ifoodStatus?.active
+                                                        ? 'Integracao habilitada para este caixa.'
+                                                        : 'Integracao ainda desativada para este caixa.'}
+                                                </p>
+                                                <p>
+                                                    Ambiente: <span className="font-semibold">{ifoodStatus?.environment_label ?? 'Homologacao'}</span>
+                                                </p>
+                                                <p>
+                                                    Loja iFood: <span className="font-semibold">{ifoodStatus?.store_name || 'Nao informada'}</span>
+                                                </p>
+                                                <p>
+                                                    Merchant ID: <span className="font-semibold">{ifoodStatus?.merchant_id || 'Nao informado'}</span>
+                                                </p>
+                                                <p>
+                                                    Ultima atualizacao: <span className="font-semibold">{ifoodStatus?.updated_at ?? '--'}</span>
+                                                </p>
+                                            </div>
+                                            {canAccessIfoodSettings && (
+                                                <div>
+                                                    <Link
+                                                        href={route('settings.ifood', { unit_id: ifoodStatus.unit_id })}
+                                                        className="inline-flex items-center rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-sky-700"
+                                                    >
+                                                        Ajustar configuracao
+                                                    </Link>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <Modal show={showCardPaymentModal} onClose={closeCardPaymentModal} maxWidth="2xl" tone="light">
+                <div className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                Selecionar pagamento no cartao
+                            </h3>
+                            <p className="mt-1 text-sm text-gray-600">
+                                Escolha uma das 5 modalidades de pagamento por cartao.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={closeCardPaymentModal}
+                            className="rounded-full border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 transition hover:border-gray-300 hover:text-gray-900"
+                        >
+                            Fechar
+                        </button>
+                    </div>
+
+                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                        {cardPaymentOptions.map((option) => (
+                            <button
+                                type="button"
+                                key={option.value}
+                                onClick={() => proceedWithPayment(option.value)}
+                                disabled={saleLoading || items.length === 0 || isSalesBlocked}
+                                className={`rounded-xl px-4 py-4 text-left text-sm font-semibold shadow transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${option.classes}`}
+                            >
+                                <span className="block text-base">{option.label}</span>
+                                <span className="mt-1 block text-xs font-medium opacity-90">
+                                    Atalho {option.shortcut}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                            Legenda de atalhos
+                        </p>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="rounded-xl bg-white px-3 py-2 text-sm text-gray-700 shadow-sm">
+                                <span className="font-semibold">F2</span> Dinheiro
+                            </div>
+                            <div className="rounded-xl bg-white px-3 py-2 text-sm text-gray-700 shadow-sm">
+                                <span className="font-semibold">F4</span> Credito
+                            </div>
+                            <div className="rounded-xl bg-white px-3 py-2 text-sm text-gray-700 shadow-sm">
+                                <span className="font-semibold">F8</span> Debito
+                            </div>
+                            <div className="rounded-xl bg-white px-3 py-2 text-sm text-gray-700 shadow-sm">
+                                <span className="font-semibold">F9</span> PiX
+                            </div>
+                            <div className="rounded-xl bg-white px-3 py-2 text-sm text-gray-700 shadow-sm">
+                                <span className="font-semibold">F10</span> Vale
+                            </div>
+                            <div className="rounded-xl bg-white px-3 py-2 text-sm text-gray-700 shadow-sm">
+                                <span className="font-semibold">F11</span> Vale Alimentacao
+                            </div>
+                            <div className="rounded-xl bg-white px-3 py-2 text-sm text-gray-700 shadow-sm">
+                                <span className="font-semibold">F12</span> Vale Refeicao
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
             {showFaturarWarning && (
                 <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4 py-6">
                     <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900">
@@ -2924,7 +3047,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                 <p key={paragraph}>{paragraph}</p>
                             ))}
                         </div>
-                        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                             <button
                                 type="button"
                                 onClick={() => handleFaturarWarningChoice('dinheiro')}
@@ -2935,19 +3058,11 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                             </button>
                             <button
                                 type="button"
-                                onClick={() => handleFaturarWarningChoice('cartao_credito')}
+                                onClick={() => handleFaturarWarningChoice('cartao')}
                                 disabled={saleLoading}
                                 className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-60"
                             >
-                                Credito
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleFaturarWarningChoice('cartao_debito')}
-                                disabled={saleLoading}
-                                className="rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:opacity-60"
-                            >
-                                Debito
+                                Cartao
                             </button>
                             <button
                                 type="button"

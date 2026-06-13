@@ -9,6 +9,19 @@ const formatCurrency = (value) =>
         currency: 'BRL',
     });
 
+const PAYMENT_LABELS = {
+    dinheiro: 'Dinheiro',
+    maquina: 'Maquina',
+    pix: 'PiX',
+    dinheiro_vale_alimentacao: 'Dinheiro + Vale Alimentacao',
+    dinheiro_vale_refeicao: 'Dinheiro + Vale Refeicao',
+    vale_alimentacao: 'Vale Alimentacao',
+    vale_refeicao: 'Vale Refeicao',
+    vale: 'Vale',
+    refeicao: 'Refeicao',
+    faturar: 'Faturar',
+};
+
 const formatDateTime = (value) => {
     if (!value) {
         return '--';
@@ -16,6 +29,8 @@ const formatDateTime = (value) => {
 
     return formatBrazilDateTime(value);
 };
+
+const formatPaymentType = (value) => PAYMENT_LABELS[String(value ?? '').toLowerCase()] ?? value ?? '--';
 
 export default function SalesDetailed({
     payments,
@@ -192,7 +207,7 @@ export default function SalesDetailed({
                                                     {formatDateTime(payment.created_at)}
                                                 </td>
                                                 <td className="px-3 py-2 text-gray-700 dark:text-gray-200">
-                                                    {payment.tipo_pagamento}
+                                                    {formatPaymentType(payment.tipo_pagamento)}
                                                 </td>
                                                 <td className="px-3 py-2 text-right font-semibold text-gray-900 dark:text-white">
                                                     {formatCurrency(payment.valor_total)}
@@ -253,7 +268,7 @@ export default function SalesDetailed({
 
                         <div className="mt-4 space-y-2 text-sm text-gray-700 dark:text-gray-200">
                             <p>
-                                <span className="font-medium">Tipo:</span> {selectedPayment.tipo_pagamento}
+                                <span className="font-medium">Tipo:</span> {formatPaymentType(selectedPayment.tipo_pagamento)}
                             </p>
                             <p>
                                 <span className="font-medium">Total:</span> {formatCurrency(selectedPayment.valor_total)}

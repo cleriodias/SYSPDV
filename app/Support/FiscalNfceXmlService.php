@@ -652,6 +652,8 @@ class FiscalNfceXmlService
             'pix' => ['code' => '17', 'description' => null, 'requires_card' => true],
             'cartao_credito', 'maquina' => ['code' => '03', 'description' => null, 'requires_card' => true],
             'cartao_debito' => ['code' => '04', 'description' => null, 'requires_card' => true],
+            'vale_alimentacao' => ['code' => '10', 'description' => null, 'requires_card' => false],
+            'vale_refeicao' => ['code' => '11', 'description' => null, 'requires_card' => false],
             'vale' => ['code' => '10', 'description' => null, 'requires_card' => false],
             'refeicao' => ['code' => '11', 'description' => null, 'requires_card' => false],
             'faturar' => ['code' => '90', 'description' => null, 'requires_card' => false],
@@ -668,7 +670,13 @@ class FiscalNfceXmlService
             $paymentType = 'dinheiro_cartao_credito';
         }
 
-        if (! in_array($paymentType, ['dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix'], true)) {
+        if (! in_array($paymentType, [
+            'dinheiro_cartao_credito',
+            'dinheiro_cartao_debito',
+            'dinheiro_pix',
+            'dinheiro_vale_alimentacao',
+            'dinheiro_vale_refeicao',
+        ], true)) {
             return [[
                 'type' => $paymentType,
                 'amount' => $documentTotal,
@@ -681,6 +689,8 @@ class FiscalNfceXmlService
         $complementPaymentType = match ($paymentType) {
             'dinheiro_cartao_debito' => 'cartao_debito',
             'dinheiro_pix' => 'pix',
+            'dinheiro_vale_alimentacao' => 'vale_alimentacao',
+            'dinheiro_vale_refeicao' => 'vale_refeicao',
             default => 'cartao_credito',
         };
         $details = [];

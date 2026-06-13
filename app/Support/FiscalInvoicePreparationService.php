@@ -702,9 +702,13 @@ class FiscalInvoicePreparationService
             'pix',
             'cartao_credito',
             'cartao_debito',
+            'vale_alimentacao',
+            'vale_refeicao',
             'dinheiro_cartao_credito',
             'dinheiro_cartao_debito',
             'dinheiro_pix',
+            'dinheiro_vale_alimentacao',
+            'dinheiro_vale_refeicao',
             'maquina',
         ], true);
     }
@@ -714,6 +718,8 @@ class FiscalInvoicePreparationService
         $label = match ((string) $paymentType) {
             'vale' => 'Vale',
             'refeicao' => 'Refeicao',
+            'vale_alimentacao' => 'Vale Alimentacao',
+            'vale_refeicao' => 'Vale Refeicao',
             'faturar' => 'Faturar',
             'pix' => 'PiX',
             default => strtoupper(str_replace('_', ' ', trim((string) $paymentType))) ?: 'NAO INFORMADO',

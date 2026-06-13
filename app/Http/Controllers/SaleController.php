@@ -88,12 +88,29 @@ class SaleController extends Controller
             'tipo_pago' => [
                 'required',
                 'string',
-                Rule::in(['cartao_credito', 'cartao_debito', 'maquina', 'pix', 'dinheiro', 'vale', 'refeicao', 'faturar']),
+                Rule::in([
+                    'cartao_credito',
+                    'cartao_debito',
+                    'maquina',
+                    'pix',
+                    'vale_alimentacao',
+                    'vale_refeicao',
+                    'dinheiro',
+                    'vale',
+                    'refeicao',
+                    'faturar',
+                ]),
             ],
             'vale_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'valor_pago' => ['nullable', 'numeric', 'min:0'],
             'vale_type' => ['nullable', 'string', Rule::in(['vale', 'refeicao'])],
-            'card_type' => ['nullable', 'string', Rule::in(['cartao_credito', 'cartao_debito', 'pix'])],
+            'card_type' => ['nullable', 'string', Rule::in([
+                'cartao_credito',
+                'cartao_debito',
+                'pix',
+                'vale_alimentacao',
+                'vale_refeicao',
+            ])],
             'comanda_codigo' => ['nullable', 'integer', 'between:3000,3100'],
         ]);
 
@@ -457,7 +474,7 @@ class SaleController extends Controller
 
         if ($requestedPaymentType === 'dinheiro' && $cardComplement > 0 && ! $this->isCashComplementPaymentType($selectedCardType)) {
             throw ValidationException::withMessages([
-                'card_type' => 'Selecione se o restante sera no credito, debito ou PiX.',
+                'card_type' => 'Selecione se o restante sera no credito, debito, PiX, Vale Alimentacao ou Vale Refeicao.',
             ]);
         }
 
@@ -1558,7 +1575,8 @@ class SaleController extends Controller
 
     private function isCardLikePaymentType(?string $paymentType): bool
     {
-        return $this->isCardPaymentType($paymentType) || (string) $paymentType === 'pix';
+        return $this->isCardPaymentType($paymentType)
+            || in_array((string) $paymentType, ['pix', 'vale_alimentacao', 'vale_refeicao'], true);
     }
 
     private function isCashComplementPaymentType(?string $paymentType): bool
@@ -1576,11 +1594,13 @@ class SaleController extends Controller
             return match ($selectedCardType) {
                 'cartao_debito' => 'dinheiro_cartao_debito',
                 'pix' => 'dinheiro_pix',
+                'vale_alimentacao' => 'dinheiro_vale_alimentacao',
+                'vale_refeicao' => 'dinheiro_vale_refeicao',
                 default => 'dinheiro_cartao_credito',
             };
         }
 
-        if ($this->isCardPaymentType($requestedPaymentType) || $requestedPaymentType === 'pix') {
+        if ($this->isCardLikePaymentType($requestedPaymentType)) {
             return $requestedPaymentType;
         }
 

@@ -2440,8 +2440,10 @@ class SalesReportController extends Controller
                 ['value' => 'all', 'label' => 'Tudo (Dinheiro e Cartao)'],
                 ['value' => 'dinheiro', 'label' => 'Dinheiro'],
                 ['value' => 'cartao', 'label' => 'Cartao'],
-                ['value' => 'vale', 'label' => 'Vale'],
-                ['value' => 'refeicao', 'label' => 'Refeicao'],
+                ['value' => 'vale_alimentacao', 'label' => 'Vale Alimentacao'],
+                ['value' => 'vale_refeicao', 'label' => 'Vale Refeicao'],
+                ['value' => 'vale', 'label' => 'Vale interno'],
+                ['value' => 'refeicao', 'label' => 'Refeicao interna'],
             ],
             'stores' => $stores,
             'summary' => [
@@ -2930,7 +2932,13 @@ class SalesReportController extends Controller
         return match ((string) $paymentType) {
             'pix' => 'pix',
             'cartao_credito', 'cartao_debito', 'maquina' => 'maquina',
-            'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix' => 'dinheiro',
+            'vale_alimentacao' => 'vale_alimentacao',
+            'vale_refeicao' => 'vale_refeicao',
+            'dinheiro_cartao_credito',
+            'dinheiro_cartao_debito',
+            'dinheiro_pix',
+            'dinheiro_vale_alimentacao',
+            'dinheiro_vale_refeicao' => 'dinheiro',
             default => (string) $paymentType,
         };
     }
@@ -2938,8 +2946,13 @@ class SalesReportController extends Controller
     private function normalizePaymentTypeForBucket(?string $paymentType): ?string
     {
         return match ((string) $paymentType) {
-            'cartao_credito', 'cartao_debito', 'maquina', 'pix' => 'maquina',
-            'dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix' => 'dinheiro',
+            'cartao_credito', 'cartao_debito', 'maquina', 'pix', 'vale_alimentacao', 'vale_refeicao' => 'maquina',
+            'dinheiro',
+            'dinheiro_cartao_credito',
+            'dinheiro_cartao_debito',
+            'dinheiro_pix',
+            'dinheiro_vale_alimentacao',
+            'dinheiro_vale_refeicao' => 'dinheiro',
             'vale', 'refeicao', 'faturar' => (string) $paymentType,
             default => null,
         };
@@ -3183,7 +3196,7 @@ class SalesReportController extends Controller
     {
         return "
             CASE
-                WHEN {$paymentAlias}.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix')
+                WHEN {$paymentAlias}.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix', 'dinheiro_vale_alimentacao', 'dinheiro_vale_refeicao')
                     THEN GREATEST({$paymentAlias}.valor_total - COALESCE({$paymentAlias}.dois_pgto, 0), 0)
                 ELSE 0
             END
@@ -3194,9 +3207,9 @@ class SalesReportController extends Controller
     {
         return "
             CASE
-                WHEN {$paymentAlias}.tipo_pagamento IN ('cartao_credito', 'cartao_debito', 'maquina', 'pix')
+                WHEN {$paymentAlias}.tipo_pagamento IN ('cartao_credito', 'cartao_debito', 'maquina', 'pix', 'vale_alimentacao', 'vale_refeicao')
                     THEN GREATEST({$paymentAlias}.valor_total, 0)
-                WHEN {$paymentAlias}.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix')
+                WHEN {$paymentAlias}.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix', 'dinheiro_vale_alimentacao', 'dinheiro_vale_refeicao')
                     THEN GREATEST(COALESCE({$paymentAlias}.dois_pgto, 0), 0)
                 ELSE 0
             END
@@ -3261,7 +3274,7 @@ class SalesReportController extends Controller
 
     private function normalizeControlPaymentType(?string $value): string
     {
-        $allowed = ['all', 'dinheiro', 'cartao', 'vale', 'refeicao'];
+        $allowed = ['all', 'dinheiro', 'cartao', 'vale_alimentacao', 'vale_refeicao', 'vale', 'refeicao'];
 
         return in_array($value, $allowed, true) ? $value : 'all';
     }
@@ -3349,7 +3362,7 @@ class SalesReportController extends Controller
 
         $cashExpression = "
             CASE
-                WHEN pagamentos.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix')
+                WHEN pagamentos.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix', 'dinheiro_vale_alimentacao', 'dinheiro_vale_refeicao')
                     THEN GREATEST(pagamentos.valor_total - COALESCE(pagamentos.dois_pgto, 0), 0)
                 ELSE 0
             END
@@ -3357,9 +3370,9 @@ class SalesReportController extends Controller
 
         $cardExpression = "
             CASE
-                WHEN pagamentos.tipo_pagamento IN ('cartao_credito', 'cartao_debito', 'maquina', 'pix')
+                WHEN pagamentos.tipo_pagamento IN ('cartao_credito', 'cartao_debito', 'maquina', 'pix', 'vale_alimentacao', 'vale_refeicao')
                     THEN GREATEST(pagamentos.valor_total, 0)
-                WHEN pagamentos.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix')
+                WHEN pagamentos.tipo_pagamento IN ('dinheiro', 'dinheiro_cartao_credito', 'dinheiro_cartao_debito', 'dinheiro_pix', 'dinheiro_vale_alimentacao', 'dinheiro_vale_refeicao')
                     THEN GREATEST(COALESCE(pagamentos.dois_pgto, 0), 0)
                 ELSE 0
             END
@@ -3368,6 +3381,8 @@ class SalesReportController extends Controller
         $totalExpression = match ($paymentType) {
             'dinheiro' => $cashExpression,
             'cartao' => $cardExpression,
+            'vale_alimentacao' => "CASE WHEN pagamentos.tipo_pagamento = 'vale_alimentacao' THEN GREATEST(pagamentos.valor_total, 0) WHEN pagamentos.tipo_pagamento = 'dinheiro_vale_alimentacao' THEN GREATEST(COALESCE(pagamentos.dois_pgto, 0), 0) ELSE 0 END",
+            'vale_refeicao' => "CASE WHEN pagamentos.tipo_pagamento = 'vale_refeicao' THEN GREATEST(pagamentos.valor_total, 0) WHEN pagamentos.tipo_pagamento = 'dinheiro_vale_refeicao' THEN GREATEST(COALESCE(pagamentos.dois_pgto, 0), 0) ELSE 0 END",
             default => "({$cashExpression}) + ({$cardExpression})",
         };
 
