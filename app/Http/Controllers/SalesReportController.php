@@ -2186,6 +2186,7 @@ class SalesReportController extends Controller
         $allowedUnitIds = $this->reportUnitIds($filterUnits);
 
         $dateValue = $request->query('date');
+        $paymentType = $this->normalizeDetailedPaymentType($request->query('payment_type'));
         $date = $this->parseDate($dateValue, 'Y-m-d', Carbon::today());
         $start = $date->copy()->startOfDay();
         $end = $date->copy()->endOfDay();
@@ -2213,6 +2214,9 @@ class SalesReportController extends Controller
             }
         }])
             ->whereBetween('created_at', [$start, $end])
+            ->when($paymentType !== 'all', function ($query) use ($paymentType) {
+                $query->where('tipo_pagamento', $paymentType);
+            })
             ->when($filterUnitId, function ($query) use ($filterUnitId) {
                 $query->whereHas('vendas', function ($subQuery) use ($filterUnitId) {
                     $subQuery->where('id_unidade', $filterUnitId);
@@ -2253,7 +2257,7 @@ class SalesReportController extends Controller
                 return [
                     'tb4_id' => $payment->tb4_id,
                     'valor_total' => (float) $payment->valor_total,
-                    'tipo_pagamento' => $this->normalizePaymentTypeForDisplay($payment->tipo_pagamento),
+                    'tipo_pagamento' => (string) $payment->tipo_pagamento,
                     'valor_pago' => $payment->valor_pago,
                     'troco' => $payment->troco,
                     'dois_pgto' => $payment->dois_pgto,
@@ -2279,6 +2283,8 @@ class SalesReportController extends Controller
         return Inertia::render('Reports/SalesDetailed', [
             'payments' => $payments,
             'dateValue' => $dateValue,
+            'paymentType' => $paymentType,
+            'paymentOptions' => $this->detailedPaymentOptions(),
             'filterUnits' => $filterUnits,
             'selectedUnitId' => $filterUnitId,
             'unit' => $selectedUnit,
@@ -2436,15 +2442,7 @@ class SalesReportController extends Controller
                 'label' => $start->translatedFormat('d/m/Y') . ' - ' . $end->translatedFormat('d/m/Y'),
             ],
             'paymentType' => $paymentType,
-            'paymentOptions' => [
-                ['value' => 'all', 'label' => 'Tudo (Dinheiro e Cartao)'],
-                ['value' => 'dinheiro', 'label' => 'Dinheiro'],
-                ['value' => 'cartao', 'label' => 'Cartao'],
-                ['value' => 'vale_alimentacao', 'label' => 'Vale Alimentacao'],
-                ['value' => 'vale_refeicao', 'label' => 'Vale Refeicao'],
-                ['value' => 'vale', 'label' => 'Vale interno'],
-                ['value' => 'refeicao', 'label' => 'Refeicao interna'],
-            ],
+            'paymentOptions' => $this->detailedPaymentOptions(),
             'stores' => $stores,
             'summary' => [
                 'grand_total' => $grandTotal,
@@ -2943,6 +2941,35 @@ class SalesReportController extends Controller
         };
     }
 
+    private function normalizeDetailedPaymentType(?string $paymentType): string
+    {
+        $type = (string) $paymentType;
+        $allowed = collect($this->detailedPaymentOptions())->pluck('value');
+
+        return $allowed->contains($type) ? $type : 'all';
+    }
+
+    private function detailedPaymentOptions(): array
+    {
+        return [
+            ['value' => 'all', 'label' => 'Todos'],
+            ['value' => 'dinheiro', 'label' => 'Dinheiro'],
+            ['value' => 'cartao_credito', 'label' => 'Credito'],
+            ['value' => 'cartao_debito', 'label' => 'Debito'],
+            ['value' => 'pix', 'label' => 'PiX'],
+            ['value' => 'vale_alimentacao', 'label' => 'Vale Alimentacao'],
+            ['value' => 'vale_refeicao', 'label' => 'Vale Refeicao'],
+            ['value' => 'dinheiro_cartao_credito', 'label' => 'Dinheiro + Credito'],
+            ['value' => 'dinheiro_cartao_debito', 'label' => 'Dinheiro + Debito'],
+            ['value' => 'dinheiro_pix', 'label' => 'Dinheiro + PiX'],
+            ['value' => 'dinheiro_vale_alimentacao', 'label' => 'Dinheiro + Vale Alimentacao'],
+            ['value' => 'dinheiro_vale_refeicao', 'label' => 'Dinheiro + Vale Refeicao'],
+            ['value' => 'vale', 'label' => 'Vale'],
+            ['value' => 'refeicao', 'label' => 'Refeicao'],
+            ['value' => 'faturar', 'label' => 'Faturar'],
+        ];
+    }
+
     private function normalizePaymentTypeForBucket(?string $paymentType): ?string
     {
         return match ((string) $paymentType) {
@@ -3274,9 +3301,7 @@ class SalesReportController extends Controller
 
     private function normalizeControlPaymentType(?string $value): string
     {
-        $allowed = ['all', 'dinheiro', 'cartao', 'vale_alimentacao', 'vale_refeicao', 'vale', 'refeicao'];
-
-        return in_array($value, $allowed, true) ? $value : 'all';
+        return $this->normalizeDetailedPaymentType($value);
     }
 
     private function buildControlStoreTotals(
@@ -3379,11 +3404,19 @@ class SalesReportController extends Controller
         ";
 
         $totalExpression = match ($paymentType) {
-            'dinheiro' => $cashExpression,
-            'cartao' => $cardExpression,
-            'vale_alimentacao' => "CASE WHEN pagamentos.tipo_pagamento = 'vale_alimentacao' THEN GREATEST(pagamentos.valor_total, 0) WHEN pagamentos.tipo_pagamento = 'dinheiro_vale_alimentacao' THEN GREATEST(COALESCE(pagamentos.dois_pgto, 0), 0) ELSE 0 END",
-            'vale_refeicao' => "CASE WHEN pagamentos.tipo_pagamento = 'vale_refeicao' THEN GREATEST(pagamentos.valor_total, 0) WHEN pagamentos.tipo_pagamento = 'dinheiro_vale_refeicao' THEN GREATEST(COALESCE(pagamentos.dois_pgto, 0), 0) ELSE 0 END",
-            default => "({$cashExpression}) + ({$cardExpression})",
+            'dinheiro' => "CASE WHEN pagamentos.tipo_pagamento = 'dinheiro' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            'cartao_credito' => "CASE WHEN pagamentos.tipo_pagamento = 'cartao_credito' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            'cartao_debito' => "CASE WHEN pagamentos.tipo_pagamento = 'cartao_debito' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            'pix' => "CASE WHEN pagamentos.tipo_pagamento = 'pix' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            'vale_alimentacao' => "CASE WHEN pagamentos.tipo_pagamento = 'vale_alimentacao' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            'vale_refeicao' => "CASE WHEN pagamentos.tipo_pagamento = 'vale_refeicao' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            'dinheiro_cartao_credito' => "CASE WHEN pagamentos.tipo_pagamento = 'dinheiro_cartao_credito' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            'dinheiro_cartao_debito' => "CASE WHEN pagamentos.tipo_pagamento = 'dinheiro_cartao_debito' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            'dinheiro_pix' => "CASE WHEN pagamentos.tipo_pagamento = 'dinheiro_pix' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            'dinheiro_vale_alimentacao' => "CASE WHEN pagamentos.tipo_pagamento = 'dinheiro_vale_alimentacao' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            'dinheiro_vale_refeicao' => "CASE WHEN pagamentos.tipo_pagamento = 'dinheiro_vale_refeicao' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            'faturar' => "CASE WHEN pagamentos.tipo_pagamento = 'faturar' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
+            default => "CASE WHEN pagamentos.tipo_pagamento <> 'maquina' THEN GREATEST(pagamentos.valor_total, 0) ELSE 0 END",
         };
 
         return DB::table('tb4_vendas_pg as pagamentos')

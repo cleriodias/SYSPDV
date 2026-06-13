@@ -126,8 +126,8 @@ const faturarWarningText = [
     'Aviso sobre a utilização do pagamento “Faturar”',
     'A opção de pagamento “Faturar” deve ser utilizada exclusivamente em situações excepcionais, quando o cliente deixa o estabelecimento sem efetuar o pagamento devido. Ao selecionar esta opção, o utilizador reconhece que está a justificar a ausência do valor correspondente no caixa.',
     'É importante salientar que a utilização indevida ou recorrente deste tipo de pagamento poderá implicar consequências administrativas, incluindo a necessidade de apresentação de justificativas formais, auditorias internas e eventuais responsabilizações conforme as políticas da empresa.',
-    'Antes de prosseguir, confirme que a situação se enquadra nos critérios definidos e que todas as alternativas de cobrança foram devidamente consideradas.',
-    'Deseja continuar com o registo como “Faturar” ou prefere cancelar a operação?',
+    'Antes de prosseguir, confirme que a situação se enquadra nos critérios definidos e que todas as alternativas de cobrança foram devidamente consideradas, incluindo Dinheiro, Credito, Debito, PiX, Vale, Refeicao, Vale Alimentacao e Vale Refeicao.',
+    'Escolha abaixo a forma de pagamento desejada ou mantenha o registo como “Faturar”.',
 ];
 
 const createCartItemId = (productId, price) =>
@@ -1569,6 +1569,18 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
             });
     };
 
+    const openValePicker = (valeType = 'vale') => {
+        closeCardPaymentModal();
+        setCashInputVisible(false);
+        setCashValue('');
+        setCashCardType('');
+        setValePickerVisible(true);
+        setValeSearchTerm('');
+        setValeResults([]);
+        setSelectedValeType(valeType);
+        setSaleError('');
+    };
+
     const proceedWithPayment = (type) => {
         if (saleLoading) {
             return;
@@ -1592,15 +1604,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
         }
 
         if (type === 'vale') {
-            closeCardPaymentModal();
-            setCashInputVisible(false);
-            setCashValue('');
-            setCashCardType('');
-            setValePickerVisible(true);
-            setValeSearchTerm('');
-            setValeResults([]);
-            setSelectedValeType('vale');
-            setSaleError('');
+            openValePicker('vale');
             return;
         }
 
@@ -1671,6 +1675,12 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
 
     const handleFaturarWarningChoice = (type) => {
         closeFaturarWarning();
+
+        if (type === 'refeicao') {
+            openValePicker('refeicao');
+            return;
+        }
+
         proceedWithPayment(type);
     };
 
@@ -3047,7 +3057,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                 <p key={paragraph}>{paragraph}</p>
                             ))}
                         </div>
-                        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             <button
                                 type="button"
                                 onClick={() => handleFaturarWarningChoice('dinheiro')}
@@ -3058,11 +3068,59 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                             </button>
                             <button
                                 type="button"
-                                onClick={() => handleFaturarWarningChoice('cartao')}
+                                onClick={() => handleFaturarWarningChoice('cartao_credito')}
                                 disabled={saleLoading}
                                 className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-60"
                             >
-                                Cartao
+                                Credito
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleFaturarWarningChoice('cartao_debito')}
+                                disabled={saleLoading}
+                                className="rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:opacity-60"
+                            >
+                                Debito
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleFaturarWarningChoice('pix')}
+                                disabled={saleLoading}
+                                className="rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-cyan-700 disabled:opacity-60"
+                            >
+                                PiX
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleFaturarWarningChoice('vale_alimentacao')}
+                                disabled={saleLoading}
+                                className="rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-gray-900 shadow hover:bg-amber-600 disabled:opacity-60"
+                            >
+                                Vale Alimentacao
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleFaturarWarningChoice('vale_refeicao')}
+                                disabled={saleLoading}
+                                className="rounded-xl bg-yellow-400 px-4 py-3 text-sm font-semibold text-gray-900 shadow hover:bg-yellow-500 disabled:opacity-60"
+                            >
+                                Vale Refeicao
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleFaturarWarningChoice('vale')}
+                                disabled={saleLoading}
+                                className="rounded-xl bg-amber-700 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-amber-800 disabled:opacity-60"
+                            >
+                                Vale
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleFaturarWarningChoice('refeicao')}
+                                disabled={saleLoading}
+                                className="rounded-xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-orange-700 disabled:opacity-60"
+                            >
+                                Refeicao
                             </button>
                             <button
                                 type="button"
@@ -3076,7 +3134,7 @@ export default function Dashboard({ profileSwitch = null, quickLookupProducts = 
                                 type="button"
                                 onClick={closeFaturarWarning}
                                 disabled={saleLoading}
-                                className="rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                                className="rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-60 sm:col-span-2 lg:col-span-3 xl:col-span-4 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
                             >
                                 Cancelar
                             </button>

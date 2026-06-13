@@ -11,8 +11,13 @@ const formatCurrency = (value) =>
 
 const PAYMENT_LABELS = {
     dinheiro: 'Dinheiro',
+    cartao_credito: 'Credito',
+    cartao_debito: 'Debito',
     maquina: 'Maquina',
     pix: 'PiX',
+    dinheiro_cartao_credito: 'Dinheiro + Credito',
+    dinheiro_cartao_debito: 'Dinheiro + Debito',
+    dinheiro_pix: 'Dinheiro + PiX',
     dinheiro_vale_alimentacao: 'Dinheiro + Vale Alimentacao',
     dinheiro_vale_refeicao: 'Dinheiro + Vale Refeicao',
     vale_alimentacao: 'Vale Alimentacao',
@@ -35,12 +40,15 @@ const formatPaymentType = (value) => PAYMENT_LABELS[String(value ?? '').toLowerC
 export default function SalesDetailed({
     payments,
     dateValue,
+    paymentType = 'all',
+    paymentOptions = [],
     unit,
     filterUnits = [],
     selectedUnitId = null,
 }) {
     const { data, setData, get, processing } = useForm({
         date: dateValue ?? '',
+        payment_type: paymentType ?? 'all',
         unit_id:
             selectedUnitId !== null && selectedUnitId !== undefined
                 ? String(selectedUnitId)
@@ -106,7 +114,7 @@ export default function SalesDetailed({
                         onSubmit={handleSubmit}
                         className="rounded-2xl bg-white p-6 shadow dark:bg-gray-800"
                     >
-                        <div className="grid gap-4 sm:grid-cols-[200px_240px_auto]">
+                        <div className="grid gap-4 lg:grid-cols-[200px_240px_260px_auto]">
                             <div>
                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
                                     Dia
@@ -131,6 +139,22 @@ export default function SalesDetailed({
                                     {filterUnits.map((filterUnit) => (
                                         <option key={filterUnit.id} value={filterUnit.id}>
                                             {filterUnit.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Tipo de pagamento
+                                </label>
+                                <select
+                                    value={data.payment_type}
+                                    onChange={(event) => setData('payment_type', event.target.value)}
+                                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-gray-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                >
+                                    {paymentOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
                                         </option>
                                     ))}
                                 </select>
